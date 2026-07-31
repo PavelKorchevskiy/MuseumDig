@@ -1,0 +1,17 @@
+# Godot 4+
+.godot/
+
+# .NET / C#
+bin/
+obj/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+
+# OS
+Thumbs.db
+.DS_Store

@@ -1,0 +1,38 @@
+[gd_scene format=3 uid="uid://tj6bqrwlncs3"]
+
+[ext_resource type="Script" uid="uid://bbv68g60oo1hg" path="res://ShopUI.cs" id="1_fscwk"]
+
+[node name="ShopUI" type="CanvasLayer" unique_id=270077110]
+script = ExtResource("1_fscwk")
+
+[node name="Container" type="VBoxContainer" parent="." unique_id=1727706800]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="Title" type="Label" parent="Container" unique_id=1690913206]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "UPGRADES"
+
+[node name="PickaxeButton" type="Button" parent="Container" unique_id=520572240]
+layout_mode = 2
+
+[node name="CoinButton" type="Button" parent="Container" unique_id=1161570497]
+layout_mode = 2
+
+[node name="FossilButton" type="Button" parent="Container" unique_id=1502615783]
+layout_mode = 2
+
+[node name="MaxEnergyButton" type="Button" parent="Container" unique_id=1874574613]
+layout_mode = 2
+
+[node name="RegenButton" type="Button" parent="Container" unique_id=1311394193]
+layout_mode = 2
+
+[node name="CloseButton" type="Button" parent="Container" unique_id=1136316008]
+layout_mode = 2
+text = "Close"

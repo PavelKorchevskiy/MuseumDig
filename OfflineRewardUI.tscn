@@ -1,0 +1,75 @@
+[gd_scene format=3 uid="uid://1pn2tmbbjiaq"]
+
+[ext_resource type="Script" uid="uid://ra6dox052go1" path="res://OfflineRewardUI.cs" id="1_qfsf7"]
+
+[node name="OfflineRewardUI" type="CanvasLayer" unique_id=1611821439]
+script = ExtResource("1_qfsf7")
+
+[node name="DimBackground" type="ColorRect" parent="." unique_id=189750430]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7)
+
+[node name="RewardPanel" type="PanelContainer" parent="." unique_id=651511688]
+custom_minimum_size = Vector2(400, 300)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Content" type="VBoxContainer" parent="RewardPanel" unique_id=1757520611]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="TitleLabel" type="Label" parent="RewardPanel/Content" unique_id=1464571714]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Welcome Back!"
+horizontal_alignment = 1
+
+[node name="TimeLabel" type="Label" parent="RewardPanel/Content" unique_id=1227764652]
+layout_mode = 2
+text = "You were away for:"
+horizontal_alignment = 1
+
+[node name="TimeValueLabel" type="Label" parent="RewardPanel/Content" unique_id=241336178]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "2h 30m"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="RewardPanel/Content" unique_id=115932383]
+layout_mode = 2
+
+[node name="RewardsTitleLabel" type="Label" parent="RewardPanel/Content" unique_id=1087026363]
+layout_mode = 2
+text = "Your rewards:"
+horizontal_alignment = 1
+
+[node name="CoinsRewardLabel" type="Label" parent="RewardPanel/Content" unique_id=1705792902]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "💰 500 coins"
+horizontal_alignment = 1
+
+[node name="EnergyRewardLabel" type="Label" parent="RewardPanel/Content" unique_id=827338073]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "⚡ 20 energy"
+horizontal_alignment = 1
+
+[node name="Control" type="Control" parent="RewardPanel/Content" unique_id=1776395827]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="CollectButton" type="Button" parent="RewardPanel/Content" unique_id=286138619]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Collect"

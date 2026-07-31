@@ -1,0 +1,80 @@
+[gd_scene format=3 uid="uid://b5v3henirr11i"]
+
+[ext_resource type="Script" uid="uid://h8ur6180uis6" path="res://DigSite.cs" id="1_tctey"]
+[ext_resource type="Script" uid="uid://dhayi3t6stxud" path="res://FossilUI.cs" id="2_rr7af"]
+[ext_resource type="PackedScene" uid="uid://tj6bqrwlncs3" path="res://ShopUI.tscn" id="3_w7n5d"]
+[ext_resource type="PackedScene" uid="uid://d3pb4cccnffni" path="res://MuseumUI.tscn" id="4_57fiv"]
+[ext_resource type="PackedScene" uid="uid://1pn2tmbbjiaq" path="res://OfflineRewardUI.tscn" id="5_b2b1i"]
+
+[node name="DigSite" type="Node2D" unique_id=351305657]
+script = ExtResource("1_tctey")
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=353512333]
+script = ExtResource("2_rr7af")
+
+[node name="Shop" parent="UI" unique_id=270077110 instance=ExtResource("3_w7n5d")]
+visible = false
+
+[node name="Museum" parent="UI" unique_id=319060316 instance=ExtResource("4_57fiv")]
+visible = false
+
+[node name="Background" type="PanelContainer" parent="UI" unique_id=1238643787]
+custom_minimum_size = Vector2(260, 0)
+anchors_preset = -1
+offset_left = 10.0
+offset_top = 10.0
+offset_transform_enabled = true
+
+[node name="MainContainer" type="VBoxContainer" parent="UI/Background" unique_id=1601391887]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="TopSection" type="VBoxContainer" parent="UI/Background/MainContainer" unique_id=1547521714]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="FossilLabel" type="Label" parent="UI/Background/MainContainer/TopSection" unique_id=2142859977]
+layout_mode = 2
+text = "No fossils found yet"
+
+[node name="CoinsLabel" type="Label" parent="UI/Background/MainContainer/TopSection" unique_id=181254310]
+layout_mode = 2
+text = "Coins: 0\\nIncome: 0/sec"
+
+[node name="EnergySection" type="VBoxContainer" parent="UI/Background/MainContainer" unique_id=1834495418]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="EnergyLabel" type="Label" parent="UI/Background/MainContainer/EnergySection" unique_id=742568604]
+layout_mode = 2
+text = "Energy: 20/20"
+
+[node name="EnergyBar" type="ProgressBar" parent="UI/Background/MainContainer/EnergySection" unique_id=169094977]
+custom_minimum_size = Vector2(0, 25)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+
+[node name="ButtonsSection" type="HBoxContainer" parent="UI/Background/MainContainer" unique_id=735315395]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ShopButton" type="Button" parent="UI/Background/MainContainer/ButtonsSection" unique_id=1957777606]
+layout_mode = 2
+text = "Shop"
+
+[node name="MuseumButton" type="Button" parent="UI/Background/MainContainer/ButtonsSection" unique_id=1197054021]
+layout_mode = 2
+text = "Museum"
+
+[node name="SaveQuitButton" type="Button" parent="UI/Background/MainContainer/ButtonsSection" unique_id=14095965]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Save & Quit"
+
+[node name="Spacer" type="Control" parent="UI/Background/MainContainer" unique_id=845834354]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="OfflineReward" parent="UI" unique_id=1611821439 instance=ExtResource("5_b2b1i")]
+visible = false
