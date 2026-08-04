@@ -1,17 +1,30 @@
-# Godot 4+
-.godot/
+```
+# Build artifacts
+*.obj
+*.exe
+*.dll
+*.so
+*.a
+*.lib
+*.out
 
-# .NET / C#
+# Dependencies
+packages/
 bin/
 obj/
-*.csproj
-*.sln
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
-.vs/
+Debug/
+Release/
 
-# OS
-Thumbs.db
-.DS_Store
+# Logs
+*.log
+
+# Temp files
+*.tmp
+*.temp
+
+# User-specific files
+.vs/
+.vscode/
+*.userprefs
+*.user
+```

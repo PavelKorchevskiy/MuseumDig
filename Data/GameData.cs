@@ -378,10 +378,16 @@ public static class GameData
 			Type = ToolType.Shovel,
 			DisplayName = "Shovel",
 			Description = "Fast digging, but can damage fossils.",
-			Damage = 2,
+			BaseDamage = 2,
 			CanDamageFossil = true,
-			UseDelay = 0.25f,
-			UpgradeCost = 100
+			BaseUseDelay = 0.25f,
+			UpgradeCostPerLevel = 100,
+			DamagePerLevel = 1,
+			UseDelayReductionPerLevel = 0.02f,
+			MinUseDelay = 0.1f,
+			BaseFossilDamageChance = 0.5f,
+			FossilDamageChanceReductionPerLevel = 0.05f,
+			MaxUpgradeLevel = 10
 		};
 		
 		var pickaxe = new ToolDefinition
@@ -389,10 +395,16 @@ public static class GameData
 			Type = ToolType.Pickaxe,
 			DisplayName = "Pickaxe",
 			Description = "Slower but safe for fossils.",
-			Damage = 1,
+			BaseDamage = 1,
 			CanDamageFossil = false,
-			UseDelay = 0.5f,
-			UpgradeCost = 150
+			BaseUseDelay = 0.5f,
+			UpgradeCostPerLevel = 150,
+			DamagePerLevel = 1,
+			UseDelayReductionPerLevel = 0.03f,
+			MinUseDelay = 0.15f,
+			BaseFossilDamageChance = 0f, // Кирка не повреждает окаменелости
+			FossilDamageChanceReductionPerLevel = 0f,
+			MaxUpgradeLevel = 10
 		};
 		
 		_tools[shovel.Type] = shovel;

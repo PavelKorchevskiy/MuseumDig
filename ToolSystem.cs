@@ -44,8 +44,41 @@ public partial class ToolSystem : Node
 	
 	public int GetDamage()
 	{
+		// Используем UpgradeSystem для получения урона с учётом уровня инструмента
+		if (UpgradeSystem.Instance != null)
+		{
+			return UpgradeSystem.Instance.GetToolDamage(_currentTool);
+		}
+		
+		// Fallback к базовому значению
 		var tool = GetCurrentTool();
-		return tool?.Damage ?? 1;
+		return tool?.BaseDamage ?? 1;
+	}
+	
+	public float GetUseDelay()
+	{
+		// Используем UpgradeSystem для получения задержки с учётом уровня инструмента
+		if (UpgradeSystem.Instance != null)
+		{
+			return UpgradeSystem.Instance.GetToolUseDelay(_currentTool);
+		}
+		
+		// Fallback к базовому значению
+		var tool = GetCurrentTool();
+		return tool?.BaseUseDelay ?? 0.3f;
+	}
+	
+	public float GetFossilDamageChance()
+	{
+		// Используем UpgradeSystem для получения шанса повреждения с учётом уровня инструмента
+		if (UpgradeSystem.Instance != null)
+		{
+			return UpgradeSystem.Instance.GetToolFossilDamageChance(_currentTool);
+		}
+		
+		// Fallback к базовому значению
+		var tool = GetCurrentTool();
+		return tool?.CanDamageFossil == true ? tool.BaseFossilDamageChance : 0f;
 	}
 	
 	public string GetToolDisplayName()
