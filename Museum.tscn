@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://d1j5tps5phiwr" path="res://Museum.cs" id="1_4rxuf"]
 [ext_resource type="PackedScene" uid="uid://b6avv4f3a4vj8" path="res://WorldMapUI.tscn" id="2_malhh"]
+[ext_resource type="PackedScene" path="res://ExhibitSlot.tscn" id="3_exhibit_slot"]
 
 [node name="Museum" type="Node2D" unique_id=15775509]
 script = ExtResource("1_4rxuf")
@@ -14,16 +15,137 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.101960786, 0.101960786, 0.14901961, 1)
 
+[node name="MuseumFloor" type="ColorRect" parent="." unique_id=2001234567]
+offset_left = 100.0
+offset_top = 100.0
+offset_right = -100.0
+offset_bottom = -150.0
+color = Color(0.4, 0.35, 0.25, 1)
+
+[node name="WallDecorations" type="Node2D" parent="." unique_id=2001234568]
+
+[node name="WallLeft" type="ColorRect" parent="WallDecorations" unique_id=2001234569]
+offset_left = 100.0
+offset_top = 100.0
+offset_right = 150.0
+offset_bottom = -150.0
+color = Color(0.3, 0.25, 0.2, 1)
+
+[node name="WallRight" type="ColorRect" parent="WallDecorations" unique_id=2001234570]
+offset_left = -150.0
+offset_top = 100.0
+offset_right = -100.0
+offset_bottom = -150.0
+color = Color(0.3, 0.25, 0.2, 1)
+
+[node name="WallTop" type="ColorRect" parent="WallDecorations" unique_id=2001234571]
+offset_left = 100.0
+offset_top = 100.0
+offset_right = -100.0
+offset_bottom = 150.0
+color = Color(0.3, 0.25, 0.2, 1)
+
+[node name="Pedestals" type="Node2D" parent="." unique_id=2001234572]
+
+[node name="Pedestal1" type="ColorRect" parent="Pedestals" unique_id=2001234573]
+offset_left = 200.0
+offset_top = 200.0
+offset_right = 280.0
+offset_bottom = 280.0
+color = Color(0.5, 0.45, 0.35, 1)
+
+[node name="Pedestal2" type="ColorRect" parent="Pedestals" unique_id=2001234574]
+offset_left = 350.0
+offset_top = 200.0
+offset_right = 430.0
+offset_bottom = 280.0
+color = Color(0.5, 0.45, 0.35, 1)
+
+[node name="Pedestal3" type="ColorRect" parent="Pedestals" unique_id=2001234575]
+offset_left = 500.0
+offset_top = 200.0
+offset_right = 580.0
+offset_bottom = 280.0
+color = Color(0.5, 0.45, 0.35, 1)
+
+[node name="Pedestal4" type="ColorRect" parent="Pedestals" unique_id=2001234576]
+offset_left = 200.0
+offset_top = 350.0
+offset_right = 280.0
+offset_bottom = 430.0
+color = Color(0.5, 0.45, 0.35, 1)
+
+[node name="Pedestal5" type="ColorRect" parent="Pedestals" unique_id=2001234577]
+offset_left = 350.0
+offset_top = 350.0
+offset_right = 430.0
+offset_bottom = 430.0
+color = Color(0.5, 0.45, 0.35, 1)
+
+[node name="Pedestal6" type="ColorRect" parent="Pedestals" unique_id=2001234578]
+offset_left = 500.0
+offset_top = 350.0
+offset_right = 580.0
+offset_bottom = 430.0
+color = Color(0.5, 0.45, 0.35, 1)
+
+[node name="Pedestal7" type="ColorRect" parent="Pedestals" unique_id=2001234579]
+offset_left = 200.0
+offset_top = 500.0
+offset_right = 280.0
+offset_bottom = 580.0
+color = Color(0.5, 0.45, 0.35, 1)
+
+[node name="Pedestal8" type="ColorRect" parent="Pedestals" unique_id=2001234580]
+offset_left = 350.0
+offset_top = 500.0
+offset_right = 430.0
+offset_bottom = 580.0
+color = Color(0.5, 0.45, 0.35, 1)
+
+[node name="Pedestal9" type="ColorRect" parent="Pedestals" unique_id=2001234581]
+offset_left = 500.0
+offset_top = 500.0
+offset_right = 580.0
+offset_bottom = 580.0
+color = Color(0.5, 0.45, 0.35, 1)
+
+[node name="ExhibitSlots" type="Node2D" parent="." unique_id=3001234567]
+
+[node name="Slot1" position=Vector2(240, 240) parent="ExhibitSlots" unique_id=3001234568 instance=ExtResource("3_exhibit_slot")]
+
+[node name="Slot2" position=Vector2(390, 240) parent="ExhibitSlots" unique_id=3001234569 instance=ExtResource("3_exhibit_slot")]
+
+[node name="Slot3" position=Vector2(540, 240) parent="ExhibitSlots" unique_id=3001234570 instance=ExtResource("3_exhibit_slot")]
+
+[node name="Slot4" position=Vector2(240, 390) parent="ExhibitSlots" unique_id=3001234571 instance=ExtResource("3_exhibit_slot")]
+
+[node name="Slot5" position=Vector2(390, 390) parent="ExhibitSlots" unique_id=3001234572 instance=ExtResource("3_exhibit_slot")]
+
+[node name="Slot6" position=Vector2(540, 390) parent="ExhibitSlots" unique_id=3001234573 instance=ExtResource("3_exhibit_slot")]
+
+[node name="Slot7" position=Vector2(240, 540) parent="ExhibitSlots" unique_id=3001234574 instance=ExtResource("3_exhibit_slot")]
+
+[node name="Slot8" position=Vector2(390, 540) parent="ExhibitSlots" unique_id=3001234575 instance=ExtResource("3_exhibit_slot")]
+
+[node name="Slot9" position=Vector2(540, 540) parent="ExhibitSlots" unique_id=3001234576 instance=ExtResource("3_exhibit_slot")]
+
 [node name="UI" type="CanvasLayer" parent="." unique_id=1016123701]
 
 [node name="MainContainer" type="VBoxContainer" parent="UI" unique_id=175361953]
-offset_right = 40.0
-offset_bottom = 40.0
+offset_left = 30.0
+offset_top = 30.0
+offset_right = -30.0
+offset_bottom = -30.0
+anchors_preset = 15
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 15
 
 [node name="TitleLabel" type="Label" parent="UI/MainContainer" unique_id=1814505023]
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
-text = "YOUR MUSEUM"
+text = "🏛️ MUSEUM HALL"
 horizontal_alignment = 1
 
 [node name="IncomeLabel" type="Label" parent="UI/MainContainer" unique_id=984957904]
@@ -33,15 +155,12 @@ text = "Income: 0 coins/sec
 "
 horizontal_alignment = 1
 
-[node name="ExhibitsScroll" type="ScrollContainer" parent="UI/MainContainer" unique_id=487369765]
-custom_minimum_size = Vector2(0, 200)
+[node name="InfoLabel" type="Label" parent="UI/MainContainer" unique_id=1814505024]
 layout_mode = 2
-size_flags_vertical = 3
-
-[node name="ExhibitsList" type="VBoxContainer" parent="UI/MainContainer/ExhibitsScroll" unique_id=1254325614]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 10
+theme_override_font_sizes/font_size = 14
+text = "Click on empty pedestals to place exhibits from your inventory"
+horizontal_alignment = 1
+modulate = Color(0.8, 0.8, 0.8, 1)
 
 [node name="ButtonsRow" type="HBoxContainer" parent="UI/MainContainer" unique_id=466757933]
 custom_minimum_size = Vector2(0, 50)

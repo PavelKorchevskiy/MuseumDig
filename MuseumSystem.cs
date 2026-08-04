@@ -189,6 +189,20 @@ public partial class MuseumSystem : Node
 		return _exhibitedItems.Count;
 	}
 	
+	// ===== УДАЛЕНИЕ ЭКСПОНАТА =====
+	
+	public void RemoveExhibit(string resourceId, Quality quality)
+	{
+		string key = $"{resourceId}_{(int)quality}";
+		
+		if (_exhibitedItems.ContainsKey(key))
+		{
+			_exhibitedItems.Remove(key);
+			GD.Print($"[Museum] Removed {resourceId} ({quality}) from exhibition");
+			SaveSystem.Instance?.MarkDirty();
+		}
+	}
+	
 	// ===== ДЛЯ СОХРАНЕНИЯ =====
 	
 	public Dictionary<string, string> GetSaveData()

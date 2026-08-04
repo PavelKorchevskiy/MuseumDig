@@ -1,0 +1,31 @@
+[gd_scene format=3 uid="uid://c8x9z2k4m1pqr"]
+
+[ext_resource type="Script" path="res://ExhibitSlot.cs" id="1_exhibit_script"]
+
+[node name="ExhibitSlot" type="Node2D"]
+script = ExtResource("1_exhibit_script")
+
+[node name="Sprite" type="Sprite2D" parent="."]
+offset_left = -40.0
+offset_top = -40.0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = null
+modulate = Color(0.5, 0.5, 0.5, 0.7)
+
+[node name="Highlight" type="ColorRect" parent="."]
+visible = false
+offset_left = -45.0
+offset_top = -45.0
+offset_right = 45.0
+offset_bottom = 45.0
+color = Color(1, 1, 0, 0.3)
+
+[node name="Label" type="Label" parent="."]
+offset_left = -60.0
+offset_top = 50.0
+offset_right = 60.0
+offset_bottom = 70.0
+text = "Empty"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 12
