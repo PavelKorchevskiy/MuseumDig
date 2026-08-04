@@ -239,17 +239,17 @@ public partial class UpgradeSystem : Node
 	
 	// ===== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ДЛЯ ГЛОБАЛЬНЫХ АПГРЕЙДОВ =====
 	
-	private int GetPickaxeCost()
+	public int GetPickaxeCost()
 	{
 		return (int)(PickaxeBaseCost * Mathf.Pow(CostGrowth, _pickaxeLevel - 1));
 	}
 	
-	private int GetCoinBonusCost()
+	public int GetCoinBonusCost()
 	{
 		return (int)(CoinBonusBaseCost * Mathf.Pow(CostGrowth, _coinBonusLevel));
 	}
 	
-	private int GetFossilChanceCost()
+	public int GetFossilChanceCost()
 	{
 		return (int)(FossilChanceBaseCost * Mathf.Pow(CostGrowth, _fossilChanceLevel));
 	}
