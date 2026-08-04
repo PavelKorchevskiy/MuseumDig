@@ -29,6 +29,12 @@ public partial class Museum : Node2D
 		_digButton = GetNode<Button>("UI/MainContainer/ButtonsRow/DigButton");
 		_worldMap = GetNode<CanvasLayer>("UI/WorldMap");
 		
+		// Скрываем карту мира при запуске сцены музея
+		if (_worldMap != null)
+		{
+			_worldMap.Visible = false;
+		}
+		
 		_worldMapButton.Pressed += OnWorldMapPressed;
 		_digButton.Pressed += OnDigPressed;
 		

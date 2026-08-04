@@ -1,49 +1,131 @@
 ```
-# Compiled and build artifacts
-*.pyc
-__pycache__/
-*.o
-*.obj
-dist/
+# Unity/Mono specific
+*.pidb
+*.suo
+*.user
+*.userprefs
+*.unityproj
+*.booproj
+*.csproj
+*.meta
+*.prefab
+*.unity
+*.asset
+*.mat
+*.anim
+*.controller
+*.physicsMaterial2D
+*.physicsMaterial
+*.renderTexture
+*.cubemap
+*.giparams
+*.flare
+*.mask
+*.guiskin
+*.fontsettings
+*.preset
+*.overrideController
+*.spriteatlas
+*.terrain
+*.tflite
+*.asmdef
+*.rsp
+*.asmref
+
+# Build results
+Build/
 build/
-target/
+[Bb]uilds/
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+Logs/
+[Uu]serSettings/
+*.unitypackage
 
-# Dependencies
-.venv/
-venv/
-node_modules/
-.mypy_cache/
-.pytest_cache/
-.gradle/
+# Generated VS/MD project files
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
 
-# Logs and temp files
-*.log
-*.tmp
-*.swp
-*.swo
+# Visual Studio Code
+.vscode/
+
+# Rider
+.idea/
 
 # Environment
 .env
 .env.local
 .env.*
 
-# Editors
-.vscode/
-.idea/
-
-# System files
+# OS generated files
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Coverage
-coverage/
-htmlcov/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
 .coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git/modules/
+*.tmproj
+*.sublime-project
+*.sublime-workspace
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
 
-# Compressed files
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-shrinkwrap.json
+*.tgz
+.ENV
+
+# Compiled and binary files
+*.exe
+*.dll
+*.so
+*.dylib
+*.o
+*.obj
+*.a
+*.lib
+*.out
+
+# Archives
 *.zip
-*.gz
 *.tar
+*.gz
 *.tgz
 *.bz2
 *.xz
@@ -63,4 +145,54 @@ htmlcov/
 *.tar.bz2
 *.tar.xz
 *.tar.zst
+
+# IDE and editor files
+*.swp
+*.swo
+*.tmp
+*.temp
+*~
+.#*
+%*%
+._*
+
+# Coverage and testing
+coverage/
+htmlcov/
+.nyc_output/
+istanbul/
+.jest/
+jest/
+mochawesome-report/
+.tap/
+.reports/
+
+# Gradle
+.gradle/
+build/
+
+# Maven
+target/
+
+# Docker
+.dockerenv
+.Dockerfile
+docker-compose*.yml
+
+# Database
+*.db
+*.db-journal
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+.directory
+.fuse_hidden*
 ```
