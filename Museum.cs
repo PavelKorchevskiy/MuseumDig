@@ -8,8 +8,10 @@ public partial class Museum : Node2D
 	private Button _worldMapButton;
 	private Button _digButton;
 	private CanvasLayer _worldMap;
+	private CanvasLayer _offlineReward;
 	
 	private string _lastExhibitState = "";
+	private bool _offlineRewardShown = false;
 	
 	public override void _Ready()
 	{
@@ -28,11 +30,16 @@ public partial class Museum : Node2D
 		_worldMapButton = GetNode<Button>("UI/MainContainer/ButtonsRow/WorldMapButton");
 		_digButton = GetNode<Button>("UI/MainContainer/ButtonsRow/DigButton");
 		_worldMap = GetNode<CanvasLayer>("UI/WorldMap");
+		_offlineReward = GetNodeOrNull<CanvasLayer>("UI/OfflineReward");
 		
-		// Скрываем карту мира при запуске сцены музея
+		// Скрываем карту мира и окно офлайн-наград при запуске сцены музея
 		if (_worldMap != null)
 		{
 			_worldMap.Visible = false;
+		}
+		if (_offlineReward != null)
+		{
+			_offlineReward.Visible = false;
 		}
 		
 		_worldMapButton.Pressed += OnWorldMapPressed;
@@ -44,6 +51,22 @@ public partial class Museum : Node2D
 	public override void _Process(double delta)
 	{
 		UpdateDisplay();
+		CheckOfflineReward();
+	}
+	
+	private void CheckOfflineReward()
+	{
+		if (_offlineReward == null || OfflineRewardSystem.Instance == null) return;
+		
+		bool hasReward = OfflineRewardSystem.Instance.HasReward();
+		
+		// Показываем окно один раз при запуске сцены музея
+		if (hasReward && !_offlineReward.Visible && !_offlineRewardShown)
+		{
+			GD.Print("✅ Showing offline reward window in Museum!");
+			_offlineReward.Visible = true;
+			_offlineRewardShown = true;
+		}
 	}
 	
 	private void UpdateDisplay()

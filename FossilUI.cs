@@ -9,7 +9,6 @@ public partial class FossilUI : CanvasLayer
 	private ProgressBar _energyBar;
 	private Button _shopButton;
 	private CanvasLayer _shop;
-	private CanvasLayer _offlineReward;
 	private Button _saveQuitButton;
 	private CanvasLayer _inventory;
 	private Button _inventoryButton;
@@ -61,7 +60,6 @@ public partial class FossilUI : CanvasLayer
 	_inventoryButton = GetNodeOrNull<Button>("Background/MainContainer/ButtonsSection/InventoryButton");
 	_inventory = GetNodeOrNull<CanvasLayer>("Inventory");
 	if (_inventoryButton != null) _inventoryButton.Pressed += OnInventoryPressed;
-	_offlineReward = GetNodeOrNull<CanvasLayer>("OfflineReward");
 	_shovelButton = GetNodeOrNull<Button>("Background/MainContainer/ToolsSection/ShovelButton");
 	_pickaxeButton = GetNodeOrNull<Button>("Background/MainContainer/ToolsSection/PickaxeButton");
 	_backToMuseumButton = GetNodeOrNull<Button>("Background/MainContainer/ButtonsSection/BackToMuseumButton");
@@ -72,27 +70,6 @@ public partial class FossilUI : CanvasLayer
 	_worldMapButton = GetNodeOrNull<Button>("Background/MainContainer/ButtonsSection/WorldMapButton");
 	_worldMap = GetNodeOrNull<CanvasLayer>("WorldMap");
 	if (_worldMapButton != null) _worldMapButton.Pressed += OnWorldMapPressed;
-	
-	if (_offlineReward == null)
-	{
-		GD.PrintErr("⚠️ OfflineReward not found! Trying alternative paths...");
-		
-		// Попробуем найти рекурсивно
-		_offlineReward = FindChildRecursive<CanvasLayer>(this, "OfflineReward");
-		
-		if (_offlineReward != null)
-		{
-			GD.Print("✅ Found OfflineReward recursively!");
-		}
-		else
-		{
-			GD.PrintErr("❌ OfflineReward not found anywhere!");
-		}
-	}
-	else
-	{
-		GD.Print("✅ OfflineReward found directly");
-	}
 	
 	// ===== ПРОВЕРКА =====
 	if (_fossilLabel == null) GD.PrintErr("⚠️ FossilLabel not found!");
@@ -153,24 +130,7 @@ if (_saveQuitButton != null)
 	UpdateCoinsDisplay();
 	UpdateEnergyDisplay();
 	UpdateToolButtons();
-	CheckOfflineReward();
-}
-
-private bool _offlineRewardShown = false; // Флаг, чтобы показывать окно только один раз
-
-private void CheckOfflineReward()
-{
-	if (_offlineReward == null || OfflineRewardSystem.Instance == null) return;
-	
-	bool hasReward = OfflineRewardSystem.Instance.HasReward();
-	
-	// Показываем окно один раз
-	if (hasReward && !_offlineReward.Visible && !_offlineRewardShown)
-	{
-		GD.Print("✅ Showing offline reward window!");
-		_offlineReward.Visible = true;
-		_offlineRewardShown = true;
-	}
+	// Офлайн-награды теперь показываются только в сцене музея
 }
 	
 	private void UpdateFossilDisplay()
@@ -298,19 +258,5 @@ private void OnBackToMuseumPressed()
 	
 	// Возвращаемся в музей
 	GetTree().ChangeSceneToFile("res://Museum.tscn");
-}
-
-private T FindChildRecursive<T>(Node parent, string name) where T : Node
-{
-	foreach (var child in parent.GetChildren())
-	{
-		if (child.Name == name && child is T result)
-			return result;
-		
-		var found = FindChildRecursive<T>(child, name);
-		if (found != null)
-			return found;
-	}
-	return null;
 }
 }
