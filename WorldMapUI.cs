@@ -212,6 +212,9 @@ public partial class WorldMapUI : CanvasLayer
 		{
 			GD.Print($"[WorldMapUI] Traveling to {locationId}!");
 			Visible = false; // Закрываем карту
+			
+			// Возвращаемся на сцену музея
+			GetTree().ChangeSceneToFile("res://Museum.tscn");
 		}
 	}
 	
