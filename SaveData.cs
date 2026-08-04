@@ -21,6 +21,10 @@ public class SaveData
 	public int CoinBonusLevel { get; set; } = 0;
 	public int FossilChanceLevel { get; set; } = 0;
 	
+	// Уровни инструментов (лопата и кирка)
+	public int ShovelLevel { get; set; } = 1;
+	public int PickaxeToolLevel { get; set; } = 1; // Переименовано для избежания конфликта с PickaxeLevel
+	
 	public int CurrentEnergy { get; set; } = 20;
 	public int MaxEnergy { get; set; } = 20;
 	public int EnergyLevel { get; set; } = 1;

@@ -88,6 +88,12 @@ public partial class SaveSystem : Node
 		{
 			data.LocationData = LocationSystem.Instance.GetSaveData();
 		}
+		if (UpgradeSystem.Instance != null)
+		{
+			// Сохранение уровней инструментов
+			data.ShovelLevel = UpgradeSystem.Instance.GetShovelLevel();
+			data.PickaxeToolLevel = UpgradeSystem.Instance.GetPickaxeToolLevel();
+		}
 		
 		// ВАЖНО: При автосохранении мы НЕ обновляем LastSaveTimestamp, 
 		// чтобы не "съедать" офлайн-время. Мы сохраняем то, что было при загрузке/выходе.
