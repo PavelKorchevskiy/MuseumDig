@@ -1,0 +1,67 @@
+[gd_scene format=3 uid="uid://b8mwd7fgnhr4s"]
+
+[ext_resource type="Script" uid="uid://d032g4i13u5le" path="res://InventoryUI.cs" id="1_dsn3v"]
+
+[node name="InventoryUI" type="CanvasLayer" unique_id=1499071112]
+script = ExtResource("1_dsn3v")
+
+[node name="DimBackground" type="ColorRect" parent="." unique_id=1788810863]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7058824)
+
+[node name="MainPanel" type="PanelContainer" parent="." unique_id=1520182123]
+custom_minimum_size = Vector2(600, 500)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -250.0
+offset_right = 300.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Content" type="VBoxContainer" parent="MainPanel" unique_id=258179569]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="MainPanel/Content" unique_id=353039432]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "INVENTORY"
+horizontal_alignment = 1
+
+[node name="TotalValueLabel" type="Label" parent="MainPanel/Content" unique_id=1901855477]
+layout_mode = 2
+text = "Total value: 0 coins"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MainPanel/Content" unique_id=1279015437]
+custom_minimum_size = Vector2(0, 300)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ItemsList" type="VBoxContainer" parent="MainPanel/Content/ScrollContainer" unique_id=1138660004]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 5
+
+[node name="ButtonsRow" type="HBoxContainer" parent="MainPanel/Content" unique_id=709279565]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SellAllButton" type="Button" parent="MainPanel/Content/ButtonsRow" unique_id=1271176616]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Sell All"
+
+[node name="CloseButton" type="Button" parent="MainPanel/Content/ButtonsRow" unique_id=507378492]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Close"

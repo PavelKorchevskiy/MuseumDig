@@ -11,18 +11,22 @@ config_version=5
 [application]
 
 config/name="MuseumDig"
-run/main_scene="uid://b5v3henirr11i"
+run/main_scene="uid://4d8mutgkaisi"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
 
+GameDataLoader="*uid://2g2kb7a5vh6x"
 FossilInventory="*uid://b8yiteg684ljh"
 Wallet="*uid://cb1tch826tlv4"
 UpgradeSystem="*uid://cckkqtfujrrjk"
 MuseumSystem="*uid://hcrqh7spdcqc"
 EnergySystem="*uid://bcapwqwf71kvj"
 OfflineRewardSystem="*uid://dbg0r11knicxb"
+InventorySystem="*uid://b2128j5kneu10"
+ToolSystem="*uid://b7v5o1h5myn5r"
+LocationSystem="*uid://bd51n4lyoje0c"
 SaveSystem="*uid://b410ajj2b4wt5"
 
 [display]

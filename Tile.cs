@@ -1,78 +1,225 @@
 using Godot;
+using System.Collections.Generic;
 
 public partial class Tile : ColorRect
 {
-	public int Hp = 3;
-	public int MaxHp = 3;
+	// ===== СОСТОЯНИЕ ТАЙЛА =====
+	private TileState _state = TileState.Solid;
 	
-	public override void _Input(InputEvent @event)
-{
-	if (@event is InputEventMouseButton mouseEvent 
-		&& mouseEvent.Pressed 
-		&& mouseEvent.ButtonIndex == MouseButton.Left)
+	// HP блока (земли)
+	private int _blockHp;
+	private int _blockMaxHp;
+	
+	// Что внутри (null = ничего)
+	private ResourceDefinition _hiddenResource;
+	private int _hiddenAmount = 1;
+	
+	// Для отладки — глубина ряда (влияет на HP)
+	[Export] public int RowIndex = 0;
+	
+	// ===== ИНИЦИАЛИЗАЦИЯ =====
+	
+	public void Initialize(int row, float baseHp, float hpGrowth)
 	{
-		if (GetRect().HasPoint(mouseEvent.Position))
+		RowIndex = row;
+		_blockMaxHp = (int)(baseHp * Mathf.Pow(hpGrowth, row));
+		_blockHp = _blockMaxHp;
+		
+		// Решаем, что внутри, по таблице лута
+		_hiddenResource = RollLoot();
+		
+		UpdateVisual();
+	}
+	
+	// ===== РОЛЛ ЛУТА =====
+	
+	private ResourceDefinition RollLoot()
+{
+	// Берём текущую локацию из LocationSystem
+	var location = LocationSystem.Instance?.GetCurrentLocation();
+	if (location == null)
+	{
+		GD.PrintErr("[Tile] No current location!");
+		return null;
+	}
+	
+	// Проходим по таблице лута
+	foreach (var entry in location.LootTable)
+	{
+		if (GD.Randf() < entry.DropChance)
 		{
-			// Проверяем энергию
-			if (EnergySystem.Instance.TrySpendEnergy(1))
+			// Для минералов определяем количество
+			if (entry.Resource is MineralDefinition mineral)
 			{
-				TakeDamage(UpgradeSystem.Instance.GetPickaxeDamage());
-				GetViewport().SetInputAsHandled();
+				_hiddenAmount = GD.RandRange(mineral.MinDropAmount, mineral.MaxDropAmount);
 			}
 			else
 			{
-				GD.Print("Not enough energy!");
+				_hiddenAmount = 1;
+			}
+			return entry.Resource;
+		}
+	}
+	return null; // Ничего не выпало
+}
+	
+	// ===== ОБРАБОТКА КЛИКА =====
+	
+	public override void _Input(InputEvent @event)
+	{
+		if (@event is InputEventMouseButton mouseEvent 
+			&& mouseEvent.Pressed 
+			&& mouseEvent.ButtonIndex == MouseButton.Left)
+		{
+			if (GetRect().HasPoint(mouseEvent.Position))
+			{
+				HandleClick();
+				GetViewport().SetInputAsHandled();
 			}
 		}
 	}
+	
+	private void HandleClick()
+	{
+		// Расход энергии
+		if (!EnergySystem.Instance.TrySpendEnergy(1))
+		{
+			GD.Print("Not enough energy!");
+			return;
+		}
+		
+		switch (_state)
+		{
+			case TileState.Solid:
+				DamageBlock();
+				break;
+				
+			case TileState.Cracked:
+				// Блок треснул, но ещё не разрушен — продолжаем ломать
+				DamageBlock();
+				break;
+				
+			case TileState.Exposed:
+				// Находка видна — извлекаем или повреждаем
+				ExtractOrDamage();
+				break;
+				
+			case TileState.Extracted:
+				// Пустой тайл — ничего не делаем
+				break;
+		}
+	}
+	
+	// ===== ЛОМАЕМ БЛОК =====
+	
+	private void DamageBlock()
+{
+	// Урон от инструмента + бонус от улучшения кирки
+	int toolDamage = ToolSystem.Instance.GetDamage();
+	int upgradeBonus = UpgradeSystem.Instance.GetPickaxeDamage() - 1; // -1, т.к. базовый урон уже в инструменте
+	int damage = toolDamage + upgradeBonus;
+	
+	_blockHp -= damage;
+	
+	GD.Print($"[Tile] Hit with {ToolSystem.Instance.GetToolDisplayName()}: -{damage} HP (remaining: {_blockHp}/{_blockMaxHp})");
+	
+	// Переход в состояние Cracked при первом ударе
+	if (_state == TileState.Solid)
+	{
+		_state = TileState.Cracked;
+	}
+	
+	if (_blockHp <= 0)
+	{
+		DestroyBlock();
+	}
+	
+	UpdateVisual();
 }
 	
-	public void TakeDamage(int damage)
+	private void DestroyBlock()
 	{
-		Hp -= damage;
-		UpdateVisual();
-		GD.Print($"Tile damaged! HP: {Hp}/{MaxHp}");
+		// Монеты за разрушение блока
+		Wallet.Instance.AddCoins(UpgradeSystem.Instance.GetCoinReward());
 		
-		if (Hp <= 0)
+		if (_hiddenResource != null)
 		{
-			GD.Print("Tile destroyed!");
-			Wallet.Instance.AddCoins(UpgradeSystem.Instance.GetCoinReward());
-			TryDropFossil();
+			// Находка обнаружена!
+			_state = TileState.Exposed;
+			GD.Print($"[Tile] Found: {_hiddenResource.DisplayName}!");
+		}
+		else
+		{
+			// Пустой блок
+			_state = TileState.Extracted;
 			QueueFree();
 		}
 	}
 	
-	private void TryDropFossil()
+	// ===== ИЗВЛЕЧЕНИЕ НАХОДКИ =====
+	
+	private void ExtractOrDamage()
+{
+	// Получаем текущий инструмент из ToolSystem
+	var tool = ToolSystem.Instance.GetCurrentTool();
+	
+	Quality finalQuality = Quality.Good;
+	
+	// Если инструмент может повредить — 50% шанс повреждения
+	if (tool != null && tool.CanDamageFossil && _hiddenResource.HasQuality)
 	{
-		if (GD.Randf() < UpgradeSystem.Instance.GetFossilChance())
+		if (GD.Randf() < 0.5f)
 		{
-			DropFossil();
+			finalQuality = Quality.Damaged;
+			GD.Print($"[Tile] ⚠️ Fossil damaged by {tool.DisplayName}!");
 		}
 	}
 	
-	private void DropFossil()
-{
-	string fossilId = "dino_bone";
-	int pieceIndex = GD.RandRange(0, 3);
+	// Добавляем в инвентарь
+	InventorySystem.Instance.AddItem(_hiddenResource.Id, finalQuality, _hiddenAmount);
 	
-	bool added = FossilInventory.Instance.AddPiece(fossilId, pieceIndex);
-	
-	if (added)
-	{
-		GD.Print($"✓ New fossil piece: {fossilId} part {pieceIndex}");
-	}
-	else
-	{
-		// Дубликат — даём бонусные монеты
-		int bonusCoins = 10;
-		Wallet.Instance.AddCoins(bonusCoins);
-		GD.Print($"💰 Duplicate piece! Bonus: {bonusCoins} coins");
-	}
+	// Тайл становится пустым
+	_state = TileState.Extracted;
+	QueueFree();
 }
+	
+	// ===== ВИЗУАЛ =====
 	
 	private void UpdateVisual()
 	{
-		float ratio = (float)Hp / MaxHp;
-		Color = new Color(0.6f * ratio, 0.4f * ratio, 0.2f);
+		switch (_state)
+		{
+			case TileState.Solid:
+				Color = new Color(0.6f, 0.4f, 0.2f); // Коричневый
+				break;
+				
+			case TileState.Cracked:
+				// Чем меньше HP, тем темнее
+				float ratio = (float)_blockHp / _blockMaxHp;
+				Color = new Color(0.4f * ratio + 0.2f, 0.3f * ratio + 0.1f, 0.1f);
+				break;
+				
+			case TileState.Exposed:
+				// Цвет зависит от редкости находки
+				Color = GetRarityColor(_hiddenResource.Rarity);
+				break;
+				
+			case TileState.Extracted:
+				Color = new Color(0.3f, 0.3f, 0.3f, 0.3f); // Полупрозрачный серый
+				break;
+		}
+	}
+	
+	private Color GetRarityColor(Rarity rarity)
+	{
+		return rarity switch
+		{
+			Rarity.Common => new Color(0.7f, 0.7f, 0.7f),     // Серый
+			Rarity.Uncommon => new Color(0.3f, 0.8f, 0.3f),   // Зелёный
+			Rarity.Rare => new Color(0.3f, 0.5f, 0.9f),       // Синий
+			Rarity.Epic => new Color(0.7f, 0.3f, 0.9f),       // Фиолетовый
+			Rarity.Legendary => new Color(1.0f, 0.8f, 0.2f),  // Золотой
+			_ => new Color(1f, 1f, 1f)
+		};
 	}
 }

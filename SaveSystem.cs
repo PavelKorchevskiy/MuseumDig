@@ -64,13 +64,29 @@ public partial class SaveSystem : Node
 			data.FossilChanceLevel = UpgradeSystem.Instance.GetFossilChanceLevel();
 		}
 		if (FossilInventory.Instance != null) data.FossilPieces = FossilInventory.Instance.GetSaveData();
-		if (MuseumSystem.Instance != null) data.ExhibitedFossils = MuseumSystem.Instance.GetSaveData();
+		if (MuseumSystem.Instance != null)
+		{
+			data.ExhibitedFossils = MuseumSystem.Instance.GetSaveData();
+		}
 		if (EnergySystem.Instance != null)
 		{
 			data.CurrentEnergy = EnergySystem.Instance.GetCurrentEnergy();
 			data.MaxEnergy = EnergySystem.Instance.GetMaxEnergy();
 			data.EnergyLevel = EnergySystem.Instance.GetEnergyLevel();
 			data.RegenLevel = EnergySystem.Instance.GetRegenLevel();
+		}
+		
+		if (InventorySystem.Instance != null)
+		{
+			data.Inventory = InventorySystem.Instance.GetSaveData();
+		}
+		if (ToolSystem.Instance != null)
+		{
+			data.CurrentTool = ToolSystem.Instance.GetSaveData();
+		}
+		if (LocationSystem.Instance != null)
+		{
+			data.LocationData = LocationSystem.Instance.GetSaveData();
 		}
 		
 		// ВАЖНО: При автосохранении мы НЕ обновляем LastSaveTimestamp, 
@@ -144,6 +160,18 @@ public partial class SaveSystem : Node
 			if (EnergySystem.Instance != null) 
 			{
 				EnergySystem.Instance.SetEnergy(data.CurrentEnergy, data.MaxEnergy, data.EnergyLevel, data.RegenLevel);
+			}
+			if (InventorySystem.Instance != null)
+			{
+				InventorySystem.Instance.LoadFromSaveData(data.Inventory);
+			}
+			if (ToolSystem.Instance != null)
+			{
+				ToolSystem.Instance.LoadFromSaveData(data.CurrentTool);
+			}
+			if (LocationSystem.Instance != null)
+			{
+				LocationSystem.Instance.LoadFromSaveData(data.LocationData);
 			}
 			
 			_lastSessionTimestamp = data.LastSaveTimestamp;

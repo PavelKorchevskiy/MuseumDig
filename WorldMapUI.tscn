@@ -1,0 +1,53 @@
+[gd_scene format=3 uid="uid://b6avv4f3a4vj8"]
+
+[ext_resource type="Script" uid="uid://0dk7icuhd6x6" path="res://WorldMapUI.cs" id="1_x2rj4"]
+
+[node name="WorldMapUI" type="CanvasLayer" unique_id=827031959]
+script = ExtResource("1_x2rj4")
+
+[node name="DimBackground" type="ColorRect" parent="." unique_id=1207725631]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7058824)
+
+[node name="MainPanel" type="PanelContainer" parent="." unique_id=1788279046]
+custom_minimum_size = Vector2(700, 550)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Content" type="VBoxContainer" parent="MainPanel" unique_id=85602230]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="MainPanel/Content" unique_id=1717494154]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "WORLD MAP"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MainPanel/Content" unique_id=295891387]
+custom_minimum_size = Vector2(0, 350)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="LocationsList" type="VBoxContainer" parent="MainPanel/Content/ScrollContainer" unique_id=1367655572]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="CloseButton" type="Button" parent="MainPanel/Content" unique_id=63844839]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "Close"

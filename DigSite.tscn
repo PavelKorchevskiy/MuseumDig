@@ -3,8 +3,9 @@
 [ext_resource type="Script" uid="uid://h8ur6180uis6" path="res://DigSite.cs" id="1_tctey"]
 [ext_resource type="Script" uid="uid://dhayi3t6stxud" path="res://FossilUI.cs" id="2_rr7af"]
 [ext_resource type="PackedScene" uid="uid://tj6bqrwlncs3" path="res://ShopUI.tscn" id="3_w7n5d"]
-[ext_resource type="PackedScene" uid="uid://d3pb4cccnffni" path="res://MuseumUI.tscn" id="4_57fiv"]
 [ext_resource type="PackedScene" uid="uid://1pn2tmbbjiaq" path="res://OfflineRewardUI.tscn" id="5_b2b1i"]
+[ext_resource type="PackedScene" uid="uid://b8mwd7fgnhr4s" path="res://InventoryUI.tscn" id="6_qe2mw"]
+[ext_resource type="PackedScene" uid="uid://b6avv4f3a4vj8" path="res://WorldMapUI.tscn" id="7_m8yj4"]
 
 [node name="DigSite" type="Node2D" unique_id=351305657]
 script = ExtResource("1_tctey")
@@ -13,9 +14,6 @@ script = ExtResource("1_tctey")
 script = ExtResource("2_rr7af")
 
 [node name="Shop" parent="UI" unique_id=270077110 instance=ExtResource("3_w7n5d")]
-visible = false
-
-[node name="Museum" parent="UI" unique_id=319060316 instance=ExtResource("4_57fiv")]
 visible = false
 
 [node name="Background" type="PanelContainer" parent="UI" unique_id=1238643787]
@@ -63,18 +61,54 @@ theme_override_constants/separation = 10
 layout_mode = 2
 text = "Shop"
 
-[node name="MuseumButton" type="Button" parent="UI/Background/MainContainer/ButtonsSection" unique_id=1197054021]
-layout_mode = 2
-text = "Museum"
-
 [node name="SaveQuitButton" type="Button" parent="UI/Background/MainContainer/ButtonsSection" unique_id=14095965]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Save & Quit"
 
+[node name="InventoryButton" type="Button" parent="UI/Background/MainContainer/ButtonsSection" unique_id=195242326]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Inventory"
+
+[node name="WorldMapButton" type="Button" parent="UI/Background/MainContainer/ButtonsSection" unique_id=1649945028]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "World Map"
+
+[node name="BackToMuseumButton" type="Button" parent="UI/Background/MainContainer/ButtonsSection" unique_id=1115153455]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "← Back to Museum"
+
 [node name="Spacer" type="Control" parent="UI/Background/MainContainer" unique_id=845834354]
 layout_mode = 2
 size_flags_vertical = 3
 
+[node name="ToolsSection" type="HBoxContainer" parent="UI/Background/MainContainer" unique_id=1872604748]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="ToolsLabel" type="Label" parent="UI/Background/MainContainer/ToolsSection" unique_id=1816030625]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+text = "Tools:"
+
+[node name="ShovelButton" type="Button" parent="UI/Background/MainContainer/ToolsSection" unique_id=1480075958]
+custom_minimum_size = Vector2(100, 35)
+layout_mode = 2
+text = "🔨 Shovel"
+
+[node name="PickaxeButton" type="Button" parent="UI/Background/MainContainer/ToolsSection" unique_id=756734752]
+custom_minimum_size = Vector2(100, 35)
+layout_mode = 2
+text = "⛏️ Pickaxe"
+
 [node name="OfflineReward" parent="UI" unique_id=1611821439 instance=ExtResource("5_b2b1i")]
+visible = false
+
+[node name="Inventory" parent="UI" unique_id=1499071112 instance=ExtResource("6_qe2mw")]
+visible = false
+
+[node name="WorldMap" parent="UI" unique_id=827031959 instance=ExtResource("7_m8yj4")]
 visible = false

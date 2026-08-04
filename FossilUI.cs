@@ -8,11 +8,16 @@ public partial class FossilUI : CanvasLayer
 	private Label _energyLabel;
 	private ProgressBar _energyBar;
 	private Button _shopButton;
-	private Button _museumButton;
 	private CanvasLayer _shop;
-	private CanvasLayer _museum;
 	private CanvasLayer _offlineReward;
 	private Button _saveQuitButton;
+	private CanvasLayer _inventory;
+	private Button _inventoryButton;
+	private Button _shovelButton;
+	private Button _pickaxeButton;
+	private CanvasLayer _worldMap;
+	private Button _worldMapButton;
+	private Button _backToMuseumButton;
 	
 	public override void _Ready()
 {
@@ -52,10 +57,21 @@ public partial class FossilUI : CanvasLayer
 	_energyLabel = GetNodeOrNull<Label>("Background/MainContainer/EnergySection/EnergyLabel");
 	_energyBar = GetNodeOrNull<ProgressBar>("Background/MainContainer/EnergySection/EnergyBar");
 	_shopButton = GetNodeOrNull<Button>("Background/MainContainer/ButtonsSection/ShopButton");
-	_museumButton = GetNodeOrNull<Button>("Background/MainContainer/ButtonsSection/MuseumButton");
 	_shop = GetNodeOrNull<CanvasLayer>("Shop");
-	_museum = GetNodeOrNull<CanvasLayer>("Museum");
+	_inventoryButton = GetNodeOrNull<Button>("Background/MainContainer/ButtonsSection/InventoryButton");
+	_inventory = GetNodeOrNull<CanvasLayer>("Inventory");
+	if (_inventoryButton != null) _inventoryButton.Pressed += OnInventoryPressed;
 	_offlineReward = GetNodeOrNull<CanvasLayer>("OfflineReward");
+	_shovelButton = GetNodeOrNull<Button>("Background/MainContainer/ToolsSection/ShovelButton");
+	_pickaxeButton = GetNodeOrNull<Button>("Background/MainContainer/ToolsSection/PickaxeButton");
+	_backToMuseumButton = GetNodeOrNull<Button>("Background/MainContainer/ButtonsSection/BackToMuseumButton");
+	if (_backToMuseumButton != null) _backToMuseumButton.Pressed += OnBackToMuseumPressed;
+
+	if (_shovelButton != null) _shovelButton.Pressed += OnShovelPressed;
+	if (_pickaxeButton != null) _pickaxeButton.Pressed += OnPickaxePressed;
+	_worldMapButton = GetNodeOrNull<Button>("Background/MainContainer/ButtonsSection/WorldMapButton");
+	_worldMap = GetNodeOrNull<CanvasLayer>("WorldMap");
+	if (_worldMapButton != null) _worldMapButton.Pressed += OnWorldMapPressed;
 	
 	if (_offlineReward == null)
 	{
@@ -84,13 +100,36 @@ public partial class FossilUI : CanvasLayer
 	if (_energyLabel == null) GD.PrintErr("⚠️ EnergyLabel not found!");
 	if (_energyBar == null) GD.PrintErr("⚠️ EnergyBar not found!");
 	if (_shopButton == null) GD.PrintErr("⚠️ ShopButton not found!");
-	if (_museumButton == null) GD.PrintErr("⚠️ MuseumButton not found!");
 	if (_shop == null) GD.PrintErr("⚠️ Shop not found!");
-	if (_museum == null) GD.PrintErr("⚠️ Museum not found!");
 	
 	// ===== ПОДПИСКА =====
 	if (_shopButton != null) _shopButton.Pressed += OnShopPressed;
-	if (_museumButton != null) _museumButton.Pressed += OnMuseumPressed;
+
+// ===== ТЕСТ InventorySystem =====
+GD.Print("=== InventorySystem TEST ===");
+
+// 1. Добавляем 2 хороших куска золота
+InventorySystem.Instance.AddItem("gold_nugget", Quality.Good, 2);
+
+// 2. Добавляем 1 хороший и 1 повреждённый череп трицератопса
+InventorySystem.Instance.AddItem("triceratops_skull", Quality.Good, 1);
+InventorySystem.Instance.AddItem("triceratops_skull", Quality.Damaged, 1);
+
+// 3. Проверяем общее количество черепов (должно быть 2)
+GD.Print($"Total triceratops_skull: {InventorySystem.Instance.GetTotalAmount("triceratops_skull")}");
+
+// 4. Проверяем продажу (продаём 1 хороший череп)
+int earned = InventorySystem.Instance.SellItem("triceratops_skull", Quality.Good, 1);
+GD.Print($"Sold 1 Good Skull for {earned} coins. Wallet now: {Wallet.Instance.GetCoins()}");
+
+// 5. Выводим весь инвентарь
+GD.Print("--- Current Inventory ---");
+foreach (var item in InventorySystem.Instance.GetAllItems())
+{
+	var res = GameData.GetResource(item.ResourceId);
+	GD.Print($"  {res.DisplayName} x{item.Amount} ({item.Quality})");
+}
+GD.Print("=========================");
 
 	_saveQuitButton = GetNodeOrNull<Button>("Background/MainContainer/ButtonsSection/SaveQuitButton");
 if (_saveQuitButton != null) 
@@ -107,19 +146,13 @@ if (_saveQuitButton != null)
 		}
 	}
 	
-	private void OnMuseumPressed()
-	{
-		if (_museum != null)
-		{
-			_museum.Visible = true;
-		}
-	}
 	
 	public override void _Process(double delta)
 {
 	UpdateFossilDisplay();
 	UpdateCoinsDisplay();
 	UpdateEnergyDisplay();
+	UpdateToolButtons();
 	CheckOfflineReward();
 }
 
@@ -198,6 +231,73 @@ private void OnSaveQuitPressed()
 {
 	GD.Print("Manual save and quit triggered!");
 	SaveSystem.Instance.ForceSaveAndQuit();
+}
+
+private void OnInventoryPressed()
+{
+	if (_inventory != null)
+	{
+		_inventory.Visible = true;
+	}
+}
+private void OnShovelPressed()
+{
+	ToolSystem.Instance.SetCurrentTool(ToolType.Shovel);
+	UpdateToolButtons();
+}
+
+private void OnPickaxePressed()
+{
+	ToolSystem.Instance.SetCurrentTool(ToolType.Pickaxe);
+	UpdateToolButtons();
+}
+
+private void UpdateToolButtons()
+{
+	if (ToolSystem.Instance == null) return;
+	
+	var currentTool = ToolSystem.Instance.GetCurrentToolType();
+	
+	if (_shovelButton != null)
+	{
+		// Подсвечиваем активный инструмент
+		_shovelButton.Modulate = currentTool == ToolType.Shovel 
+			? new Color(1.2f, 1.2f, 1.2f)  // Ярче
+			: new Color(0.7f, 0.7f, 0.7f); // Тусклее
+		
+		// Добавляем индикатор выбора
+		_shovelButton.Text = currentTool == ToolType.Shovel 
+			? "▶ 🔨 Shovel" 
+			: "🔨 Shovel";
+	}
+	
+	if (_pickaxeButton != null)
+	{
+		_pickaxeButton.Modulate = currentTool == ToolType.Pickaxe 
+			? new Color(1.2f, 1.2f, 1.2f) 
+			: new Color(0.7f, 0.7f, 0.7f);
+		
+		_pickaxeButton.Text = currentTool == ToolType.Pickaxe 
+			? "▶ ⛏️ Pickaxe" 
+			: "⛏️ Pickaxe";
+	}
+}
+
+private void OnWorldMapPressed()
+{
+	if (_worldMap != null)
+	{
+		_worldMap.Visible = true;
+	}
+}
+
+private void OnBackToMuseumPressed()
+{
+	// Сохраняем перед выходом
+	SaveSystem.Instance?.SaveGame();
+	
+	// Возвращаемся в музей
+	GetTree().ChangeSceneToFile("res://Museum.tscn");
 }
 
 private T FindChildRecursive<T>(Node parent, string name) where T : Node
