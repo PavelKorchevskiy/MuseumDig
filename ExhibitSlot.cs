@@ -8,7 +8,7 @@ public partial class ExhibitSlot : Node2D
     private Label _label;
     
     private string _exhibitedResourceId = null;
-    private Quality _exhibitedQuality = Quality.Common;
+    private Quality _exhibitedQuality = Quality.Good;
     private bool _isOccupied = false;
     
     public override void _Ready()
@@ -31,7 +31,7 @@ public partial class ExhibitSlot : Node2D
     public void Clear()
     {
         _exhibitedResourceId = null;
-        _exhibitedQuality = Quality.Common;
+        _exhibitedQuality = Quality.Good;
         _isOccupied = false;
         UpdateVisuals();
     }
@@ -64,11 +64,8 @@ public partial class ExhibitSlot : Node2D
     {
         return quality switch
         {
-            Quality.Common => new Color(0.8f, 0.8f, 0.8f),
-            Quality.Uncommon => new Color(0.3f, 1f, 0.3f),
-            Quality.Rare => new Color(0.3f, 0.6f, 1f),
-            Quality.Epic => new Color(0.8f, 0.3f, 1f),
-            Quality.Legendary => new Color(1f, 0.8f, 0.2f),
+            Quality.Damaged => new Color(0.6f, 0.3f, 0.3f),  // Красноватый для поврежденного
+            Quality.Good => new Color(0.8f, 0.8f, 0.8f),     // Серый для хорошего
             _ => new Color(0.8f, 0.8f, 0.8f)
         };
     }
@@ -154,14 +151,8 @@ public partial class ExhibitSlot : Node2D
     {
         // Создаём простое всплывающее меню с доступными предметами
         var popup = new PopupPanel();
-        popup.SetAnchorsPreset(Control.LayoutPreset.Center);
-        popup.OffsetLeft = -200;
-        popup.OffsetTop = -150;
-        popup.OffsetRight = 200;
-        popup.OffsetBottom = 150;
         
         var vbox = new VBoxContainer();
-        vbox.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         vbox.OffsetLeft = 20;
         vbox.OffsetTop = 20;
         vbox.OffsetRight = -20;
@@ -201,7 +192,7 @@ public partial class ExhibitSlot : Node2D
         
         popup.AddChild(vbox);
         GetTree().Root.AddChild(popup);
-        popup.PopupCentered();
+        popup.PopupCentered(new Vector2(400, 300));
     }
     
     private void OnItemSelected(PopupPanel popup, string resourceId, Quality quality)
