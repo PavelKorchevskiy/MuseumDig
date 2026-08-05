@@ -160,4 +160,25 @@ public partial class InventorySystem : Node
 	}
 	GD.Print($"[Inventory] Loaded {_items.Count} unique item stacks");
 }
+
+    // ===== УДАЛЕНИЕ ПРЕДМЕТА (для выставки в музее) =====
+    public void RemoveItem(string resourceId, Quality quality, int amount = 1)
+    {
+        string key = GetItemKey(resourceId, quality);
+        
+        if (!_items.ContainsKey(key) || _items[key].Amount < amount)
+        {
+            GD.PrintErr($"[Inventory] Cannot remove: not enough {resourceId} ({quality})");
+            return;
+        }
+        
+        _items[key].Amount -= amount;
+        if (_items[key].Amount <= 0)
+        {
+            _items.Remove(key);
+        }
+        
+        SaveSystem.Instance?.MarkDirty();
+        GD.Print($"[Inventory] Removed {amount}x {resourceId} ({quality})");
+    }
 }
