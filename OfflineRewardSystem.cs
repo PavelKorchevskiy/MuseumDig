@@ -107,4 +107,8 @@ public partial class OfflineRewardSystem : Node
 		long minutes = (seconds % 3600) / 60;
 		return $"{hours}h {minutes}m";
 	}
+
+	// ===== ПУБЛИЧНЫЕ СВОЙСТВА ДЛЯ UI =====
+public int OfflineCoins => _offlineCoins;
+public int OfflineEnergy => _offlineEnergy;
 }

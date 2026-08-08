@@ -112,30 +112,36 @@ public partial class Tile : ColorRect
 	
 	// ===== ЛОМАЕМ БЛОК =====
 	
-	private void DamageBlock()
-{
-	// Урон от инструмента + бонус от улучшения кирки
-	int toolDamage = ToolSystem.Instance.GetDamage();
-	int upgradeBonus = UpgradeSystem.Instance.GetPickaxeDamage() - 1; // -1, т.к. базовый урон уже в инструменте
-	int damage = toolDamage + upgradeBonus;
-	
-	_blockHp -= damage;
-	
-	GD.Print($"[Tile] Hit with {ToolSystem.Instance.GetToolDisplayName()}: -{damage} HP (remaining: {_blockHp}/{_blockMaxHp})");
-	
-	// Переход в состояние Cracked при первом ударе
-	if (_state == TileState.Solid)
+		private void DamageBlock()
 	{
-		_state = TileState.Cracked;
+		int toolDamage = ToolSystem.Instance.GetDamage();
+		int upgradeBonus = UpgradeSystem.Instance.GetPickaxeDamage() - 1;
+		int damage = toolDamage + upgradeBonus;
+		
+		_blockHp -= damage;
+		
+		// === ДОБАВЛЯЕМ ВИЗУАЛЬНУЮ СОЧНОСТЬ ===
+		Shake(); // Трясем плитку
+		
+		if (_blockHp <= 0)
+		{
+			SpawnFloatingText("Broken!", Colors.White);
+			DestroyBlock();
+		}
+		else
+		{
+			// Показываем остаток HP или просто визуальный фидбек
+			SpawnFloatingText($"-{damage}", new Color(1f, 0.8f, 0.2f)); // Желтоватый текст
+		}
+		
+		// Переход в состояние Cracked при первом ударе
+		if (_state == TileState.Solid)
+		{
+			_state = TileState.Cracked;
+		}
+		
+		UpdateVisual();
 	}
-	
-	if (_blockHp <= 0)
-	{
-		DestroyBlock();
-	}
-	
-	UpdateVisual();
-}
 	
 	private void DestroyBlock()
 	{
@@ -158,30 +164,28 @@ public partial class Tile : ColorRect
 	
 	// ===== ИЗВЛЕЧЕНИЕ НАХОДКИ =====
 	
-	private void ExtractOrDamage()
-{
-	// Получаем текущий инструмент из ToolSystem
-	var tool = ToolSystem.Instance.GetCurrentTool();
-	
-	Quality finalQuality = Quality.Good;
-	
-	// Если инструмент может повредить — 50% шанс повреждения
-	if (tool != null && tool.CanDamageFossil && _hiddenResource.HasQuality)
+		private void ExtractOrDamage()
 	{
-		if (GD.Randf() < 0.5f)
+		var tool = ToolSystem.Instance.GetCurrentTool();
+		Quality finalQuality = Quality.Good;
+		
+		if (tool != null && tool.CanDamageFossil && _hiddenResource.HasQuality)
 		{
-			finalQuality = Quality.Damaged;
-			GD.Print($"[Tile] ⚠️ Fossil damaged by {tool.DisplayName}!");
+			if (GD.Randf() < UpgradeSystem.Instance.GetToolDamageChance(ToolType.Shovel)) // Используем реальный шанс из UpgradeSystem!
+			{
+				finalQuality = Quality.Damaged;
+				SpawnFloatingText("Damaged!", new Color(1f, 0.3f, 0.3f)); // Красный текст
+			}
 		}
+		
+		InventorySystem.Instance.AddItem(_hiddenResource.Id, finalQuality, _hiddenAmount);
+		
+		// Показываем, что нашли
+		SpawnFloatingText($"+1 {_hiddenResource.DisplayName}", new Color(0.3f, 1f, 0.3f)); // Зеленый текст
+		
+		_state = TileState.Extracted;
+		QueueFree();
 	}
-	
-	// Добавляем в инвентарь
-	InventorySystem.Instance.AddItem(_hiddenResource.Id, finalQuality, _hiddenAmount);
-	
-	// Тайл становится пустым
-	_state = TileState.Extracted;
-	QueueFree();
-}
 	
 	// ===== ВИЗУАЛ =====
 	
@@ -222,4 +226,54 @@ public partial class Tile : ColorRect
 			_ => new Color(1f, 1f, 1f)
 		};
 	}
+
+		// ===== ВИЗУАЛЬНЫЕ ЭФФЕКТЫ (Future-proof) =====
+	
+	// 1. Тряска плитки при ударе
+	private void Shake()
+	{
+		var tween = CreateTween();
+		
+		// Явное приведение к float, чтобы исключить ошибку CS1503
+		float shakeX = (float)GD.RandRange(-4.0f, 4.0f);
+		float shakeY = (float)GD.RandRange(-4.0f, 4.0f);
+		Vector2 shakeOffset = new Vector2(shakeX, shakeY);
+		
+		tween.TweenProperty(this, "position", Position + shakeOffset, 0.05f);
+		tween.TweenProperty(this, "position", Position, 0.05f);
+	}
+
+	// 2. Всплывающий текст над плиткой
+	private void SpawnFloatingText(string text, Color textColor)
+{
+    var label = new Label();
+    label.Text = text;
+    label.AddThemeFontSizeOverride("font_size", 16);
+    label.AddThemeColorOverride("font_color", textColor);
+    label.HorizontalAlignment = HorizontalAlignment.Center;
+    
+    // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Label не перехватывает клики
+    label.MouseFilter = Control.MouseFilterEnum.Ignore;
+    
+    // Добавляем в CanvasLayer (UI), а не в родителя плитки, 
+    // чтобы текст был поверх всех 2D-объектов и не мешал кнопкам
+    var fossilUI = GetTree().Root.GetNodeOrNull<CanvasLayer>("DigSite/FossilUI");
+    if (fossilUI != null)
+    {
+        fossilUI.AddChild(label);
+        label.GlobalPosition = GlobalPosition + new Vector2(0f, -20f);
+    }
+    else
+    {
+        // Fallback: если не нашли FossilUI, добавляем в родителя
+        GetParent().AddChild(label);
+        label.GlobalPosition = GlobalPosition + new Vector2(0f, -20f);
+    }
+    
+    var tween = CreateTween();
+    tween.Parallel().TweenProperty(label, "modulate:a", 0.0f, 0.8f);
+    tween.Parallel().TweenProperty(label, "position:y", (float)(label.Position.Y - 30f), 0.8f);
+    
+    tween.TweenCallback(Callable.From(() => label.QueueFree()));
+}
 }

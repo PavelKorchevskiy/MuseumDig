@@ -60,14 +60,15 @@ public partial class SaveSystem : Node
 		if (UpgradeSystem.Instance != null)
 		{
 			data.PickaxeLevel = UpgradeSystem.Instance.GetPickaxeLevel();
+			data.ShovelLevel = UpgradeSystem.Instance.GetShovelLevel();
 			data.CoinBonusLevel = UpgradeSystem.Instance.GetCoinBonusLevel();
 			data.FossilChanceLevel = UpgradeSystem.Instance.GetFossilChanceLevel();
 		}
 		if (FossilInventory.Instance != null) data.FossilPieces = FossilInventory.Instance.GetSaveData();
 		if (MuseumSystem.Instance != null)
-		{
-			data.ExhibitedFossils = MuseumSystem.Instance.GetSaveData();
-		}
+{
+    data.MuseumData = MuseumSystem.Instance.GetSaveData();
+}
 		if (EnergySystem.Instance != null)
 		{
 			data.CurrentEnergy = EnergySystem.Instance.GetCurrentEnergy();
@@ -156,7 +157,10 @@ public partial class SaveSystem : Node
 			if (Wallet.Instance != null) Wallet.Instance.SetCoins(data.Coins);
 			if (UpgradeSystem.Instance != null) UpgradeSystem.Instance.LoadFromSaveData(data);
 			if (FossilInventory.Instance != null) FossilInventory.Instance.LoadFromSaveData(data.FossilPieces);
-			if (MuseumSystem.Instance != null) MuseumSystem.Instance.LoadFromSaveData(data.ExhibitedFossils);
+			if (data.MuseumData != null)
+{
+    MuseumSystem.Instance.LoadFromSaveData(data.MuseumData);
+}
 			if (EnergySystem.Instance != null) 
 			{
 				EnergySystem.Instance.SetEnergy(data.CurrentEnergy, data.MaxEnergy, data.EnergyLevel, data.RegenLevel);
@@ -199,4 +203,11 @@ public partial class SaveSystem : Node
 		}
 		GD.Print("Save file deleted");
 	}
+
+// ===== ГЕТТЕР ДЛЯ ВРЕМЕНИ ПОСЛЕДНЕГО СОХРАНЕНИЯ =====
+	public long GetLastSaveTimestamp()
+	{
+		return _lastSessionTimestamp;
+	}
+	
 }

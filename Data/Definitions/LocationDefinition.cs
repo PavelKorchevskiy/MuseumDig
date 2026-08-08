@@ -1,5 +1,6 @@
 using Godot;
 using Godot.Collections;
+using System.Collections.Generic;
 
 [GlobalClass]
 public partial class LocationDefinition : Resource
@@ -21,7 +22,7 @@ public partial class LocationDefinition : Resource
 	[Export] public float TileHpGrowthPerRow = 1.15f;
 	
 	// Таблица лута
-	public Array<LootEntry> LootTable = new Array<LootEntry>();
+	public List<LootEntry> LootTable = new List<LootEntry>();
 	
 	// Уникальная находка локации (опционально)
 	[Export] public FossilDefinition UniqueFossil;

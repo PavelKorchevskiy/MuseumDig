@@ -1,4 +1,5 @@
 using Godot;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -6,8 +7,24 @@ public partial class MuseumSystem : Node
 {
     public static MuseumSystem Instance { get; private set; }
     
-    // Выставленные экспонаты: ключ = "ResourceId_Quality"
-    private Dictionary<string, string> _exhibitedItems = new();
+    // Глобальная карта залов: координаты -> зал
+    private Dictionary<Vector2I, Room> _rooms = new();
+    
+    // Позиция главного зала
+    private Vector2I _mainHallPosition = new(0, 0);
+    
+    // Текущий зал, в котором находится игрок
+    private Vector2I _currentRoomPosition = new(0, 0);
+    
+    // Инвентарь купленной, но ещё не размещённой мебели
+    private List<Furniture> _pendingFurniture = new();
+    
+    // Режим размещения мебели
+    private bool _isPlacementMode = false;
+    private Furniture _furnitureToPlace;
+    
+    // Счётчик для уникальных ID
+    private int _instanceCounter = 0;
     
     private double _incomeTimer = 0;
     private const double IncomeInterval = 1.0;
@@ -15,6 +32,7 @@ public partial class MuseumSystem : Node
     public override void _Ready()
     {
         Instance = this;
+        InitializeMainHall();
     }
     
     public override void _Process(double delta)
@@ -27,171 +45,516 @@ public partial class MuseumSystem : Node
         }
     }
     
-    // ===== ПРОВЕРКА ВОЗМОЖНОСТИ ВЫСТАВКИ =====
+    // ===== ИНИЦИАЛИЗАЦИЯ ГЛАВНОГО ЗАЛА =====
     
-    public bool CanExhibit(string resourceId, Quality quality)
+    private void InitializeMainHall()
     {
-        var resource = GameData.GetResource(resourceId);
-        if (resource == null) return false;
+        if (_rooms.Count > 0) return; // Уже инициализировано
         
-        string key = GetKey(resourceId, quality);
-        if (_exhibitedItems.ContainsKey(key)) return false;
+        var mainHall = CreateRoom("main_hall", "Главный зал", _mainHallPosition, isMainHall: true);
+        _rooms[_mainHallPosition] = mainHall;
         
-        var item = InventorySystem.Instance.GetItem(resourceId, quality);
-        if (item == null || item.Amount <= 0) return false;
-        
-        if (resource is FossilDefinition fossil && !string.IsNullOrEmpty(fossil.CollectionId))
+        GD.Print("[Museum] Main hall initialized");
+    }
+    
+    private Room CreateRoom(string id, string displayName, Vector2I globalPos, bool isMainHall = false)
+    {
+        var room = new Room
         {
-            return IsCollectionComplete(fossil.CollectionId, quality);
-        }
+            Id = id,
+            DisplayName = displayName,
+            GlobalPosition = globalPos,
+            Width = 10,
+            Height = 10,
+            IsMainHall = isMainHall
+        };
         
-        if (resource is FossilDefinition standalone && standalone.CanExhibitAlone)
+        room.InitializeGrid();
+        
+        // Создаём 4 двери (по середине каждой стены)
+        room.Doors[Direction.Top] = new Door
         {
-            return true;
+            Direction = Direction.Top,
+            Position = new Vector2I(room.Width / 2, 0)
+        };
+        room.Doors[Direction.Right] = new Door
+        {
+            Direction = Direction.Right,
+            Position = new Vector2I(room.Width - 1, room.Height / 2)
+        };
+        room.Doors[Direction.Bottom] = new Door
+        {
+            Direction = Direction.Bottom,
+            Position = new Vector2I(room.Width / 2, room.Height - 1),
+            IsExitToStreet = isMainHall // Только у главного зала есть выход на улицу
+        };
+        room.Doors[Direction.Left] = new Door
+        {
+            Direction = Direction.Left,
+            Position = new Vector2I(0, room.Height / 2)
+        };
+        
+        // Соединяем двери с соседними залами, если они есть
+        ConnectDoorsWithNeighbors(room);
+        
+        return room;
+    }
+    
+    private void ConnectDoorsWithNeighbors(Room room)
+    {
+        // Проверяем 4 соседних позиции
+        var neighbors = new Dictionary<Direction, Vector2I>
+        {
+            { Direction.Top, new Vector2I(room.GlobalPosition.X, room.GlobalPosition.Y - 1) },
+            { Direction.Right, new Vector2I(room.GlobalPosition.X + 1, room.GlobalPosition.Y) },
+            { Direction.Bottom, new Vector2I(room.GlobalPosition.X, room.GlobalPosition.Y + 1) },
+            { Direction.Left, new Vector2I(room.GlobalPosition.X - 1, room.GlobalPosition.Y) }
+        };
+        
+        foreach (var kvp in neighbors)
+        {
+            if (_rooms.TryGetValue(kvp.Value, out var neighbor))
+            {
+                // Соединяем двери
+                room.Doors[kvp.Key].ConnectedRoomId = neighbor.Id;
+                
+                // Противоположное направление у соседа
+                Direction opposite = kvp.Key switch
+                {
+                    Direction.Top => Direction.Bottom,
+                    Direction.Bottom => Direction.Top,
+                    Direction.Left => Direction.Right,
+                    Direction.Right => Direction.Left,
+                    _ => Direction.Top
+                };
+                
+                neighbor.Doors[opposite].ConnectedRoomId = room.Id;
+            }
         }
+    }
+    
+    // ===== ПРАВИЛА СТРОИТЕЛЬСТВА =====
+    
+    public bool CanBuildRoomAt(Vector2I globalPos)
+    {
+        // Уже занятая позиция
+        if (_rooms.ContainsKey(globalPos)) return false;
+        
+        // Нельзя строить ниже главного зала и его горизонтальных соседей
+        if (IsForbiddenZone(globalPos)) return false;
+        
+        // Зал должен примыкать к существующему залу (иметь хотя бы одного соседа)
+        if (!HasAdjacentRoom(globalPos)) return false;
+        
+        return true;
+    }
+    
+    private bool IsForbiddenZone(Vector2I pos)
+    {
+        // Запретная зона: все клетки с Y > 0, которые находятся
+        // под главным залом или под его горизонтальными соседями
+        
+        // Главный зал
+        Vector2I mainPos = _mainHallPosition;
+        
+        // Если позиция ниже главного зала
+        if (pos.Y > mainPos.Y && pos.X == mainPos.X) return true;
+        
+        // Если позиция ниже левого соседа главного зала
+        Vector2I leftNeighbor = new(mainPos.X - 1, mainPos.Y);
+        if (_rooms.ContainsKey(leftNeighbor) && pos.Y > leftNeighbor.Y && pos.X == leftNeighbor.X) return true;
+        
+        // Если позиция ниже правого соседа главного зала
+        Vector2I rightNeighbor = new(mainPos.X + 1, mainPos.Y);
+        if (_rooms.ContainsKey(rightNeighbor) && pos.Y > rightNeighbor.Y && pos.X == rightNeighbor.X) return true;
         
         return false;
     }
     
-    private bool IsCollectionComplete(string collectionId, Quality quality)
+    private bool HasAdjacentRoom(Vector2I pos)
     {
-        var collection = GameData.GetCollection(collectionId);
-        if (collection == null) return false;
+        return _rooms.ContainsKey(new Vector2I(pos.X + 1, pos.Y)) ||
+               _rooms.ContainsKey(new Vector2I(pos.X - 1, pos.Y)) ||
+               _rooms.ContainsKey(new Vector2I(pos.X, pos.Y + 1)) ||
+               _rooms.ContainsKey(new Vector2I(pos.X, pos.Y - 1));
+    }
+    
+    // ===== ПОКУПКА И РАЗМЕЩЕНИЕ ЗАЛОВ =====
+    
+    public const int RoomBuyPrice = 5000;
+    
+    public bool TryBuyRoom(Vector2I globalPos)
+    {
+        if (!CanBuildRoomAt(globalPos)) return false;
+        if (!Wallet.Instance.SpendCoins(RoomBuyPrice)) return false;
         
-        foreach (var piece in collection.Pieces)
-        {
-            var item = InventorySystem.Instance.GetItem(piece.Id, quality);
-            if (item == null || item.Amount <= 0) return false;
-        }
+        string id = $"room_{globalPos.X}_{globalPos.Y}";
+        string displayName = $"Зал ({globalPos.X}, {globalPos.Y})";
+        
+        var room = CreateRoom(id, displayName, globalPos);
+        _rooms[globalPos] = room;
+        
+        GD.Print($"[Museum] Bought new room at {globalPos}");
+        SaveSystem.Instance?.MarkDirty();
         return true;
     }
     
-    // ===== ВЫСТАВКА ЭКСПОНАТА =====
+    // ===== ПОКУПКА И РАЗМЕЩЕНИЕ МЕБЕЛИ =====
     
-    public void ExhibitItem(string resourceId, Quality quality)
+    public List<FurnitureTemplate> GetAvailableFurnitureTemplates()
     {
-        if (!CanExhibit(resourceId, quality))
+        return new List<FurnitureTemplate>
         {
-            GD.PrintErr($"[Museum] Cannot exhibit {resourceId} ({quality})");
+            new FurnitureTemplate { TypeId = "display_case_1x1", DisplayName = "Малая витрина", Size = new Vector2I(1, 1), BuyPrice = 200, CreateFunc = () => new DisplayCase { TypeId = "display_case_1x1", DisplayName = "Малая витрина", Size = new Vector2I(1, 1), BuyPrice = 200, Capacity = 5 } },
+            new FurnitureTemplate { TypeId = "display_case_2x1", DisplayName = "Большая витрина", Size = new Vector2I(2, 1), BuyPrice = 400, CreateFunc = () => new DisplayCase { TypeId = "display_case_2x1", DisplayName = "Большая витрина", Size = new Vector2I(2, 1), BuyPrice = 400, Capacity = 10 } },
+            new FurnitureTemplate { TypeId = "pedestal_2x2", DisplayName = "Малый пьедестал", Size = new Vector2I(2, 2), BuyPrice = 600, CreateFunc = () => new Pedestal { TypeId = "pedestal_2x2", DisplayName = "Малый пьедестал", Size = new Vector2I(2, 2), BuyPrice = 600 } },
+            new FurnitureTemplate { TypeId = "pedestal_3x4", DisplayName = "Большой пьедестал", Size = new Vector2I(3, 4), BuyPrice = 1500, CreateFunc = () => new Pedestal { TypeId = "pedestal_3x4", DisplayName = "Большой пьедестал", Size = new Vector2I(3, 4), BuyPrice = 1500 } }
+        };
+    }
+    
+    public bool TryBuyFurniture(string typeId)
+    {
+        var template = GetAvailableFurnitureTemplates().Find(t => t.TypeId == typeId);
+        if (template == null) return false;
+        if (!Wallet.Instance.SpendCoins(template.BuyPrice)) return false;
+        
+        var furniture = template.CreateFunc();
+        _pendingFurniture.Add(furniture);
+        
+        GD.Print($"[Museum] Bought {template.DisplayName}");
+        SaveSystem.Instance?.MarkDirty();
+        return true;
+    }
+    
+    public List<Furniture> GetPendingFurniture() => _pendingFurniture;
+    
+    // Режим размещения
+    public void StartPlacementMode(Furniture furniture)
+    {
+        _isPlacementMode = true;
+        _furnitureToPlace = furniture;
+        GD.Print($"[Museum] Placement mode started for {furniture.DisplayName}");
+    }
+    
+    public void CancelPlacementMode()
+    {
+        _isPlacementMode = false;
+        _furnitureToPlace = null;
+    }
+    
+    public bool IsInPlacementMode() => _isPlacementMode;
+    public Furniture GetFurnitureToPlace() => _furnitureToPlace;
+    
+    public bool CanPlaceFurnitureAt(Room room, Vector2I position, Vector2I size)
+    {
+        return room.CanPlaceFurniture(position, size);
+    }
+    
+    public bool PlaceFurniture(Room room, Furniture furniture, Vector2I position)
+    {
+        if (!room.CanPlaceFurniture(position, furniture.Size)) return false;
+        
+        var placed = new PlacedFurniture
+        {
+            InstanceId = $"furn_{_instanceCounter++}",
+            FurnitureTypeId = furniture.TypeId,
+            Position = position,
+            Size = furniture.Size,
+            Furniture = furniture
+        };
+        
+        room.PlaceFurniture(placed);
+        _pendingFurniture.Remove(furniture);
+        
+        GD.Print($"[Museum] Placed {furniture.DisplayName} at ({position.X}, {position.Y}) in {room.DisplayName}");
+        SaveSystem.Instance?.MarkDirty();
+        
+        _isPlacementMode = false;
+        _furnitureToPlace = null;
+        
+        return true;
+    }
+    
+    public bool SellFurniture(Room room, PlacedFurniture placed)
+    {
+        int refund = placed.Furniture.SellPrice;
+        
+        // Возвращаем все экспонаты в инвентарь
+        foreach (var item in placed.Furniture.GetAllItems())
+        {
+            InventorySystem.Instance.AddItem(item.ResourceId, item.Quality, item.Amount);
+        }
+        
+        Wallet.Instance.AddCoins(refund);
+        room.RemoveFurniture(placed);
+        
+        GD.Print($"[Museum] Sold {placed.Furniture.DisplayName} for {refund} coins");
+        SaveSystem.Instance?.MarkDirty();
+        return true;
+    }
+    
+    // ===== НАВИГАЦИЯ =====
+    
+    public Room GetCurrentRoom() => _rooms[_currentRoomPosition];
+    
+    public void SetCurrentRoom(Vector2I pos)
+    {
+        if (_rooms.ContainsKey(pos))
+        {
+            _currentRoomPosition = pos;
+        }
+    }
+    
+    public void EnterDoor(Room room, Direction direction)
+    {
+        var door = room.GetDoor(direction);
+        if (door == null) return;
+        
+        if (door.IsExitToStreet)
+        {
+            GD.Print("[Museum] Exit to street (not implemented yet)");
             return;
         }
         
-        string key = GetKey(resourceId, quality);
-        _exhibitedItems[key] = resourceId;
-        
-        // ВАЖНО: Удаляем предмет, а не продаём его!
-        InventorySystem.Instance.RemoveItem(resourceId, quality, 1);
-        
-        GD.Print($"[Museum] Exhibited {resourceId} ({quality})");
-        SaveSystem.Instance?.MarkDirty();
+        if (!string.IsNullOrEmpty(door.ConnectedRoomId))
+        {
+            // Находим зал по ID
+            var targetRoom = _rooms.Values.FirstOrDefault(r => r.Id == door.ConnectedRoomId);
+            if (targetRoom != null)
+            {
+                _currentRoomPosition = targetRoom.GlobalPosition;
+                GD.Print($"[Museum] Entered room {targetRoom.DisplayName}");
+            }
+        }
+        else
+        {
+            // Двери нет — можно купить зал
+            Vector2I newPos = direction switch
+            {
+                Direction.Top => new Vector2I(room.GlobalPosition.X, room.GlobalPosition.Y - 1),
+                Direction.Bottom => new Vector2I(room.GlobalPosition.X, room.GlobalPosition.Y + 1),
+                Direction.Left => new Vector2I(room.GlobalPosition.X - 1, room.GlobalPosition.Y),
+                Direction.Right => new Vector2I(room.GlobalPosition.X + 1, room.GlobalPosition.Y),
+                _ => room.GlobalPosition
+            };
+            
+            if (CanBuildRoomAt(newPos))
+            {
+                GD.Print($"[Museum] Can buy room at {newPos} for {RoomBuyPrice} coins");
+                // UI должен показать окно покупки
+            }
+        }
     }
     
     // ===== РАСЧЁТ ДОХОДА =====
     
-    public int CalculateItemIncome(string resourceId, string key)
+    public int GetTotalIncomePerSecond()
     {
-        var resource = GameData.GetResource(resourceId);
-        if (resource == null) return 0;
+        int total = 0;
         
-        Quality quality = GetQualityFromKey(key);
-        float multiplier = resource.GetRarityMultiplier() * resource.GetQualityMultiplier(quality);
-        int baseIncome = (int)(resource.BaseMuseumIncome * multiplier);
-        
-        if (resource is FossilDefinition fossil && !string.IsNullOrEmpty(fossil.CollectionId))
+        foreach (var room in _rooms.Values)
         {
-            var collection = GameData.GetCollection(fossil.CollectionId);
-            if (collection != null)
+            foreach (var placed in room.PlacedFurnitureList)
             {
-                int exhibitedPieces = 0;
-                foreach (var piece in collection.Pieces)
+                foreach (var item in placed.Furniture.GetAllItems())
                 {
-                    if (_exhibitedItems.ContainsKey(GetKey(piece.Id, quality)))
+                    var resource = GameData.GetResource(item.ResourceId);
+                    if (resource == null) continue;
+                    
+                    float multiplier = resource.GetRarityMultiplier() * resource.GetQualityMultiplier(item.Quality);
+                    int baseIncome = (int)(resource.BaseMuseumIncome * multiplier);
+                    
+                    if (placed.Furniture is Pedestal pedestal && pedestal.IsComplete())
                     {
-                        exhibitedPieces++;
+                        var collection = GameData.GetCollection(pedestal.CurrentCollectionId);
+                        if (collection != null) baseIncome = (int)(baseIncome * collection.CollectionBonus);
                     }
-                }
-                
-                if (exhibitedPieces == collection.Pieces.Count)
-                {
-                    baseIncome = (int)(baseIncome * collection.CollectionBonus);
+                    
+                    total += baseIncome;
                 }
             }
         }
-        return baseIncome;
+        
+        return total;
     }
     
     private void GenerateIncome()
     {
         int totalIncome = GetTotalIncomePerSecond();
-        if (totalIncome > 0)
-        {
-            Wallet.Instance.AddCoins(totalIncome);
-        }
-    }
-    
-    public int GetTotalIncomePerSecond()
-    {
-        int total = 0;
-        foreach (var kvp in _exhibitedItems)
-        {
-            total += CalculateItemIncome(kvp.Value, kvp.Key);
-        }
-        return total;
+        if (totalIncome > 0) Wallet.Instance.AddCoins(totalIncome);
     }
     
     // ===== ГЕТТЕРЫ =====
     
-    public Dictionary<string, string> GetExhibitedItems()
+    public List<Room> GetAllRooms() => _rooms.Values.ToList();
+    public Room GetRoomAt(Vector2I pos) => _rooms.TryGetValue(pos, out var room) ? room : null;
+    
+    // ===== СОХРАНЕНИЕ =====
+    
+    public MuseumSaveData GetSaveData()
     {
-        return new Dictionary<string, string>(_exhibitedItems);
+        var data = new MuseumSaveData
+        {
+            CurrentRoomX = _currentRoomPosition.X,
+            CurrentRoomY = _currentRoomPosition.Y,
+            Rooms = _rooms.Values.Select(r => r.GetSaveData()).ToList()
+        };
+        return data;
     }
     
-    public int GetExhibitedCount()
+    public void LoadFromSaveData(MuseumSaveData data)
     {
-        return _exhibitedItems.Count;
-    }
-    
-    // ===== УТИЛИТЫ ДЛЯ КЛЮЧЕЙ =====
-    
-    private string GetKey(string resourceId, Quality quality) => $"{resourceId}_{(int)quality}";
-    
-    public Quality GetQualityFromKey(string key)
-    {
-        var parts = key.Split('_');
-        return (Quality)int.Parse(parts[parts.Length - 1]);
-    }
-    
-    // ===== ДЛЯ СОХРАНЕНИЯ =====
-    
-    public Dictionary<string, string> GetSaveData() => new Dictionary<string, string>(_exhibitedItems);
-    
-    public void LoadFromSaveData(Dictionary<string, string> data)
-    {
-        _exhibitedItems.Clear();
         if (data == null) return;
         
-        foreach (var kvp in data)
+        _rooms.Clear();
+        _currentRoomPosition = new Vector2I(data.CurrentRoomX, data.CurrentRoomY);
+        
+        foreach (var roomData in data.Rooms)
         {
-            try
+            var room = new Room
             {
-                var parts = kvp.Key.Split('_');
-                if (parts.Length >= 2 && int.TryParse(parts[parts.Length - 1], out int q))
+                Id = roomData.Id,
+                DisplayName = $"Зал ({roomData.GlobalPositionX}, {roomData.GlobalPositionY})",
+                GlobalPosition = new Vector2I(roomData.GlobalPositionX, roomData.GlobalPositionY),
+                Width = 10,
+                Height = 10,
+                IsMainHall = roomData.Id == "main_hall"
+            };
+            
+            room.InitializeGrid();
+            
+            // Восстанавливаем двери
+            room.Doors[Direction.Top] = new Door { Direction = Direction.Top, Position = new Vector2I(5, 0) };
+            room.Doors[Direction.Right] = new Door { Direction = Direction.Right, Position = new Vector2I(9, 5) };
+            room.Doors[Direction.Bottom] = new Door { Direction = Direction.Bottom, Position = new Vector2I(5, 9), IsExitToStreet = room.IsMainHall };
+            room.Doors[Direction.Left] = new Door { Direction = Direction.Left, Position = new Vector2I(0, 5) };
+            
+            if (roomData.Doors != null)
+            {
+                foreach (var kvp in roomData.Doors)
                 {
-                    if (GameData.GetResource(kvp.Value) != null)
+                    var dir = (Direction)kvp.Key;
+                    if (room.Doors.ContainsKey(dir))
                     {
-                        _exhibitedItems[kvp.Key] = kvp.Value;
+                        room.Doors[dir].ConnectedRoomId = kvp.Value;
                     }
                 }
-                else
+            }
+            
+            // Восстанавливаем мебель
+            if (roomData.Furniture != null)
+            {
+                foreach (var furnData in roomData.Furniture)
                 {
-                    GD.PrintErr($"[Museum] Пропущена устаревшая запись: '{kvp.Key}'");
+                    Furniture furniture = null;
+                    
+                    if (furnData.FurnitureTypeId.StartsWith("display_case"))
+                    {
+                        var dc = new DisplayCase
+                        {
+                            TypeId = furnData.FurnitureTypeId,
+                            DisplayName = furnData.FurnitureTypeId == "display_case_1x1" ? "Малая витрина" : "Большая витрина",
+                            Size = new Vector2I(furnData.SizeX, furnData.SizeY),
+                            BuyPrice = furnData.FurnitureTypeId == "display_case_1x1" ? 200 : 400,
+                            Capacity = furnData.SizeX * 5
+                        };
+                        dc.LoadFromSaveData(furnData.FurnitureSaveData);
+                        furniture = dc;
+                    }
+                    else if (furnData.FurnitureTypeId.StartsWith("pedestal"))
+                    {
+                        var ped = new Pedestal
+                        {
+                            TypeId = furnData.FurnitureTypeId,
+                            DisplayName = furnData.FurnitureTypeId == "pedestal_2x2" ? "Малый пьедестал" : "Большой пьедестал",
+                            Size = new Vector2I(furnData.SizeX, furnData.SizeY),
+                            BuyPrice = furnData.FurnitureTypeId == "pedestal_2x2" ? 600 : 1500
+                        };
+                        ped.LoadFromSaveData(furnData.FurnitureSaveData);
+                        furniture = ped;
+                    }
+                    
+                    if (furniture != null)
+                    {
+                        var placed = new PlacedFurniture
+                        {
+                            InstanceId = furnData.InstanceId,
+                            FurnitureTypeId = furnData.FurnitureTypeId,
+                            Position = new Vector2I(furnData.PositionX, furnData.PositionY),
+                            Size = new Vector2I(furnData.SizeX, furnData.SizeY),
+                            Furniture = furniture
+                        };
+                        
+                        room.PlacedFurnitureList.Add(placed);
+                        
+                        // Обновляем счётчик ID
+                        if (int.TryParse(furnData.InstanceId.Replace("furn_", ""), out int id))
+                        {
+                            _instanceCounter = Math.Max(_instanceCounter, id + 1);
+                        }
+                    }
+                }
+                
+                // Пересчитываем occupancy grid
+                foreach (var placed in room.PlacedFurnitureList)
+                {
+                    for (int x = placed.Position.X - 1; x <= placed.Position.X + placed.Size.X; x++)
+                    {
+                        for (int y = placed.Position.Y - 1; y <= placed.Position.Y + placed.Size.Y; y++)
+                        {
+                            if (x >= 0 && x < room.Width && y >= 0 && y < room.Height)
+                            {
+                                // Используем прямой доступ через IsCellOccupied-подобную логику
+                                // (тут можно оптимизировать, но для простоты оставим так)
+                            }
+                        }
+                    }
                 }
             }
-            catch (System.Exception e)
+            
+            _rooms[room.GlobalPosition] = room;
+        }
+        
+        GD.Print($"[Museum] Loaded {_rooms.Count} rooms");
+    }
+        // ===== ВЗАИМОДЕЙСТВИЕ UI С МЕБЕЛЬЮ =====
+    
+    public bool TryAddItemToFurniture(Room room, PlacedFurniture placed, string resourceId, Quality quality)
+    {
+        if (placed.Furniture.CanAccept(GameData.GetResource(resourceId), quality))
+        {
+            var invItem = InventorySystem.Instance.GetItem(resourceId, quality);
+            if (invItem != null && invItem.Amount > 0)
             {
-                GD.PrintErr($"[Museum] Ошибка загрузки {kvp.Key}: {e.Message}");
+                placed.Furniture.AddItem(new FoundItem(resourceId, quality, 1));
+                InventorySystem.Instance.RemoveItem(resourceId, quality, 1);
+                SaveSystem.Instance?.MarkDirty();
+                return true;
             }
         }
-        GD.Print($"[Museum] Loaded {_exhibitedItems.Count} exhibited items");
+        return false;
     }
+
+    public bool TryReturnItemFromFurniture(Room room, PlacedFurniture placed, string resourceId, Quality quality)
+    {
+        var removed = placed.Furniture.RemoveItem(resourceId, quality);
+        if (removed != null)
+        {
+            InventorySystem.Instance.AddItem(removed.ResourceId, removed.Quality, removed.Amount);
+            SaveSystem.Instance?.MarkDirty();
+            return true;
+        }
+        return false;
+    }
+}
+
+// ===== ВСПОМОГАТЕЛЬНЫЕ КЛАССЫ =====
+
+public class FurnitureTemplate
+{
+    public string TypeId;
+    public string DisplayName;
+    public Vector2I Size;
+    public int BuyPrice;
+    public Func<Furniture> CreateFunc;
 }

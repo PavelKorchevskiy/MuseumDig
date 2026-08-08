@@ -27,10 +27,12 @@ public class SaveData
 	public int RegenLevel { get; set; } = 0;
 	public int CurrentTool { get; set; } = 0; // 0 = Shovel, 1 = Pickaxe
 	public LocationSaveData LocationData { get; set; } = new();
+
+	public int ShovelLevel { get; set; } = 1;
 	
 	// Старые данные (можно удалить позже, когда полностью мигрируем)
 	public Dictionary<string, List<int>> FossilPieces { get; set; } = new();
-	public Dictionary<string, string> ExhibitedFossils { get; set; } = new();
+	public MuseumSaveData MuseumData { get; set; }
 	
 	// НОВЫЙ инвентарь: Ключ = "ResourceId_Quality", Значение = данные
 	public Dictionary<string, InventorySaveData> Inventory { get; set; } = new();

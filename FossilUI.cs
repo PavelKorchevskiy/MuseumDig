@@ -9,7 +9,6 @@ public partial class FossilUI : CanvasLayer
 	private ProgressBar _energyBar;
 	private Button _shopButton;
 	private CanvasLayer _shop;
-	private CanvasLayer _offlineReward;
 	private Button _saveQuitButton;
 	private CanvasLayer _inventory;
 	private Button _inventoryButton;
@@ -18,6 +17,11 @@ public partial class FossilUI : CanvasLayer
 	private CanvasLayer _worldMap;
 	private Button _worldMapButton;
 	private Button _backToMuseumButton;
+	private VBoxContainer _upgradePanel;
+private Label _toolNameLabel;
+private Label _toolStatsLabel;
+private Label _upgradeCostLabel;
+private Button _upgradeButton;
 	
 	public override void _Ready()
 {
@@ -61,7 +65,6 @@ public partial class FossilUI : CanvasLayer
 	_inventoryButton = GetNodeOrNull<Button>("Background/MainContainer/ButtonsSection/InventoryButton");
 	_inventory = GetNodeOrNull<CanvasLayer>("Inventory");
 	if (_inventoryButton != null) _inventoryButton.Pressed += OnInventoryPressed;
-	_offlineReward = GetNodeOrNull<CanvasLayer>("OfflineReward");
 	_shovelButton = GetNodeOrNull<Button>("Background/MainContainer/ToolsSection/ShovelButton");
 	_pickaxeButton = GetNodeOrNull<Button>("Background/MainContainer/ToolsSection/PickaxeButton");
 	_backToMuseumButton = GetNodeOrNull<Button>("Background/MainContainer/ButtonsSection/BackToMuseumButton");
@@ -73,26 +76,6 @@ public partial class FossilUI : CanvasLayer
 	_worldMap = GetNodeOrNull<CanvasLayer>("WorldMap");
 	if (_worldMapButton != null) _worldMapButton.Pressed += OnWorldMapPressed;
 	
-	if (_offlineReward == null)
-	{
-		GD.PrintErr("⚠️ OfflineReward not found! Trying alternative paths...");
-		
-		// Попробуем найти рекурсивно
-		_offlineReward = FindChildRecursive<CanvasLayer>(this, "OfflineReward");
-		
-		if (_offlineReward != null)
-		{
-			GD.Print("✅ Found OfflineReward recursively!");
-		}
-		else
-		{
-			GD.PrintErr("❌ OfflineReward not found anywhere!");
-		}
-	}
-	else
-	{
-		GD.Print("✅ OfflineReward found directly");
-	}
 	
 	// ===== ПРОВЕРКА =====
 	if (_fossilLabel == null) GD.PrintErr("⚠️ FossilLabel not found!");
@@ -104,32 +87,9 @@ public partial class FossilUI : CanvasLayer
 	
 	// ===== ПОДПИСКА =====
 	if (_shopButton != null) _shopButton.Pressed += OnShopPressed;
+SetupUpgradeUI();
+    UpdateUpgradeUI();
 
-// ===== ТЕСТ InventorySystem =====
-GD.Print("=== InventorySystem TEST ===");
-
-// 1. Добавляем 2 хороших куска золота
-InventorySystem.Instance.AddItem("gold_nugget", Quality.Good, 2);
-
-// 2. Добавляем 1 хороший и 1 повреждённый череп трицератопса
-InventorySystem.Instance.AddItem("triceratops_skull", Quality.Good, 1);
-InventorySystem.Instance.AddItem("triceratops_skull", Quality.Damaged, 1);
-
-// 3. Проверяем общее количество черепов (должно быть 2)
-GD.Print($"Total triceratops_skull: {InventorySystem.Instance.GetTotalAmount("triceratops_skull")}");
-
-// 4. Проверяем продажу (продаём 1 хороший череп)
-int earned = InventorySystem.Instance.SellItem("triceratops_skull", Quality.Good, 1);
-GD.Print($"Sold 1 Good Skull for {earned} coins. Wallet now: {Wallet.Instance.GetCoins()}");
-
-// 5. Выводим весь инвентарь
-GD.Print("--- Current Inventory ---");
-foreach (var item in InventorySystem.Instance.GetAllItems())
-{
-	var res = GameData.GetResource(item.ResourceId);
-	GD.Print($"  {res.DisplayName} x{item.Amount} ({item.Quality})");
-}
-GD.Print("=========================");
 
 	_saveQuitButton = GetNodeOrNull<Button>("Background/MainContainer/ButtonsSection/SaveQuitButton");
 if (_saveQuitButton != null) 
@@ -139,12 +99,20 @@ if (_saveQuitButton != null)
 }
 	
 	private void OnShopPressed()
-	{
-		if (_shop != null)
-		{
-			_shop.Visible = true;
-		}
-	}
+{
+    GD.Print("[DEBUG] OnShopPressed вызван!");
+    GD.Print($"[DEBUG] _shop = {_shop != null}");
+    
+    if (_shop != null)
+    {
+        _shop.Visible = true;
+        GD.Print("[DEBUG] Shop.Visible = true");
+    }
+    else
+    {
+        GD.PrintErr("[DEBUG] _shop равен null!");
+    }
+}
 	
 	
 	public override void _Process(double delta)
@@ -153,26 +121,9 @@ if (_saveQuitButton != null)
 	UpdateCoinsDisplay();
 	UpdateEnergyDisplay();
 	UpdateToolButtons();
-	CheckOfflineReward();
 }
 
-private bool _offlineRewardShown = false; // Флаг, чтобы показывать окно только один раз
 
-private void CheckOfflineReward()
-{
-	if (_offlineReward == null || OfflineRewardSystem.Instance == null) return;
-	
-	bool hasReward = OfflineRewardSystem.Instance.HasReward();
-	
-	// Показываем окно один раз
-	if (hasReward && !_offlineReward.Visible && !_offlineRewardShown)
-	{
-		GD.Print("✅ Showing offline reward window!");
-		_offlineReward.Visible = true;
-		_offlineRewardShown = true;
-	}
-}
-	
 	private void UpdateFossilDisplay()
 	{
 		if (_fossilLabel == null) return; // ← ЗАЩИТА
@@ -281,6 +232,7 @@ private void UpdateToolButtons()
 			? "▶ ⛏️ Pickaxe" 
 			: "⛏️ Pickaxe";
 	}
+	UpdateUpgradeUI();
 }
 
 private void OnWorldMapPressed()
@@ -313,4 +265,173 @@ private T FindChildRecursive<T>(Node parent, string name) where T : Node
 	}
 	return null;
 }
+
+    // ===== НАСТРОЙКА UI УЛУЧШЕНИЙ =====
+    
+       private void SetupUpgradeUI()
+    {
+        // Создаем панель улучшений как отдельный элемент
+        _upgradePanel = new VBoxContainer();
+        
+        // Якоря: Правый нижний угол (чтобы не перекрывать монеты сверху и основные кнопки)
+        _upgradePanel.SetAnchorsPreset(Control.LayoutPreset.BottomRight);
+        _upgradePanel.OffsetLeft = -240;   // Ширина панели
+        _upgradePanel.OffsetTop = -160;    // Высота панели
+        _upgradePanel.OffsetRight = -20;   // Отступ справа от края экрана
+        _upgradePanel.OffsetBottom = -20;  // Отступ снизу от края экрана
+        
+        // ВАЖНО: Позволяем кликам проходить сквозь пустые места панели, 
+        // но сама панель и её кнопки будут ловить клики.
+        _upgradePanel.MouseFilter = Control.MouseFilterEnum.Pass;
+
+        // Стиль для панели (полупрозрачный темный фон)
+        var panelStyle = new StyleBoxFlat();
+        panelStyle.BgColor = new Color(0.1f, 0.1f, 0.15f, 0.9f);
+        panelStyle.CornerRadiusTopLeft = 8;
+        panelStyle.CornerRadiusTopRight = 8;
+        panelStyle.CornerRadiusBottomLeft = 8;
+        panelStyle.CornerRadiusBottomRight = 8;
+        panelStyle.ContentMarginLeft = 12;
+        panelStyle.ContentMarginTop = 12;
+        panelStyle.ContentMarginRight = 12;
+        panelStyle.ContentMarginBottom = 12;
+        _upgradePanel.AddThemeStyleboxOverride("panel", panelStyle);
+
+        _toolNameLabel = new Label();
+        _toolNameLabel.AddThemeFontSizeOverride("font_size", 18);
+        _toolNameLabel.AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.5f)); // Золотистый
+        _upgradePanel.AddChild(_toolNameLabel);
+
+        _toolStatsLabel = new Label();
+        _toolStatsLabel.AddThemeFontSizeOverride("font_size", 14);
+        _toolStatsLabel.AddThemeColorOverride("font_color", Colors.White);
+        _upgradePanel.AddChild(_toolStatsLabel);
+
+        _upgradeCostLabel = new Label();
+        _upgradeCostLabel.AddThemeFontSizeOverride("font_size", 14);
+        _upgradeCostLabel.AddThemeColorOverride("font_color", new Color(0.7f, 1f, 0.7f)); // Зелёный
+        _upgradePanel.AddChild(_upgradeCostLabel);
+
+        _upgradeButton = new Button();
+        _upgradeButton.Text = "Upgrade Tool";
+        _upgradeButton.CustomMinimumSize = new Vector2(0, 35);
+        _upgradeButton.Pressed += OnUpgradeToolPressed;
+        _upgradePanel.AddChild(_upgradeButton);
+
+        // Добавляем прямо в корень Background, чтобы не ломать существующую иерархию кнопок
+        AddChild(_upgradePanel);
+    }
+
+    private void UpdateUpgradeUI()
+{
+    if (_upgradePanel == null || UpgradeSystem.Instance == null || ToolSystem.Instance == null) return;
+
+    var currentToolType = ToolSystem.Instance.GetCurrentToolType();
+    var toolDef = ToolSystem.Instance.GetCurrentTool();
+    
+    int currentLevel = currentToolType == ToolType.Pickaxe 
+        ? UpgradeSystem.Instance.GetPickaxeLevel() 
+        : UpgradeSystem.Instance.GetShovelLevel();
+        
+    int nextLevelCost = currentToolType == ToolType.Pickaxe 
+        ? UpgradeSystem.Instance.GetPickaxeCost() 
+        : UpgradeSystem.Instance.GetShovelCost();
+
+    int maxLevel = 20;
+
+    // ===== ТЕКУЩИЕ ЗНАЧЕНИЯ =====
+    float currentDelay = UpgradeSystem.Instance.GetToolDelay(currentToolType);
+    int currentDamage = UpgradeSystem.Instance.GetToolDamage(currentToolType);
+    float currentDmgChance = UpgradeSystem.Instance.GetToolDamageChance(currentToolType);
+
+    // ===== ЗНАЧЕНИЯ ДЛЯ СЛЕДУЮЩЕГО УРОВНЯ =====
+    // Вычисляем, что будет при уровне +1, используя те же формулы из UpgradeSystem
+    float nextDelay = currentDelay * 0.95f;
+    int nextDamage = currentDamage + 1;
+    float nextDmgChance = currentDmgChance * 0.90f;
+
+    // ===== ОТОБРАЖЕНИЕ =====
+    
+    // Заголовок с текущим и следующим уровнем
+    if (currentLevel >= maxLevel)
+    {
+        _toolNameLabel.Text = $"{toolDef.DisplayName} (Lv. {currentLevel})";
+    }
+    else
+    {
+        _toolNameLabel.Text = $"{toolDef.DisplayName} (Lv. {currentLevel} → {currentLevel + 1})";
+    }
+    
+    // Характеристики с показом прогресса
+    string statsText = "";
+    
+    // Урон
+    if (currentLevel >= maxLevel)
+    {
+        statsText += $"Damage: {currentDamage}";
+    }
+    else
+    {
+        statsText += $"Damage: {currentDamage} → {nextDamage}";
+    }
+    
+    // Задержка
+    if (currentLevel >= maxLevel)
+    {
+        statsText += $"\nDelay: {currentDelay:F2}s";
+    }
+    else
+    {
+        statsText += $"\nDelay: {currentDelay:F2}s → {nextDelay:F2}s";
+    }
+    
+    // Шанс повреждения (только для лопаты)
+    if (currentToolType == ToolType.Shovel)
+    {
+        if (currentLevel >= maxLevel)
+        {
+            statsText += $"\nFossil Damage: {currentDmgChance:P1}";
+        }
+        else
+        {
+            statsText += $"\nFossil Damage: {currentDmgChance:P1} → {nextDmgChance:P1}";
+        }
+    }
+    
+    _toolStatsLabel.Text = statsText;
+
+    // Стоимость и кнопка
+    if (currentLevel >= maxLevel)
+    {
+        _upgradeCostLabel.Text = "MAX LEVEL REACHED";
+        _upgradeButton.Disabled = true;
+        _upgradeButton.Text = "MAXED";
+    }
+    else
+    {
+        _upgradeCostLabel.Text = $"Cost: {nextLevelCost} coins";
+        _upgradeButton.Disabled = Wallet.Instance.GetCoins() < nextLevelCost;
+        _upgradeButton.Text = "Upgrade";
+    }
+}
+
+    private void OnUpgradeToolPressed()
+    {
+        var currentToolType = ToolSystem.Instance.GetCurrentToolType();
+        bool success = false;
+
+        if (currentToolType == ToolType.Pickaxe)
+        {
+            success = UpgradeSystem.Instance.TryBuyPickaxe();
+        }
+        else
+        {
+            success = UpgradeSystem.Instance.TryBuyShovel();
+        }
+
+        if (success)
+        {
+            UpdateUpgradeUI(); // Обновляем UI сразу после покупки
+        }
+    }
 }
