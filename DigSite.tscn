@@ -2,7 +2,6 @@
 
 [ext_resource type="Script" uid="uid://h8ur6180uis6" path="res://DigSite.cs" id="1_tctey"]
 [ext_resource type="Script" uid="uid://dhayi3t6stxud" path="res://FossilUI.cs" id="2_rr7af"]
-[ext_resource type="PackedScene" uid="uid://tj6bqrwlncs3" path="res://ShopUI.tscn" id="3_w7n5d"]
 [ext_resource type="PackedScene" uid="uid://1pn2tmbbjiaq" path="res://OfflineRewardUI.tscn" id="5_b2b1i"]
 [ext_resource type="PackedScene" uid="uid://b8mwd7fgnhr4s" path="res://InventoryUI.tscn" id="6_qe2mw"]
 [ext_resource type="PackedScene" uid="uid://b6avv4f3a4vj8" path="res://WorldMapUI.tscn" id="7_m8yj4"]
@@ -12,9 +11,6 @@ script = ExtResource("1_tctey")
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=353512333]
 script = ExtResource("2_rr7af")
-
-[node name="Shop" parent="UI" unique_id=270077110 instance=ExtResource("3_w7n5d")]
-visible = false
 
 [node name="Background" type="PanelContainer" parent="UI" unique_id=1238643787]
 custom_minimum_size = Vector2(260, 0)

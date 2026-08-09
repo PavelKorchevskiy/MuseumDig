@@ -61,8 +61,6 @@ public partial class SaveSystem : Node
 		{
 			data.PickaxeLevel = UpgradeSystem.Instance.GetPickaxeLevel();
 			data.ShovelLevel = UpgradeSystem.Instance.GetShovelLevel();
-			data.CoinBonusLevel = UpgradeSystem.Instance.GetCoinBonusLevel();
-			data.FossilChanceLevel = UpgradeSystem.Instance.GetFossilChanceLevel();
 		}
 		if (FossilInventory.Instance != null) data.FossilPieces = FossilInventory.Instance.GetSaveData();
 		if (MuseumSystem.Instance != null)

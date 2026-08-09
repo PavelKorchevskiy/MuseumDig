@@ -18,8 +18,6 @@ public class SaveData
 	public int Coins { get; set; } = 0;
 	
 	public int PickaxeLevel { get; set; } = 1;
-	public int CoinBonusLevel { get; set; } = 0;
-	public int FossilChanceLevel { get; set; } = 0;
 	
 	public int CurrentEnergy { get; set; } = 20;
 	public int MaxEnergy { get; set; } = 20;

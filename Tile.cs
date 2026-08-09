@@ -114,9 +114,7 @@ public partial class Tile : ColorRect
 	
 		private void DamageBlock()
 	{
-		int toolDamage = ToolSystem.Instance.GetDamage();
-		int upgradeBonus = UpgradeSystem.Instance.GetPickaxeDamage() - 1;
-		int damage = toolDamage + upgradeBonus;
+		int damage = ToolSystem.Instance.GetDamage();
 		
 		_blockHp -= damage;
 		
@@ -145,8 +143,6 @@ public partial class Tile : ColorRect
 	
 	private void DestroyBlock()
 	{
-		// Монеты за разрушение блока
-		Wallet.Instance.AddCoins(UpgradeSystem.Instance.GetCoinReward());
 		
 		if (_hiddenResource != null)
 		{
@@ -243,7 +239,6 @@ public partial class Tile : ColorRect
 		tween.TweenProperty(this, "position", Position, 0.05f);
 	}
 
-	// 2. Всплывающий текст над плиткой
 	private void SpawnFloatingText(string text, Color textColor)
 {
     var label = new Label();
@@ -251,12 +246,9 @@ public partial class Tile : ColorRect
     label.AddThemeFontSizeOverride("font_size", 16);
     label.AddThemeColorOverride("font_color", textColor);
     label.HorizontalAlignment = HorizontalAlignment.Center;
-    
-    // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Label не перехватывает клики
     label.MouseFilter = Control.MouseFilterEnum.Ignore;
     
-    // Добавляем в CanvasLayer (UI), а не в родителя плитки, 
-    // чтобы текст был поверх всех 2D-объектов и не мешал кнопкам
+    // Добавляем в CanvasLayer (UI), чтобы пережил уничтожение плитки
     var fossilUI = GetTree().Root.GetNodeOrNull<CanvasLayer>("DigSite/FossilUI");
     if (fossilUI != null)
     {
@@ -265,12 +257,12 @@ public partial class Tile : ColorRect
     }
     else
     {
-        // Fallback: если не нашли FossilUI, добавляем в родителя
-        GetParent().AddChild(label);
+        GetTree().Root.AddChild(label);
         label.GlobalPosition = GlobalPosition + new Vector2(0f, -20f);
     }
     
-    var tween = CreateTween();
+    // ИСПРАВЛЕНИЕ: Создаём tween на Label, а не на плитке
+    var tween = label.CreateTween();
     tween.Parallel().TweenProperty(label, "modulate:a", 0.0f, 0.8f);
     tween.Parallel().TweenProperty(label, "position:y", (float)(label.Position.Y - 30f), 0.8f);
     

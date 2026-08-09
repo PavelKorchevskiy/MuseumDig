@@ -3,76 +3,91 @@ using System.Collections.Generic;
 
 public partial class Museum : Node2D
 {
-    private Label _roomNameLabel;
-    private VBoxContainer _furnitureList;
-    private CanvasLayer _worldMap;
+    public RoomViewUI _roomView;
     private CanvasLayer _offlineReward;
+    private CanvasLayer _shop;
+    private CanvasLayer _inventory;    
+    private VBoxContainer _buttonPanel;
     
     private bool _offlineRewardChecked = false;
     private bool _initialDisplayUpdated = false;
 
     public override void _Ready()
     {
-        _worldMap = GetNodeOrNull<CanvasLayer>("UI/WorldMap");
-        if (_worldMap != null) _worldMap.Visible = false;
-        
         _offlineReward = GetNodeOrNull<CanvasLayer>("UI/OfflineReward");
         if (_offlineReward != null) _offlineReward.Visible = false;
 
+        var museumShop = new MuseumShopUI();
+        museumShop.Name = "MuseumShop";
+        AddChild(museumShop);
+
+        if (_shop != null) _shop.Visible = false;
+        
+        _inventory = GetNodeOrNull<CanvasLayer>("UI/Inventory");
+        if (_inventory != null) _inventory.Visible = false;
+
+        // Создаём визуализацию зала
+        _roomView = new RoomViewUI();
+        AddChild(_roomView);
+        
+        // Создаём панель кнопок
+        CreateButtonPanel();
+    }
+    
+    private void CreateButtonPanel()
+    {
         var uiLayer = GetNodeOrNull<CanvasLayer>("UI");
         if (uiLayer == null)
         {
             uiLayer = new CanvasLayer { Name = "UI", Layer = 10 };
             AddChild(uiLayer);
         }
-
-        var mainContainer = new VBoxContainer();
-        mainContainer.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-        mainContainer.OffsetLeft = 30;
-        mainContainer.OffsetTop = 30;
-        mainContainer.OffsetRight = -30;
-        mainContainer.OffsetBottom = -30;
-        mainContainer.AddThemeConstantOverride("separation", 20);
-        uiLayer.AddChild(mainContainer);
-
-        var roomControls = new HBoxContainer();
-        roomControls.AddThemeConstantOverride("separation", 15);
-        roomControls.Alignment = BoxContainer.AlignmentMode.Center;
-
-        var prevBtn = new Button { Text = "◀ Пред. зал" };
-        prevBtn.Pressed += OnPrevRoomPressed;
         
-        _roomNameLabel = new Label();
-        _roomNameLabel.AddThemeFontSizeOverride("font_size", 24);
-        _roomNameLabel.AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.5f));
+        _buttonPanel = new VBoxContainer();
+        _buttonPanel.Position = new Vector2(20, 60);
+        _buttonPanel.AddThemeConstantOverride("separation", 10);
+        uiLayer.AddChild(_buttonPanel);
         
-        var nextBtn = new Button { Text = "След. зал ▶" };
-        nextBtn.Pressed += OnNextRoomPressed;
-
-        roomControls.AddChild(prevBtn);
-        roomControls.AddChild(_roomNameLabel);
-        roomControls.AddChild(nextBtn);
-        mainContainer.AddChild(roomControls);
-
-        var scroll = new ScrollContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        _furnitureList = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        _furnitureList.AddThemeConstantOverride("separation", 15);
-        scroll.AddChild(_furnitureList);
-        mainContainer.AddChild(scroll);
-
-        var bottomRow = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
-        var digBtn = new Button { Text = "⛏️ Start Digging", CustomMinimumSize = new Vector2(200, 40) };
+        // Кнопка магазина
+        var shopBtn = new Button();
+        shopBtn.Text = "🏪 Магазин";
+        shopBtn.CustomMinimumSize = new Vector2(150, 40);
+        shopBtn.Pressed += OnShopPressed;
+        _buttonPanel.AddChild(shopBtn);
+        
+        // Кнопка инвентаря
+        var invBtn = new Button();
+        invBtn.Text = "🎒 Инвентарь";
+        invBtn.CustomMinimumSize = new Vector2(150, 40);
+        invBtn.Pressed += OnInventoryPressed;
+        _buttonPanel.AddChild(invBtn);
+        
+        // Кнопка раскопок
+        var digBtn = new Button();
+        digBtn.Text = "⛏️ Раскопки";
+        digBtn.CustomMinimumSize = new Vector2(150, 40);
         digBtn.Pressed += OnDigPressed;
-        bottomRow.AddChild(digBtn);
-        mainContainer.AddChild(bottomRow);
+        _buttonPanel.AddChild(digBtn);
+        
+        // Кнопка сохранения
+        var saveBtn = new Button();
+        saveBtn.Text = "💾 Сохранить и выйти";
+        saveBtn.CustomMinimumSize = new Vector2(150, 40);
+        saveBtn.Pressed += OnSaveQuitPressed;
+        _buttonPanel.AddChild(saveBtn);
     }
 
     public override void _Process(double delta)
+{
+    // При первом запуске сразу обновляем визуализацию
+    if (!_initialDisplayUpdated)
     {
-        if (!_initialDisplayUpdated && SaveSystem.Instance != null && SaveSystem.Instance.GetLastSaveTimestamp() > 0)
+        _initialDisplayUpdated = true;
+        UpdateDisplay();
+        
+        // Проверяем офлайн-награду только если есть сохранение
+        if (SaveSystem.Instance != null && SaveSystem.Instance.GetLastSaveTimestamp() > 0)
         {
-            _initialDisplayUpdated = true;
-            UpdateDisplay();
             if (!_offlineRewardChecked)
             {
                 _offlineRewardChecked = true;
@@ -80,130 +95,36 @@ public partial class Museum : Node2D
             }
         }
     }
+}
 
     private void UpdateDisplay()
     {
-        if (MuseumSystem.Instance == null) return;
-
+        if (MuseumSystem.Instance == null || _roomView == null) return;
+        
         var room = MuseumSystem.Instance.GetCurrentRoom();
-        _roomNameLabel.Text = $"{room.DisplayName} ({room.GlobalPosition.X}, {room.GlobalPosition.Y})";
-
-        foreach (var child in _furnitureList.GetChildren()) child.QueueFree();
-
-        if (room.PlacedFurnitureList.Count == 0)
-        {
-            var emptyLabel = new Label { Text = "В этом зале пока нет мебели. Купите её в магазине!", HorizontalAlignment = HorizontalAlignment.Center };
-            emptyLabel.AddThemeFontSizeOverride("font_size", 18);
-            emptyLabel.Modulate = new Color(0.7f, 0.7f, 0.7f);
-            _furnitureList.AddChild(emptyLabel);
-            return;
-        }
-
-        foreach (var placed in room.PlacedFurnitureList)
-        {
-            var furn = placed.Furniture;
-            var panel = new VBoxContainer();
-            panel.AddThemeConstantOverride("separation", 8);
-            
-            var style = new StyleBoxFlat { BgColor = new Color(0.15f, 0.15f, 0.2f), CornerRadiusTopLeft = 8, CornerRadiusTopRight = 8, CornerRadiusBottomLeft = 8, CornerRadiusBottomRight = 8, ContentMarginLeft = 15, ContentMarginTop = 12, ContentMarginRight = 15, ContentMarginBottom = 12 };
-            panel.AddThemeStyleboxOverride("panel", style);
-
-            var header = new Label();
-            int income = CalculateFurnitureIncome(placed);
-            string collectionInfo = (furn is Pedestal ped && !string.IsNullOrEmpty(ped.CurrentCollectionId)) ? $" [{GameData.GetCollection(ped.CurrentCollectionId)?.DisplayName}]" : "";
-            header.Text = $"{furn.DisplayName} ({placed.Size.X}x{placed.Size.Y}){collectionInfo} | Доход: +{income}/сек";
-            header.AddThemeFontSizeOverride("font_size", 18);
-            header.AddThemeColorOverride("font_color", new Color(0.8f, 1f, 0.8f));
-            panel.AddChild(header);
-
-            var items = furn.GetAllItems();
-            if (items.Count == 0)
-            {
-                panel.AddChild(new Label { Text = "  Пусто", Modulate = new Color(0.6f, 0.6f, 0.6f) });
-            }
-            else
-            {
-                foreach (var item in items)
-                {
-                    var res = GameData.GetResource(item.ResourceId);
-                    var row = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Begin };
-                    
-                    var nameLabel = new Label { Text = $"  • {res.DisplayName} ({item.Quality})", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-                    row.AddChild(nameLabel);
-
-                    var returnBtn = new Button { Text = "Вернуть", CustomMinimumSize = new Vector2(120, 0) };
-                    string rId = item.ResourceId;
-                    Quality q = item.Quality;
-                    returnBtn.Pressed += () => OnReturnPressed(room, placed, rId, q);
-                    row.AddChild(returnBtn);
-                    panel.AddChild(row);
-                }
-            }
-
-            var addBtn = new Button { Text = "+ Добавить из инвентаря" };
-            addBtn.AddThemeColorOverride("font_color", new Color(0.7f, 1f, 0.7f));
-            addBtn.Pressed += () => OnAddFromInventoryPressed(room, placed);
-            panel.AddChild(addBtn);
-
-            _furnitureList.AddChild(panel);
-        }
+        _roomView.DisplayRoom(room);
     }
-
-    private int CalculateFurnitureIncome(PlacedFurniture placed)
+    
+    private void OnShopPressed()
+{
+    var museumShop = GetNodeOrNull<MuseumShopUI>("MuseumShop");
+    if (museumShop != null) museumShop.Visible = true;
+}
+    
+    private void OnInventoryPressed()
     {
-        int total = 0;
-        foreach (var item in placed.Furniture.GetAllItems())
-        {
-            var res = GameData.GetResource(item.ResourceId);
-            if (res == null) continue;
-            float mult = res.GetRarityMultiplier() * res.GetQualityMultiplier(item.Quality);
-            int baseInc = (int)(res.BaseMuseumIncome * mult);
-            if (placed.Furniture is Pedestal ped && ped.IsComplete())
-            {
-                var col = GameData.GetCollection(ped.CurrentCollectionId);
-                if (col != null) baseInc = (int)(baseInc * col.CollectionBonus);
-            }
-            total += baseInc;
-        }
-        return total;
+        if (_inventory != null) _inventory.Visible = true;
     }
-
-    private void OnNextRoomPressed()
+    
+    private void OnDigPressed()
     {
-        var rooms = MuseumSystem.Instance.GetAllRooms();
-        int idx = rooms.FindIndex(r => r.GlobalPosition == MuseumSystem.Instance.GetCurrentRoom().GlobalPosition);
-        MuseumSystem.Instance.SetCurrentRoom(rooms[(idx + 1) % rooms.Count].GlobalPosition);
-        UpdateDisplay();
+        GetTree().ChangeSceneToFile("res://DigSite.tscn");
     }
-
-    private void OnPrevRoomPressed()
+    
+    private void OnSaveQuitPressed()
     {
-        var rooms = MuseumSystem.Instance.GetAllRooms();
-        int idx = rooms.FindIndex(r => r.GlobalPosition == MuseumSystem.Instance.GetCurrentRoom().GlobalPosition);
-        MuseumSystem.Instance.SetCurrentRoom(rooms[(idx - 1 + rooms.Count) % rooms.Count].GlobalPosition);
-        UpdateDisplay();
+        SaveSystem.Instance?.ForceSaveAndQuit();
     }
-
-    private void OnAddFromInventoryPressed(Room room, PlacedFurniture placed)
-    {
-        foreach (var invItem in InventorySystem.Instance.GetAllItems())
-        {
-            if (MuseumSystem.Instance.TryAddItemToFurniture(room, placed, invItem.ResourceId, invItem.Quality))
-            {
-                UpdateDisplay();
-                return; // Добавляем по одному за раз
-            }
-        }
-        GD.Print("[Museum] Нет подходящих предметов для этой мебели.");
-    }
-
-    private void OnReturnPressed(Room room, PlacedFurniture placed, string resourceId, Quality quality)
-    {
-        MuseumSystem.Instance.TryReturnItemFromFurniture(room, placed, resourceId, quality);
-        UpdateDisplay();
-    }
-
-    private void OnDigPressed() => GetTree().ChangeSceneToFile("res://DigSite.tscn");
 
     private void CheckOfflineReward()
     {
@@ -232,4 +153,13 @@ public partial class Museum : Node2D
             _offlineReward.Visible = true;
         }
     }
+
+    public void RefreshRoomView()
+{
+    if (_roomView != null && MuseumSystem.Instance != null)
+    {
+        _roomView.DisplayRoom(MuseumSystem.Instance.GetCurrentRoom());
+        GD.Print("[Museum] Room view refreshed");
+    }
+}
 }

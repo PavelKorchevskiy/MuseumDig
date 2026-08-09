@@ -9,24 +9,30 @@ public partial class Pedestal : Furniture
     
     private Dictionary<string, Quality> _parts = new();
     
-    // Пьедестал принимает ЛЮБУЮ коллекцию, если он пуст
     public override bool CanAccept(ResourceDefinition resource, Quality quality)
+{
+    if (resource is not FossilDefinition fossil) return false;
+    if (string.IsNullOrEmpty(fossil.CollectionId)) return false;
+    
+    var collection = GameData.GetCollection(fossil.CollectionId);
+    if (collection == null) return false;
+
+    // Если пьедестал пуст — проверяем, подходит ли он по размеру для этой коллекции
+    if (string.IsNullOrEmpty(CurrentCollectionId))
     {
-        if (resource is not FossilDefinition fossil) return false;
-        if (string.IsNullOrEmpty(fossil.CollectionId)) return false;
-        
-        // Если пьедестал пуст — принимает любую коллекцию
-        if (string.IsNullOrEmpty(CurrentCollectionId))
+        if (Size.X < collection.MinSizeX || Size.Y < collection.MinSizeY)
         {
-            CurrentCollectionId = fossil.CollectionId;
-            return true;
+            return false; // Пьедестал слишком мал для этого скелета
         }
-        
-        // Если уже выбрана коллекция — принимает только её части
-        if (fossil.CollectionId != CurrentCollectionId) return false;
-        
-        return !_parts.ContainsKey(fossil.Id);
+        CurrentCollectionId = fossil.CollectionId;
+        return true;
     }
+    
+    // Если коллекция уже выбрана — принимаем только её части
+    if (fossil.CollectionId != CurrentCollectionId) return false;
+    
+    return !_parts.ContainsKey(fossil.Id);
+}
     
     public override List<FoundItem> GetAllItems()
     {

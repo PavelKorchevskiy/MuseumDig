@@ -47,68 +47,52 @@ public partial class Room : Resource
     
     // ===== РАЗМЕЩЕНИЕ МЕБЕЛИ =====
     
-    public bool CanPlaceFurniture(Vector2I position, Vector2I size)
+        public bool CanPlaceFurniture(Vector2I position, Vector2I size)
     {
-        // Проверка границ (с учётом отступа 1 клетка от стен)
+        // 1. Проверка границ с отступом 1 клетка от стен
+        // Зал имеет клетки от 0 до Width-1. Отступ 1 значит:
         if (position.X < 1 || position.Y < 1) return false;
         if (position.X + size.X > Width - 1) return false;
         if (position.Y + size.Y > Height - 1) return false;
-        
-        // Проверка занятости (с буферной зоной 1 клетка вокруг)
-        for (int x = position.X - 1; x <= position.X + size.X; x++)
+
+        // 2. Проверка коллизий с другой мебелью (с учетом буфера ровно в 1 клетку)
+        foreach (var existing in PlacedFurnitureList)
         {
-            for (int y = position.Y - 1; y <= position.Y + size.Y; y++)
+            // Границы существующей мебели + 1 клетка буфера вокруг
+            int exMinX = existing.Position.X - 1;
+            int exMaxX = existing.Position.X + existing.Size.X; // Последняя клетка мебели + 1 клетка буфера
+            int exMinY = existing.Position.Y - 1;
+            int exMaxY = existing.Position.Y + existing.Size.Y;
+
+            // Границы новой мебели
+            int newX1 = position.X;
+            int newX2 = position.X + size.X - 1;
+            int newY1 = position.Y;
+            int newY2 = position.Y + size.Y - 1;
+
+            // Проверка пересечения прямоугольников
+            bool overlapX = newX1 <= exMaxX && newX2 >= exMinX;
+            bool overlapY = newY1 <= exMaxY && newY2 >= exMinY;
+
+            if (overlapX && overlapY)
             {
-                if (IsCellOccupied(x, y)) return false;
+                return false; // Пересечение с мебелью или её буферной зоной
             }
         }
-        
+
         return true;
     }
-    
+
     public void PlaceFurniture(PlacedFurniture placed)
     {
         PlacedFurnitureList.Add(placed);
-        
-        // Помечаем клетки как занятые (с буферной зоной)
-        for (int x = placed.Position.X - 1; x <= placed.Position.X + placed.Size.X; x++)
-        {
-            for (int y = placed.Position.Y - 1; y <= placed.Position.Y + placed.Size.Y; y++)
-            {
-                if (x >= 0 && x < Width && y >= 0 && y < Height)
-                {
-                    _occupancyGrid[x, y] = true;
-                }
-            }
-        }
+        // Сетка _occupancyGrid больше не нужна для коллизий. 
+        // Мы полагаемся на прямой перебор PlacedFurnitureList, что на 100% надежно.
     }
-    
+
     public void RemoveFurniture(PlacedFurniture placed)
     {
         PlacedFurnitureList.Remove(placed);
-        
-        // Освобождаем клетки (с буферной зоной)
-        for (int x = placed.Position.X - 1; x <= placed.Position.X + placed.Size.X; x++)
-        {
-            for (int y = placed.Position.Y - 1; y <= placed.Position.Y + placed.Size.Y; y++)
-            {
-                if (x >= 0 && x < Width && y >= 0 && y < Height)
-                {
-                    // Проверяем, не занята ли клетка другой мебелью
-                    bool stillOccupied = false;
-                    foreach (var other in PlacedFurnitureList)
-                    {
-                        if (x >= other.Position.X - 1 && x <= other.Position.X + other.Size.X &&
-                            y >= other.Position.Y - 1 && y <= other.Position.Y + other.Size.Y)
-                        {
-                            stillOccupied = true;
-                            break;
-                        }
-                    }
-                    if (!stillOccupied) _occupancyGrid[x, y] = false;
-                }
-            }
-        }
     }
     
     // ===== ДЛЯ ПОИСКА ПУТИ (задел на посетителей) =====

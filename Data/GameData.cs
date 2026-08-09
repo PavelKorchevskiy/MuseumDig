@@ -71,6 +71,7 @@ public static class GameData
             LocationId = "canada",
             Rarity = rarity,
             CollectionBonus = 2.0f, // Uncommon bonus
+            MinSizeX = 2, MinSizeY = 2,
             Pieces = new List<FossilDefinition> { skull, body, tail }
         };
     }
@@ -86,7 +87,7 @@ public static class GameData
 
         _resources[skull.Id] = skull; _resources[body.Id] = body; _resources[tail.Id] = tail;
 
-        _collections[colId] = new CollectionDefinition { Id = colId, DisplayName = "Protoceratops", Description = "A sheep-sized ceratopsian from the sands of the Gobi Desert.", LocationId = "gobi", Rarity = rarity, CollectionBonus = 2.5f, Pieces = new List<FossilDefinition> { skull, body, tail } };
+        _collections[colId] = new CollectionDefinition { Id = colId, DisplayName = "Protoceratops", Description = "A sheep-sized ceratopsian from the sands of the Gobi Desert.", LocationId = "gobi", Rarity = rarity, CollectionBonus = 2.5f, MinSizeX = 1, MinSizeY = 1, Pieces = new List<FossilDefinition> { skull, body, tail } };
     }
 
     private static void RegisterVelociraptor()
@@ -99,7 +100,7 @@ public static class GameData
         var tail = new FossilDefinition { Id = $"{colId}_tail", DisplayName = "Velociraptor Tail", Description = "The stiff tail used for balance.", Type = ResourceType.Bone, Rarity = rarity, BaseSellPrice = 60, BaseMuseumIncome = 6, CollectionId = colId, PieceIndex = 2, TotalPieces = 3, CanExhibitAlone = false };
 
         _resources[skull.Id] = skull; _resources[body.Id] = body; _resources[tail.Id] = tail;
-        _collections[colId] = new CollectionDefinition { Id = colId, DisplayName = "Velociraptor", Description = "A swift, feathered predator made famous by movies.", LocationId = "gobi", Rarity = rarity, CollectionBonus = 2.5f, Pieces = new List<FossilDefinition> { skull, body, tail } };
+        _collections[colId] = new CollectionDefinition { Id = colId, DisplayName = "Velociraptor", Description = "A swift, feathered predator made famous by movies.", LocationId = "gobi", Rarity = rarity, CollectionBonus = 2.5f, MinSizeX = 1, MinSizeY = 1, Pieces = new List<FossilDefinition> { skull, body, tail } };
     }
 
     private static void RegisterTherizinosaurus()
@@ -112,7 +113,7 @@ public static class GameData
         var tail = new FossilDefinition { Id = $"{colId}_tail", DisplayName = "Therizinosaurus Tail", Description = "The short tail of a giant sloth-like dinosaur.", Type = ResourceType.Bone, Rarity = rarity, BaseSellPrice = 70, BaseMuseumIncome = 7, CollectionId = colId, PieceIndex = 2, TotalPieces = 3, CanExhibitAlone = false };
 
         _resources[skull.Id] = skull; _resources[body.Id] = body; _resources[tail.Id] = tail;
-        _collections[colId] = new CollectionDefinition { Id = colId, DisplayName = "Therizinosaurus", Description = "A bizarre giant herbivore with meter-long claws.", LocationId = "gobi", Rarity = rarity, CollectionBonus = 2.5f, Pieces = new List<FossilDefinition> { skull, body, tail } };
+        _collections[colId] = new CollectionDefinition { Id = colId, DisplayName = "Therizinosaurus", Description = "A bizarre giant herbivore with meter-long claws.", LocationId = "gobi", Rarity = rarity, CollectionBonus = 2.5f, MinSizeX = 1, MinSizeY = 1, Pieces = new List<FossilDefinition> { skull, body, tail } };
     }
 
     private static void RegisterIchthyosaurus()
@@ -125,7 +126,7 @@ public static class GameData
         var tail = new FossilDefinition { Id = $"{colId}_tail", DisplayName = "Ichthyosaurus Tail", Description = "The tail fluke of a marine reptile.", Type = ResourceType.Bone, Rarity = rarity, BaseSellPrice = 50, BaseMuseumIncome = 5, CollectionId = colId, PieceIndex = 2, TotalPieces = 3, CanExhibitAlone = false };
 
         _resources[skull.Id] = skull; _resources[body.Id] = body; _resources[tail.Id] = tail;
-        _collections[colId] = new CollectionDefinition { Id = colId, DisplayName = "Ichthyosaurus", Description = "A dolphin-like marine reptile from the Jurassic seas of Undoria.", LocationId = "undoria", Rarity = rarity, CollectionBonus = 2.5f, Pieces = new List<FossilDefinition> { skull, body, tail } };
+        _collections[colId] = new CollectionDefinition { Id = colId, DisplayName = "Ichthyosaurus", Description = "A dolphin-like marine reptile from the Jurassic seas of Undoria.", LocationId = "undoria", Rarity = rarity, CollectionBonus = 2.5f, MinSizeX = 1, MinSizeY = 1, Pieces = new List<FossilDefinition> { skull, body, tail } };
     }
 
     private static void RegisterPlesiosaurus()
@@ -138,7 +139,7 @@ public static class GameData
         var tail = new FossilDefinition { Id = $"{colId}_tail", DisplayName = "Plesiosaurus Tail", Description = "The short tail of a plesiosaur.", Type = ResourceType.Bone, Rarity = rarity, BaseSellPrice = 65, BaseMuseumIncome = 6, CollectionId = colId, PieceIndex = 2, TotalPieces = 3, CanExhibitAlone = false };
 
         _resources[skull.Id] = skull; _resources[body.Id] = body; _resources[tail.Id] = tail;
-        _collections[colId] = new CollectionDefinition { Id = colId, DisplayName = "Plesiosaurus", Description = "An elegant long-necked predator of the ancient Volga sea.", LocationId = "undoria", Rarity = rarity, CollectionBonus = 2.5f, Pieces = new List<FossilDefinition> { skull, body, tail } };
+        _collections[colId] = new CollectionDefinition { Id = colId, DisplayName = "Plesiosaurus", Description = "An elegant long-necked predator of the ancient Volga sea.", LocationId = "undoria", Rarity = rarity, CollectionBonus = 2.5f, MinSizeX = 2, MinSizeY = 2, Pieces = new List<FossilDefinition> { skull, body, tail } };
     }
 
     private static void RegisterStandaloneFossils()

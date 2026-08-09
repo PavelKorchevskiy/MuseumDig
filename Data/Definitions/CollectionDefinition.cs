@@ -19,4 +19,7 @@ public partial class CollectionDefinition : Resource
 	
 	// Множитель дохода за полный сбор
 	[Export] public float CollectionBonus = 2.0f;
+
+	[Export] public int MinSizeX = 2;
+    [Export] public int MinSizeY = 2;
 }

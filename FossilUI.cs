@@ -8,7 +8,6 @@ public partial class FossilUI : CanvasLayer
 	private Label _energyLabel;
 	private ProgressBar _energyBar;
 	private Button _shopButton;
-	private CanvasLayer _shop;
 	private Button _saveQuitButton;
 	private CanvasLayer _inventory;
 	private Button _inventoryButton;
@@ -61,8 +60,9 @@ private Button _upgradeButton;
 	_energyLabel = GetNodeOrNull<Label>("Background/MainContainer/EnergySection/EnergyLabel");
 	_energyBar = GetNodeOrNull<ProgressBar>("Background/MainContainer/EnergySection/EnergyBar");
 	_shopButton = GetNodeOrNull<Button>("Background/MainContainer/ButtonsSection/ShopButton");
-	_shop = GetNodeOrNull<CanvasLayer>("Shop");
-	_inventoryButton = GetNodeOrNull<Button>("Background/MainContainer/ButtonsSection/InventoryButton");
+var digShop = new DigShopUI();
+digShop.Name = "DigShop";
+AddChild(digShop);	_inventoryButton = GetNodeOrNull<Button>("Background/MainContainer/ButtonsSection/InventoryButton");
 	_inventory = GetNodeOrNull<CanvasLayer>("Inventory");
 	if (_inventoryButton != null) _inventoryButton.Pressed += OnInventoryPressed;
 	_shovelButton = GetNodeOrNull<Button>("Background/MainContainer/ToolsSection/ShovelButton");
@@ -83,7 +83,6 @@ private Button _upgradeButton;
 	if (_energyLabel == null) GD.PrintErr("⚠️ EnergyLabel not found!");
 	if (_energyBar == null) GD.PrintErr("⚠️ EnergyBar not found!");
 	if (_shopButton == null) GD.PrintErr("⚠️ ShopButton not found!");
-	if (_shop == null) GD.PrintErr("⚠️ Shop not found!");
 	
 	// ===== ПОДПИСКА =====
 	if (_shopButton != null) _shopButton.Pressed += OnShopPressed;
@@ -100,18 +99,20 @@ if (_saveQuitButton != null)
 	
 	private void OnShopPressed()
 {
-    GD.Print("[DEBUG] OnShopPressed вызван!");
-    GD.Print($"[DEBUG] _shop = {_shop != null}");
+    // Ищем или создаём магазин раскопок
+    var digShop = GetNodeOrNull<DigShopUI>("DigShop");
     
-    if (_shop != null)
+    if (digShop == null)
     {
-        _shop.Visible = true;
-        GD.Print("[DEBUG] Shop.Visible = true");
+        // Создаём магазин программно, если его ещё нет
+        digShop = new DigShopUI();
+        digShop.Name = "DigShop";
+        AddChild(digShop);
+        GD.Print("[FossilUI] DigShop created");
     }
-    else
-    {
-        GD.PrintErr("[DEBUG] _shop равен null!");
-    }
+    
+    digShop.Visible = true;
+    GD.Print("[FossilUI] DigShop opened");
 }
 	
 	
