@@ -110,22 +110,22 @@ public partial class PlacementModeUI : CanvasLayer
     // ===== ОБНОВЛЕНИЕ ПРЕДПРОСМОТРА =====
     
     private void UpdateHoveredCell()
+{
+    var mousePos = GetViewport().GetMousePosition();
+    
+    // Конвертируем экранные координаты в изометрические координаты сетки
+    float relativeX = mousePos.X - GridOffsetX;
+    float relativeY = mousePos.Y - GridOffsetY;
+    
+    _hoveredCell = IsoUtils.IsoToGrid(relativeX, relativeY);
+    
+    // Проверяем границы
+    if (_hoveredCell.X < 0 || _hoveredCell.X >= _currentRoom.Width ||
+        _hoveredCell.Y < 0 || _hoveredCell.Y >= _currentRoom.Height)
     {
-        var mousePos = GetViewport().GetMousePosition();
-        
-        // Конвертируем позицию мыши в координаты сетки
-        int gridX = (int)((mousePos.X - GridOffsetX) / CellSize);
-        int gridY = (int)((mousePos.Y - GridOffsetY) / CellSize);
-        
-        if (gridX >= 0 && gridX < _currentRoom.Width && gridY >= 0 && gridY < _currentRoom.Height)
-        {
-            _hoveredCell = new Vector2I(gridX, gridY);
-        }
-        else
-        {
-            _hoveredCell = new Vector2I(-1, -1);
-        }
+        _hoveredCell = new Vector2I(-1, -1);
     }
+}
     
     private void UpdatePreview()
     {
@@ -136,10 +136,11 @@ public partial class PlacementModeUI : CanvasLayer
         }
         
         _previewGhost.Visible = true;
-        _previewGhost.Position = new Vector2(
-            GridOffsetX + _hoveredCell.X * CellSize,
-            GridOffsetY + _hoveredCell.Y * CellSize
-        );
+        var isoPos = IsoUtils.GridToIso(_hoveredCell.X, _hoveredCell.Y);
+    _previewGhost.Position = new Vector2(
+        GridOffsetX + isoPos.X,
+        GridOffsetY + isoPos.Y
+    );
         _previewGhost.Size = new Vector2(
             _furnitureToPlace.Size.X * CellSize - 2,
             _furnitureToPlace.Size.Y * CellSize - 2

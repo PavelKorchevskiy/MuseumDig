@@ -63,7 +63,8 @@ public partial class DigSite : Node2D
 				tile.Position = new Vector2(x * TileSize, y * TileSize);
 				tile.CustomMinimumSize = new Vector2(TileSize, TileSize);
 				tile.Size = new Vector2(TileSize, TileSize);
-				
+				        tile.GridPosition = new Vector2I(x, y);
+
 				tile.Initialize(y, baseHp, hpGrowth);
 				
 				AddChild(tile);

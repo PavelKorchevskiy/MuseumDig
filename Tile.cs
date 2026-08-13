@@ -5,6 +5,9 @@ public partial class Tile : ColorRect
 {
 	// ===== СОСТОЯНИЕ ТАЙЛА =====
 	private TileState _state = TileState.Solid;
+
+	private TextureRect _sprite;
+    private Label _hpLabel;
 	
 	// HP блока (земли)
 	private int _blockHp;
@@ -16,20 +19,43 @@ public partial class Tile : ColorRect
 	
 	// Для отладки — глубина ряда (влияет на HP)
 	[Export] public int RowIndex = 0;
+
+	public Vector2I GridPosition { get; set; }
 	
 	// ===== ИНИЦИАЛИЗАЦИЯ =====
 	
 	public void Initialize(int row, float baseHp, float hpGrowth)
-	{
-		RowIndex = row;
-		_blockMaxHp = (int)(baseHp * Mathf.Pow(hpGrowth, row));
-		_blockHp = _blockMaxHp;
-		
-		// Решаем, что внутри, по таблице лута
-		_hiddenResource = RollLoot();
-		
-		UpdateVisual();
-	}
+{
+    RowIndex = row;
+    _blockMaxHp = (int)(baseHp * Mathf.Pow(hpGrowth, row));
+    _blockHp = _blockMaxHp;
+    
+    // Решаем, что внутри, по таблице лута
+    _hiddenResource = RollLoot();
+    
+    // Инициализация визуальных элементов (только один раз)
+    if (_sprite == null)
+    {
+        _sprite = new TextureRect();
+        // ЗАМЕНИТЕ ПУТЬ на реальный путь к вашему сгенерированному тайлу!
+        _sprite.Texture = GD.Load<Texture2D>("res://assets/tiles/dirt.png"); 
+        _sprite.Size = new Vector2(IsoUtils.TileWidth, IsoUtils.TileHeight);
+        _sprite.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
+        _sprite.MouseFilter = Control.MouseFilterEnum.Stop;
+        AddChild(_sprite);
+        
+        _hpLabel = new Label();
+        _hpLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        _hpLabel.VerticalAlignment = VerticalAlignment.Center;
+        _hpLabel.Size = new Vector2(IsoUtils.TileWidth, IsoUtils.TileHeight);
+        _hpLabel.AddThemeFontSizeOverride("font_size", 14);
+        _hpLabel.AddThemeColorOverride("font_color", Colors.White);
+        _hpLabel.MouseFilter = Control.MouseFilterEnum.Ignore;
+        AddChild(_hpLabel);
+    }
+    
+    UpdateVisual();
+}
 	
 	// ===== РОЛЛ ЛУТА =====
 	
@@ -186,29 +212,29 @@ public partial class Tile : ColorRect
 	// ===== ВИЗУАЛ =====
 	
 	private void UpdateVisual()
-	{
-		switch (_state)
-		{
-			case TileState.Solid:
-				Color = new Color(0.6f, 0.4f, 0.2f); // Коричневый
-				break;
-				
-			case TileState.Cracked:
-				// Чем меньше HP, тем темнее
-				float ratio = (float)_blockHp / _blockMaxHp;
-				Color = new Color(0.4f * ratio + 0.2f, 0.3f * ratio + 0.1f, 0.1f);
-				break;
-				
-			case TileState.Exposed:
-				// Цвет зависит от редкости находки
-				Color = GetRarityColor(_hiddenResource.Rarity);
-				break;
-				
-			case TileState.Extracted:
-				Color = new Color(0.3f, 0.3f, 0.3f, 0.3f); // Полупрозрачный серый
-				break;
-		}
-	}
+{
+    // Обновляем отображение HP
+    if (_hpLabel != null)
+    {
+        _hpLabel.Text = _blockHp > 0 ? $"{_blockHp}" : "";
+    }
+    
+    // Обновляем позицию (изометрия)
+    UpdatePosition();
+}
+
+// НОВЫЙ МЕТОД: Обновление позиции в изометрии
+private void UpdatePosition()
+{
+    // Изометрическая позиция
+    var isoPos = IsoUtils.GridToIso(GridPosition.X, GridPosition.Y);
+    
+    // Добавляем смещение для центрирования сетки на экране
+    Position = isoPos + new Vector2(400, 100); // Настройте смещение под свой экран
+    
+    // Z-порядок для правильной отрисовки
+    ZIndex = IsoUtils.GetZOrder(GridPosition.X, GridPosition.Y);
+}
 	
 	private Color GetRarityColor(Rarity rarity)
 	{

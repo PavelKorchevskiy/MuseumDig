@@ -183,12 +183,18 @@ public partial class Visitor : Control
     }
     
     private void UpdateVisualPosition()
-    {
-        Position = new Vector2(
-            GridOffsetX + _currentCell.X * CellSize + 10,
-            GridOffsetY + _currentCell.Y * CellSize + 10
-        );
-    }
+{
+    // Изометрическая позиция
+    var isoPos = IsoUtils.GridToIso(_currentCell.X, _currentCell.Y);
+    
+    Position = new Vector2(
+        500 + isoPos.X, // GridOffsetX из RoomViewUI
+        100 + isoPos.Y  // GridOffsetY из RoomViewUI
+    );
+    
+    // Z-порядок для правильной отрисовки
+    ZIndex = IsoUtils.GetZOrder(_currentCell.X, _currentCell.Y) + 2;
+}
     
     private void FindNewWanderTarget()
     {
