@@ -142,7 +142,7 @@ public static class GameData
         _collections[colId] = new CollectionDefinition { Id = colId, DisplayName = "Plesiosaurus", Description = "An elegant long-necked predator of the ancient Volga sea.", LocationId = "undoria", Rarity = rarity, CollectionBonus = 2.5f, MinSizeX = 2, MinSizeY = 2, Pieces = new List<FossilDefinition> { skull, body, tail } };
     }
 
-    private static void RegisterStandaloneFossils()
+    public static void RegisterStandaloneFossils()
     {
         _resources["dino_tooth"] = new FossilDefinition { Id = "dino_tooth", DisplayName = "Dinosaur Tooth", Description = "A sharp tooth from an unknown dinosaur.", Type = ResourceType.Tooth, Rarity = Rarity.Common, BaseSellPrice = 15, BaseMuseumIncome = 2, CollectionId = "", PieceIndex = -1, TotalPieces = 1, CanExhibitAlone = true };
         _resources["dino_egg"] = new FossilDefinition { Id = "dino_egg", DisplayName = "Fossilized Dinosaur Egg", Description = "A perfectly preserved dinosaur egg from the Gobi Desert.", Type = ResourceType.Bone, Rarity = Rarity.Uncommon, BaseSellPrice = 40, BaseMuseumIncome = 4, CollectionId = "", PieceIndex = -1, TotalPieces = 1, CanExhibitAlone = true };

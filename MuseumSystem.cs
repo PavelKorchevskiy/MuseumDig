@@ -520,24 +520,37 @@ public partial class MuseumSystem : Node
         // ===== ВЗАИМОДЕЙСТВИЕ UI С МЕБЕЛЬЮ =====
     
     public bool TryAddItemToFurniture(Room room, PlacedFurniture placed, string resourceId, Quality quality)
+{
+    // 1. Находим РЕАЛЬНЫЙ объект в списке комнаты, чтобы исключить работу с копией
+    var realPlaced = room.PlacedFurnitureList.FirstOrDefault(p => p.InstanceId == placed.InstanceId);
+    
+    if (realPlaced == null)
     {
-        if (placed.Furniture.CanAccept(GameData.GetResource(resourceId), quality))
-        {
-            var invItem = InventorySystem.Instance.GetItem(resourceId, quality);
-            if (invItem != null && invItem.Amount > 0)
-            {
-                placed.Furniture.AddItem(new FoundItem(resourceId, quality, 1));
-                InventorySystem.Instance.RemoveItem(resourceId, quality, 1);
-                SaveSystem.Instance?.MarkDirty();
-                return true;
-            }
-        }
+        GD.PrintErr($"[MuseumSystem] КРИТИЧЕСКАЯ ОШИБКА: Не удалось найти мебель с ID {placed.InstanceId} в комнате!");
         return false;
     }
 
+    // 2. Создаем новый предмет
+    var newItem = new FoundItem(resourceId, quality, 1);
+
+    // 3. Пытаемся добавить его в РЕАЛЬНЫЙ объект
+    bool added = realPlaced.AddItem(newItem);
+    
+    if (added)
+    {
+        GD.Print($"[MuseumSystem] УСПЕХ: Добавлен {resourceId} в витрину {realPlaced.InstanceId}. Всего предметов: {realPlaced.GetAllItems().Count}");
+    }
+    else
+    {
+        GD.PrintErr($"[MuseumSystem] ОТКАЗ: Метод AddItem вернул false для витрины {realPlaced.InstanceId} (возможно, превышен лимит)");
+    }
+    
+    return added;
+}
+
     public bool TryReturnItemFromFurniture(Room room, PlacedFurniture placed, string resourceId, Quality quality)
     {
-        var removed = placed.Furniture.RemoveItem(resourceId, quality);
+        var removed = placed.RemoveItem(resourceId, quality);
         if (removed != null)
         {
             InventorySystem.Instance.AddItem(removed.ResourceId, removed.Quality, removed.Amount);

@@ -14,8 +14,8 @@ public partial class Wallet : Node
 	public void AddCoins(int amount)
 	{
 		_coins += amount;
-		GD.Print($"Added {amount} coins. Total: {_coins}");
-		SaveSystem.Instance?.MarkDirty(); // Помечаем, что нужно сохранить
+		// GD.Print($"Added {amount} coins. Total: {_coins}");
+		// SaveSystem.Instance?.MarkDirty(); // Помечаем, что нужно сохранить
 	}
 	
 	public bool SpendCoins(int amount)

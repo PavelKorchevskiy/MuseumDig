@@ -25,12 +25,6 @@ public partial class DisplayCase : Furniture
         return true;
     }
     
-    public override FoundItem RemoveItem(string resourceId, Quality quality)
-    {
-        var item = _items.FirstOrDefault(i => i.ResourceId == resourceId && i.Quality == quality);
-        if (item != null) _items.Remove(item);
-        return item;
-    }
     
     public override FurnitureSaveData GetSaveData()
     {

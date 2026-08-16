@@ -4,21 +4,20 @@ using System.Collections.Generic;
 public partial class PlacementModeUI : CanvasLayer
 {
     private ColorRect[,] _gridCells;
-    private ColorRect _previewGhost;
+    private TextureRect _previewGhost;
     private Label _instructionLabel;
     
     private Room _currentRoom;
     private Furniture _furnitureToPlace;
     private Vector2I _hoveredCell = new(-1, -1);
     
-    // Размеры ячейки в пикселях
-    private const int CellSize = 60;
-    private const int GridOffsetX = 100;
+    // ИЗОМЕТРИЧЕСКИЕ КОНСТАНТЫ (должны совпадать с RoomViewUI)
+    private const int GridOffsetX = 500;
     private const int GridOffsetY = 100;
     
     public override void _Ready()
     {
-        Layer = 50; // Поверх основного UI, но ниже модалок
+        Layer = 50;
         Visible = false;
     }
     
@@ -29,7 +28,6 @@ public partial class PlacementModeUI : CanvasLayer
         UpdateHoveredCell();
         UpdatePreview();
         
-        // Отмена по Esc
         if (Input.IsActionJustPressed("ui_cancel"))
         {
             CancelPlacement();
@@ -74,14 +72,13 @@ public partial class PlacementModeUI : CanvasLayer
             for (int y = 0; y < _currentRoom.Height; y++)
             {
                 var cell = new ColorRect();
-                cell.Position = new Vector2(GridOffsetX + x * CellSize, GridOffsetY + y * CellSize);
-                cell.Size = new Vector2(CellSize - 2, CellSize - 2); // -2 для зазора между клетками
+                var isoPos = IsoUtils.GridToIso(x, y);
                 
-                // Определяем цвет клетки
-                bool canPlace = MuseumSystem.Instance.CanPlaceFurnitureAt(_currentRoom, new Vector2I(x, y), _furnitureToPlace.Size);
-                cell.Color = canPlace ? new Color(0.2f, 0.8f, 0.2f, 0.3f) : new Color(0.8f, 0.2f, 0.2f, 0.3f);
-                
-                cell.MouseFilter = Control.MouseFilterEnum.Ignore; // Клики проходят сквозь клетки
+                cell.Position = new Vector2(GridOffsetX + isoPos.X, GridOffsetY + isoPos.Y);
+                cell.Size = new Vector2(IsoUtils.TileWidth, IsoUtils.TileHeight);
+                cell.Color = new Color(1f, 1f, 1f, 0.1f);
+                cell.MouseFilter = Control.MouseFilterEnum.Ignore;
+                cell.ZIndex = IsoUtils.GetZOrder(x, y);
                 
                 AddChild(cell);
                 _gridCells[x, y] = cell;
@@ -91,9 +88,9 @@ public partial class PlacementModeUI : CanvasLayer
     
     private void CreatePreviewGhost()
     {
-        _previewGhost = new ColorRect();
-        _previewGhost.Color = new Color(1f, 1f, 1f, 0.5f); // Полупрозрачный белый
+        _previewGhost = new TextureRect();
         _previewGhost.MouseFilter = Control.MouseFilterEnum.Ignore;
+        _previewGhost.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
         AddChild(_previewGhost);
     }
     
@@ -101,7 +98,7 @@ public partial class PlacementModeUI : CanvasLayer
     {
         _instructionLabel = new Label();
         _instructionLabel.Text = $"Размещение: {_furnitureToPlace.DisplayName} ({_furnitureToPlace.Size.X}x{_furnitureToPlace.Size.Y})\nКлик = поставить | Esc = отмена";
-        _instructionLabel.Position = new Vector2(GridOffsetX, GridOffsetY - 50);
+        _instructionLabel.Position = new Vector2(20, 20);
         _instructionLabel.AddThemeFontSizeOverride("font_size", 18);
         _instructionLabel.AddThemeColorOverride("font_color", Colors.White);
         AddChild(_instructionLabel);
@@ -110,68 +107,104 @@ public partial class PlacementModeUI : CanvasLayer
     // ===== ОБНОВЛЕНИЕ ПРЕДПРОСМОТРА =====
     
     private void UpdateHoveredCell()
-{
-    var mousePos = GetViewport().GetMousePosition();
-    
-    // Конвертируем экранные координаты в изометрические координаты сетки
-    float relativeX = mousePos.X - GridOffsetX;
-    float relativeY = mousePos.Y - GridOffsetY;
-    
-    _hoveredCell = IsoUtils.IsoToGrid(relativeX, relativeY);
-    
-    // Проверяем границы
-    if (_hoveredCell.X < 0 || _hoveredCell.X >= _currentRoom.Width ||
-        _hoveredCell.Y < 0 || _hoveredCell.Y >= _currentRoom.Height)
     {
-        _hoveredCell = new Vector2I(-1, -1);
+        var mousePos = GetViewport().GetMousePosition();
+        
+        float relativeX = mousePos.X - GridOffsetX;
+        float relativeY = mousePos.Y - GridOffsetY;
+        
+        _hoveredCell = IsoUtils.IsoToGrid(relativeX, relativeY);
+        
+        if (_hoveredCell.X < 0 || _hoveredCell.X >= _currentRoom.Width ||
+            _hoveredCell.Y < 0 || _hoveredCell.Y >= _currentRoom.Height)
+        {
+            _hoveredCell = new Vector2I(-1, -1);
+        }
     }
-}
     
     private void UpdatePreview()
     {
-        if (_hoveredCell.X < 0 || _hoveredCell.Y < 0)
+        if (_hoveredCell.X < 0 || _hoveredCell.Y < 0 || _previewGhost == null)
         {
-            _previewGhost.Visible = false;
+            if (_previewGhost != null) _previewGhost.Visible = false;
+            UpdateGridColors(false);
             return;
         }
         
         _previewGhost.Visible = true;
-        var isoPos = IsoUtils.GridToIso(_hoveredCell.X, _hoveredCell.Y);
-    _previewGhost.Position = new Vector2(
-        GridOffsetX + isoPos.X,
-        GridOffsetY + isoPos.Y
-    );
-        _previewGhost.Size = new Vector2(
-            _furnitureToPlace.Size.X * CellSize - 2,
-            _furnitureToPlace.Size.Y * CellSize - 2
+        
+        // Загружаем текстуру мебели
+        string texturePath = GetFurnitureTexturePath(_furnitureToPlace);
+        if (ResourceLoader.Exists(texturePath))
+        {
+            _previewGhost.Texture = GD.Load<Texture2D>(texturePath);
+        }
+        
+        // Вычисляем изометрическую позицию (центр нижней клетки мебели)
+        int centerX = _hoveredCell.X + _furnitureToPlace.Size.X / 2;
+        int centerY = _hoveredCell.Y + _furnitureToPlace.Size.Y / 2;
+        var isoPos = IsoUtils.GridToIso(centerX, centerY);
+        
+        // Позиционирование "призрака" (нижний центр на уровне пола)
+        float texWidth = _previewGhost.Texture?.GetWidth() ?? 64;
+        float texHeight = _previewGhost.Texture?.GetHeight() ?? 64;
+        float yOffset = (_furnitureToPlace.Size.Y - 1) * (IsoUtils.TileHeight / 2f) + (IsoUtils.TileHeight / 2f);
+        
+        _previewGhost.Position = new Vector2(
+            GridOffsetX + isoPos.X - texWidth / 2f + 30,
+            GridOffsetY + isoPos.Y - texHeight + yOffset
         );
         
-        // Проверяем, можно ли разместить мебель здесь
+        _previewGhost.ZIndex = IsoUtils.GetZOrder(centerX, centerY) + 10;
+        
         bool canPlace = MuseumSystem.Instance.CanPlaceFurnitureAt(_currentRoom, _hoveredCell, _furnitureToPlace.Size);
-        _previewGhost.Color = canPlace ? new Color(0.3f, 1f, 0.3f, 0.6f) : new Color(1f, 0.3f, 0.3f, 0.6f);
+        
+        // Цветовой оверлей для индикации
+        _previewGhost.Modulate = canPlace ? new Color(1f, 1f, 1f, 0.7f) : new Color(1f, 0.3f, 0.3f, 0.7f);
+        
+        UpdateGridColors(canPlace);
+    }
+    
+    private void UpdateGridColors(bool isValid)
+    {
+        Color highlightColor = isValid ? new Color(0.3f, 1f, 0.3f, 0.4f) : new Color(1f, 0.3f, 0.3f, 0.4f);
+        Color defaultColor = new Color(1f, 1f, 1f, 0.1f);
+
+        for (int x = 0; x < _currentRoom.Width; x++)
+        {
+            for (int y = 0; y < _currentRoom.Height; y++)
+            {
+                bool isUnderFurniture = x >= _hoveredCell.X && x < _hoveredCell.X + _furnitureToPlace.Size.X &&
+                                        y >= _hoveredCell.Y && y < _hoveredCell.Y + _furnitureToPlace.Size.Y;
+                
+                if (_gridCells[x, y] != null)
+                {
+                    _gridCells[x, y].Color = isUnderFurniture ? highlightColor : defaultColor;
+                }
+            }
+        }
     }
     
     // ===== РАЗМЕЩЕНИЕ И ОТМЕНА =====
     
     private void TryPlaceFurniture()
-{
-    if (_hoveredCell.X < 0 || _hoveredCell.Y < 0) return;
-    
-    if (MuseumSystem.Instance.PlaceFurniture(_currentRoom, _furnitureToPlace, _hoveredCell))
     {
-        GD.Print($"[PlacementMode] Placed {_furnitureToPlace.DisplayName} at ({_hoveredCell.X}, {_hoveredCell.Y})");
+        if (_hoveredCell.X < 0 || _hoveredCell.Y < 0) return;
         
-        // НОВОЕ: Находим сцену Музея и просим её обновить визуализацию
-        var museum = GetTree().CurrentScene as Museum;
-        museum?.RefreshRoomView();
-        
-        CancelPlacement();
+        if (MuseumSystem.Instance.PlaceFurniture(_currentRoom, _furnitureToPlace, _hoveredCell))
+        {
+            GD.Print($"[PlacementMode] Placed {_furnitureToPlace.DisplayName} at ({_hoveredCell.X}, {_hoveredCell.Y})");
+            
+            var museum = GetTree().CurrentScene as Museum;
+            museum?.RefreshRoomView();
+            
+            CancelPlacement();
+        }
+        else
+        {
+            GD.Print("[PlacementMode] Cannot place here!");
+        }
     }
-    else
-    {
-        GD.Print("[PlacementMode] Cannot place here!");
-    }
-}
     
     private void CancelPlacement()
     {
@@ -180,15 +213,38 @@ public partial class PlacementModeUI : CanvasLayer
         GD.Print("[PlacementMode] Cancelled");
     }
     
-    // ===== ОЧИСТКА =====
+    // ===== УТИЛИТЫ =====
+    
+    private string GetFurnitureTexturePath(Furniture furniture)
+    {
+        if (furniture is DisplayCase)
+        {
+            if (furniture.Size.X == 1 && furniture.Size.Y == 1)
+                return "res://assets/museum/furniture/display_case_small.png";
+            else
+                return "res://assets/museum/furniture/display_case_large.png";
+        }
+        else if (furniture is Pedestal)
+        {
+            if (furniture.Size.X == 2 && furniture.Size.Y == 2)
+                return "res://assets/museum/furniture/pedestal_small.png";
+            else
+                return "res://assets/museum/furniture/pedestal_large.png";
+        }
+        
+        return "";
+    }
     
     private void ClearGrid()
     {
         if (_gridCells != null)
         {
-            foreach (var cell in _gridCells)
+            for (int x = 0; x < _currentRoom?.Width; x++)
             {
-                cell?.QueueFree();
+                for (int y = 0; y < _currentRoom?.Height; y++)
+                {
+                    _gridCells[x, y]?.QueueFree();
+                }
             }
             _gridCells = null;
         }

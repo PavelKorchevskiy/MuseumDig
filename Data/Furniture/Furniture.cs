@@ -25,7 +25,7 @@ public abstract partial class Furniture : Resource
     public abstract bool AddItem(FoundItem item);
     
     // Удалить предмет
-    public abstract FoundItem RemoveItem(string resourceId, Quality quality);
+    // public virtual FoundItem RemoveItem(string resourceId, Quality quality);
     
     // Для сохранения (переопределяется в наследниках)
     public abstract FurnitureSaveData GetSaveData();

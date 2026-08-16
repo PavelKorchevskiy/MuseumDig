@@ -155,7 +155,7 @@ public partial class Visitor : Control
             {
                 if (_currentRoom.IsMainHall)
                 {
-                    GD.Print("[Visitor] Exited through street door!");
+                    // GD.Print("[Visitor] Exited through street door!");
                     QueueFree();
                 }
                 else
@@ -392,7 +392,7 @@ public partial class Visitor : Control
             FindPathToMainHall();
         }
         
-        GD.Print("[Visitor] Decided to leave the museum");
+        // GD.Print("[Visitor] Decided to leave the museum");
     }
     
     private void FindPathToMainHall()

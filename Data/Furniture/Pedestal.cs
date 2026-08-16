@@ -51,19 +51,6 @@ public partial class Pedestal : Furniture
         return true;
     }
     
-    public override FoundItem RemoveItem(string resourceId, Quality quality)
-    {
-        if (_parts.ContainsKey(resourceId) && _parts[resourceId] == quality)
-        {
-            _parts.Remove(resourceId);
-            
-            // Если пьедестал опустел — сбрасываем выбранную коллекцию
-            if (_parts.Count == 0) CurrentCollectionId = "";
-            
-            return new FoundItem(resourceId, quality, 1);
-        }
-        return null;
-    }
     
     public bool IsComplete()
     {
