@@ -187,10 +187,18 @@ private void OnSaveQuitPressed()
 
 private void OnInventoryPressed()
 {
-	if (_inventory != null)
-	{
-		_inventory.Visible = true;
-	}
+    GD.Print("[DEBUG] Кнопка инвентаря нажата на раскопках!");
+    
+    // ИСПОЛЬЗУЕМ ГЛОБАЛЬНЫЙ ИНВЕНТАРЬ ВМЕСТО ЛОКАЛЬНОГО
+    if (InventoryUI.Instance != null && GodotObject.IsInstanceValid(InventoryUI.Instance))
+    {
+        InventoryUI.Instance.Visible = true;
+        GD.Print("[DEBUG] Глобальный инвентарь открыт!");
+    }
+    else
+    {
+        GD.PrintErr("[DEBUG] ОШИБКА: InventoryUI.Instance недоступен!");
+    }
 }
 private void OnShovelPressed()
 {

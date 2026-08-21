@@ -4,7 +4,6 @@ using System.Collections.Generic;
 public partial class PlacementModeUI : CanvasLayer
 {
     private ColorRect[,] _gridCells;
-    private TextureRect _previewGhost;
     private Label _instructionLabel;
     
     private Room _currentRoom;
@@ -54,7 +53,6 @@ public partial class PlacementModeUI : CanvasLayer
         
         ClearGrid();
         CreateGrid();
-        CreatePreviewGhost();
         CreateInstructionLabel();
         
         Visible = true;
@@ -84,14 +82,6 @@ public partial class PlacementModeUI : CanvasLayer
                 _gridCells[x, y] = cell;
             }
         }
-    }
-    
-    private void CreatePreviewGhost()
-    {
-        _previewGhost = new TextureRect();
-        _previewGhost.MouseFilter = Control.MouseFilterEnum.Ignore;
-        _previewGhost.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
-        AddChild(_previewGhost);
     }
     
     private void CreateInstructionLabel()
@@ -124,44 +114,12 @@ public partial class PlacementModeUI : CanvasLayer
     
     private void UpdatePreview()
     {
-        if (_hoveredCell.X < 0 || _hoveredCell.Y < 0 || _previewGhost == null)
+        if (_hoveredCell.X < 0 || _hoveredCell.Y < 0 )
         {
-            if (_previewGhost != null) _previewGhost.Visible = false;
             UpdateGridColors(false);
             return;
-        }
-        
-        _previewGhost.Visible = true;
-        
-        // Загружаем текстуру мебели
-        string texturePath = GetFurnitureTexturePath(_furnitureToPlace);
-        if (ResourceLoader.Exists(texturePath))
-        {
-            _previewGhost.Texture = GD.Load<Texture2D>(texturePath);
-        }
-        
-        // Вычисляем изометрическую позицию (центр нижней клетки мебели)
-        int centerX = _hoveredCell.X + _furnitureToPlace.Size.X / 2;
-        int centerY = _hoveredCell.Y + _furnitureToPlace.Size.Y / 2;
-        var isoPos = IsoUtils.GridToIso(centerX, centerY);
-        
-        // Позиционирование "призрака" (нижний центр на уровне пола)
-        float texWidth = _previewGhost.Texture?.GetWidth() ?? 64;
-        float texHeight = _previewGhost.Texture?.GetHeight() ?? 64;
-        float yOffset = (_furnitureToPlace.Size.Y - 1) * (IsoUtils.TileHeight / 2f) + (IsoUtils.TileHeight / 2f);
-        
-        _previewGhost.Position = new Vector2(
-            GridOffsetX + isoPos.X - texWidth / 2f + 30,
-            GridOffsetY + isoPos.Y - texHeight + yOffset
-        );
-        
-        _previewGhost.ZIndex = IsoUtils.GetZOrder(centerX, centerY) + 10;
-        
+        }       
         bool canPlace = MuseumSystem.Instance.CanPlaceFurnitureAt(_currentRoom, _hoveredCell, _furnitureToPlace.Size);
-        
-        // Цветовой оверлей для индикации
-        _previewGhost.Modulate = canPlace ? new Color(1f, 1f, 1f, 0.7f) : new Color(1f, 0.3f, 0.3f, 0.7f);
-        
         UpdateGridColors(canPlace);
     }
     
@@ -248,9 +206,6 @@ public partial class PlacementModeUI : CanvasLayer
             }
             _gridCells = null;
         }
-        
-        _previewGhost?.QueueFree();
-        _previewGhost = null;
         
         _instructionLabel?.QueueFree();
         _instructionLabel = null;

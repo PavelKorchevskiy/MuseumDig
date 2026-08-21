@@ -208,7 +208,7 @@ public partial class MuseumSystem : Node
             new FurnitureTemplate { TypeId = "display_case_1x1", DisplayName = "Малая витрина", Size = new Vector2I(1, 1), BuyPrice = 200, CreateFunc = () => new DisplayCase { TypeId = "display_case_1x1", DisplayName = "Малая витрина", Size = new Vector2I(1, 1), BuyPrice = 200, Capacity = 5 } },
             new FurnitureTemplate { TypeId = "display_case_2x1", DisplayName = "Большая витрина", Size = new Vector2I(2, 1), BuyPrice = 400, CreateFunc = () => new DisplayCase { TypeId = "display_case_2x1", DisplayName = "Большая витрина", Size = new Vector2I(2, 1), BuyPrice = 400, Capacity = 10 } },
             new FurnitureTemplate { TypeId = "pedestal_2x2", DisplayName = "Малый пьедестал", Size = new Vector2I(2, 2), BuyPrice = 600, CreateFunc = () => new Pedestal { TypeId = "pedestal_2x2", DisplayName = "Малый пьедестал", Size = new Vector2I(2, 2), BuyPrice = 600 } },
-            new FurnitureTemplate { TypeId = "pedestal_3x4", DisplayName = "Большой пьедестал", Size = new Vector2I(3, 4), BuyPrice = 1500, CreateFunc = () => new Pedestal { TypeId = "pedestal_3x4", DisplayName = "Большой пьедестал", Size = new Vector2I(3, 4), BuyPrice = 1500 } }
+            new FurnitureTemplate { TypeId = "pedestal_3x3", DisplayName = "Большой пьедестал", Size = new Vector2I(3, 3), BuyPrice = 1500, CreateFunc = () => new Pedestal { TypeId = "pedestal_3x3", DisplayName = "Большой пьедестал", Size = new Vector2I(3, 3), BuyPrice = 1500 } }
         };
     }
     
@@ -458,7 +458,6 @@ public partial class MuseumSystem : Node
                             BuyPrice = furnData.FurnitureTypeId == "display_case_1x1" ? 200 : 400,
                             Capacity = furnData.SizeX * 5
                         };
-                        dc.LoadFromSaveData(furnData.FurnitureSaveData);
                         furniture = dc;
                     }
                     else if (furnData.FurnitureTypeId.StartsWith("pedestal"))
@@ -470,7 +469,6 @@ public partial class MuseumSystem : Node
                             Size = new Vector2I(furnData.SizeX, furnData.SizeY),
                             BuyPrice = furnData.FurnitureTypeId == "pedestal_2x2" ? 600 : 1500
                         };
-                        ped.LoadFromSaveData(furnData.FurnitureSaveData);
                         furniture = ped;
                     }
                     
@@ -484,6 +482,12 @@ public partial class MuseumSystem : Node
                             Size = new Vector2I(furnData.SizeX, furnData.SizeY),
                             Furniture = furniture
                         };
+
+                        if (furnData.FurnitureSaveData?.DisplayCaseItems != null)
+            {
+                placed.Items.Clear(); // На всякий случай очищаем
+                placed.Items.AddRange(furnData.FurnitureSaveData.DisplayCaseItems);
+            }
                         
                         room.PlacedFurnitureList.Add(placed);
                         

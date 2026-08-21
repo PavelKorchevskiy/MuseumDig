@@ -1,137 +1,114 @@
 using Godot;
-using System.Collections.Generic;
 
 public partial class Museum : Node2D
 {
-    public RoomViewUI _roomView;
+    private RoomViewUI _roomView;
     private CanvasLayer _offlineReward;
-    private CanvasLayer _shop;
-    private CanvasLayer _inventory;    
+    private MuseumShopUI _shopUI;
     private VBoxContainer _buttonPanel;
     
-    private bool _offlineRewardChecked = false;
     private bool _initialDisplayUpdated = false;
+    private bool _offlineRewardChecked = false;
 
     public override void _Ready()
     {
-        _offlineReward = GetNodeOrNull<CanvasLayer>("UI/OfflineReward");
-        if (_offlineReward != null) _offlineReward.Visible = false;
-
-        var museumShop = new MuseumShopUI();
-        museumShop.Name = "MuseumShop";
-        AddChild(museumShop);
-
-        if (_shop != null) _shop.Visible = false;
-        
-        _inventory = GetNodeOrNull<CanvasLayer>("UI/Inventory");
-        if (_inventory != null) _inventory.Visible = false;
-
-        // Создаём визуализацию зала
-        _roomView = new RoomViewUI();
-        AddChild(_roomView);
-        
-        // Создаём панель кнопок
-        CreateButtonPanel();
-    }
-    
-    private void CreateButtonPanel()
-    {
+        // 1. Создаем или получаем UI-слой с высоким приоритетом (чтобы быть поверх комнаты)
         var uiLayer = GetNodeOrNull<CanvasLayer>("UI");
         if (uiLayer == null)
         {
-            uiLayer = new CanvasLayer { Name = "UI", Layer = 10 };
+            uiLayer = new CanvasLayer { Name = "UI", Layer = 100 };
             AddChild(uiLayer);
         }
+
+        // 2. Офлайн-награда (если она есть в сцене)
+        _offlineReward = GetNodeOrNull<CanvasLayer>("UI/OfflineReward");
+        if (_offlineReward != null) _offlineReward.Visible = false;
+
+        // 3. Магазин
+        _shopUI = new MuseumShopUI { Name = "MuseumShop" };
+        uiLayer.AddChild(_shopUI);
+        _shopUI.Visible = false;
+
+        // 4. Комната музея
+        _roomView = new RoomViewUI();
+        AddChild(_roomView);
         
+        // 5. Панель кнопок
+        CreateButtonPanel(uiLayer);
+    }
+
+    public override void _Process(double delta)
+    {
+        if (!_initialDisplayUpdated)
+        {
+            _initialDisplayUpdated = true;
+            UpdateDisplay();
+            
+            if (SaveSystem.Instance != null && SaveSystem.Instance.GetLastSaveTimestamp() > 0)
+            {
+                if (!_offlineRewardChecked)
+                {
+                    _offlineRewardChecked = true;
+                    CheckOfflineReward();
+                }
+            }
+        }
+    }
+
+    private void CreateButtonPanel(CanvasLayer uiLayer)
+    {
         _buttonPanel = new VBoxContainer();
         _buttonPanel.Position = new Vector2(20, 60);
         _buttonPanel.AddThemeConstantOverride("separation", 10);
         uiLayer.AddChild(_buttonPanel);
         
         // Кнопка магазина
-        var shopBtn = new Button();
-        shopBtn.Text = "🏪 Магазин";
-        shopBtn.CustomMinimumSize = new Vector2(150, 40);
-        shopBtn.Pressed += OnShopPressed;
+        var shopBtn = new Button { Text = "🏪 Магазин", CustomMinimumSize = new Vector2(150, 40) };
+        shopBtn.Pressed += () => _shopUI.Visible = true;
         _buttonPanel.AddChild(shopBtn);
         
         // Кнопка инвентаря
-        var invBtn = new Button();
-        invBtn.Text = "🎒 Инвентарь";
-        invBtn.CustomMinimumSize = new Vector2(150, 40);
-        invBtn.Pressed += OnInventoryPressed;
-        _buttonPanel.AddChild(invBtn);
+var invBtn = new Button { Text = "🎒 Инвентарь", CustomMinimumSize = new Vector2(150, 40) };
+invBtn.Pressed += () => {
+    var invUI = InventoryUI.Instance;
+    
+    if (invUI != null && GodotObject.IsInstanceValid(invUI))
+    {
+        invUI.Visible = true;
+    }
+    else
+    {
+        GD.PrintErr("[Museum] Инвентарь недоступен. Проверьте настройки Autoload!");
+    }
+};
+_buttonPanel.AddChild(invBtn);
         
         // Кнопка раскопок
-        var digBtn = new Button();
-        digBtn.Text = "⛏️ Раскопки";
-        digBtn.CustomMinimumSize = new Vector2(150, 40);
-        digBtn.Pressed += OnDigPressed;
+        var digBtn = new Button { Text = "⛏️ Раскопки", CustomMinimumSize = new Vector2(150, 40) };
+        digBtn.Pressed += () => GetTree().ChangeSceneToFile("res://DigSite.tscn");
         _buttonPanel.AddChild(digBtn);
         
         // Кнопка сохранения
-        var saveBtn = new Button();
-        saveBtn.Text = "💾 Сохранить и выйти";
-        saveBtn.CustomMinimumSize = new Vector2(150, 40);
-        saveBtn.Pressed += OnSaveQuitPressed;
+        var saveBtn = new Button { Text = "💾 Сохранить и выйти", CustomMinimumSize = new Vector2(150, 40) };
+        saveBtn.Pressed += () => SaveSystem.Instance?.ForceSaveAndQuit();
         _buttonPanel.AddChild(saveBtn);
     }
 
-    public override void _Process(double delta)
-{
-    // При первом запуске сразу обновляем визуализацию
-    if (!_initialDisplayUpdated)
-    {
-        _initialDisplayUpdated = true;
-        UpdateDisplay();
-        
-        // Проверяем офлайн-награду только если есть сохранение
-        if (SaveSystem.Instance != null && SaveSystem.Instance.GetLastSaveTimestamp() > 0)
-        {
-            if (!_offlineRewardChecked)
-            {
-                _offlineRewardChecked = true;
-                CheckOfflineReward();
-            }
-        }
-    }
-}
-
     private void UpdateDisplay()
     {
-        if (MuseumSystem.Instance == null || _roomView == null) return;
-        
-        var room = MuseumSystem.Instance.GetCurrentRoom();
-        _roomView.DisplayRoom(room);
+        if (MuseumSystem.Instance != null && _roomView != null)
+        {
+            _roomView.DisplayRoom(MuseumSystem.Instance.GetCurrentRoom());
+        }
     }
     
-    private void OnShopPressed()
-{
-    var museumShop = GetNodeOrNull<MuseumShopUI>("MuseumShop");
-    if (museumShop != null) museumShop.Visible = true;
-}
-    
-    private void OnInventoryPressed()
-    {
-        if (_inventory != null) _inventory.Visible = true;
-    }
-    
-    private void OnDigPressed()
-    {
-        GetTree().ChangeSceneToFile("res://DigSite.tscn");
-    }
-    
-    private void OnSaveQuitPressed()
-    {
-        SaveSystem.Instance?.ForceSaveAndQuit();
-    }
-
     private void CheckOfflineReward()
     {
-        if (OfflineRewardSystem.Instance == null || SaveSystem.Instance == null) return;
+        if (OfflineRewardSystem.Instance == null || SaveSystem.Instance == null || _offlineReward == null) return;
+        
         OfflineRewardSystem.Instance.CalculateOfflineReward(SaveSystem.Instance.GetLastSaveTimestamp());
         
-        if (OfflineRewardSystem.Instance.HasReward() && _offlineReward != null)
+        if (OfflineRewardSystem.Instance.HasReward())
         {
             var label = _offlineReward.GetNodeOrNull<Label>("RewardPanel/Content/RewardsTitleLabel");
             var btn = _offlineReward.GetNodeOrNull<Button>("RewardPanel/Content/CollectButton");
@@ -145,21 +122,26 @@ public partial class Museum : Node2D
                 if (e > 0) t += $"You recovered {e} energy!";
                 label.Text = t.Trim();
             }
+            
             if (btn != null)
             {
-                foreach (var conn in btn.GetSignalConnectionList("pressed")) btn.Disconnect("pressed", conn["callable"].AsCallable());
-                btn.Pressed += () => { OfflineRewardSystem.Instance.CollectReward(); _offlineReward.Visible = false; };
+                foreach (var conn in btn.GetSignalConnectionList("pressed")) 
+                    btn.Disconnect("pressed", conn["callable"].AsCallable());
+                
+                btn.Pressed += () => { 
+                    OfflineRewardSystem.Instance.CollectReward(); 
+                    _offlineReward.Visible = false; 
+                };
             }
             _offlineReward.Visible = true;
         }
     }
 
     public void RefreshRoomView()
-{
-    if (_roomView != null && MuseumSystem.Instance != null)
     {
-        _roomView.DisplayRoom(MuseumSystem.Instance.GetCurrentRoom());
-        GD.Print("[Museum] Room view refreshed");
+        if (_roomView != null && MuseumSystem.Instance != null)
+        {
+            _roomView.DisplayRoom(MuseumSystem.Instance.GetCurrentRoom());
+        }
     }
-}
 }

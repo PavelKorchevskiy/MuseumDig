@@ -8,7 +8,6 @@ public partial class RoomViewUI : CanvasLayer
     private ColorRect _background;
     private List<Control> _gridCells = new();
     private List<Control> _furnitureRects = new();
-    private List<Label> _furnitureLabels = new();
     private List<Control> _doorRects = new();
     private Label _roomNameLabel;
 
@@ -24,7 +23,7 @@ private Control _inventorySelector;
     
     public override void _Ready()
     {
-        Layer = 5;
+        Layer = 1;
         
         _roomContainer = new Control();
         _roomContainer.SetAnchorsPreset(Control.LayoutPreset.FullRect);
@@ -46,6 +45,7 @@ private Control _inventorySelector;
         
         GD.Print("[RoomViewUI] Ready (Isometric Mode)");
     }
+
     
     public void DisplayRoom(Room room)
     {
@@ -138,22 +138,29 @@ private Control _inventorySelector;
         
         Control furnitureControl;
         
-        if (furnitureTexture != null)
+                if (furnitureTexture != null)
         {
             var textureRect = new TextureRect();
             
-            // Размер спрайта (берём из текстуры)
             float texWidth = furnitureTexture.GetWidth();
             float texHeight = furnitureTexture.GetHeight();
             
-            // Позиционирование: сдвигаем так, чтобы низ мебели был на уровне пола
-            // В изометрии anchor находится в нижнем центре спрайта
-            float yOffset = (placed.Size.Y - 1) * (IsoUtils.TileHeight / 2f) + (IsoUtils.TileHeight / 2f);
-
-textureRect.Position = new Vector2(
-    GridOffsetX + isoPos.X - texWidth / 2f + 30, // +30 для горизонтального центрирования
-    GridOffsetY + isoPos.Y - texHeight + yOffset
-);
+            // 1. Горизонтальное центрирование: центр тайла минус половина ширины спрайта
+            float posX = GridOffsetX + isoPos.X - (texWidth / 2f);
+            
+            // 2. Вертикальное позиционирование: 
+            // isoPos.Y + (TileHeight / 2) — это самая нижняя точка изометрического ромба (пол)
+            // Вычитаем texHeight, чтобы низ спрайта стоял ровно на этой линии
+            float floorLevelY = isoPos.Y + (IsoUtils.TileHeight / 2f);
+            float posY = GridOffsetY + floorLevelY - texHeight;
+            
+            // === НАСТРОЙКА СМЕЩЕНИЯ ===
+            // Если спрайты имеют прозрачные поля снизу или их нужно чуть опустить/поднять глобально, 
+            // измените это число. Положительное число опустит мебель ниже, отрицательное поднимет.
+            float manualXAdjustment = 30f;
+            float manualYAdjustment = 18f; 
+            
+            textureRect.Position = new Vector2(posX + manualXAdjustment, posY + manualYAdjustment);
             
             textureRect.Size = new Vector2(texWidth, texHeight);
             textureRect.Texture = furnitureTexture;
@@ -162,7 +169,7 @@ textureRect.Position = new Vector2(
             textureRect.Name = $"furniture_{placed.InstanceId}";
             textureRect.SetMeta("placed_id", placed.InstanceId);
             
-            // Z-порядок: мебель рисуется поверх пола, но экспонаты поверх неё
+            // Z-порядок: мебель рисуется поверх пола
             textureRect.ZIndex = IsoUtils.GetZOrder(centerX, centerY) + 5;
             
             furnitureControl = textureRect;
@@ -193,20 +200,6 @@ textureRect.Position = new Vector2(
         _roomContainer.AddChild(furnitureControl);
         _furnitureRects.Add(furnitureControl);
         
-        // Название мебели (под мебелью)
-        var label = new Label();
-        label.Text = placed.Furniture.DisplayName;
-        label.Position = new Vector2(
-            GridOffsetX + isoPos.X - 30,
-            GridOffsetY + isoPos.Y + 20
-        );
-        label.AddThemeFontSizeOverride("font_size", 10);
-        label.AddThemeColorOverride("font_color", Colors.White);
-        label.MouseFilter = Control.MouseFilterEnum.Ignore;
-        label.ZIndex = IsoUtils.GetZOrder(centerX, centerY) + 6;
-        _roomContainer.AddChild(label);
-        _furnitureLabels.Add(label);
-        
         // Рисуем экспонаты поверх мебели
         DrawFurnitureContents(placed, centerX, centerY);
     }
@@ -234,34 +227,66 @@ private string GetFurnitureTexturePath(Furniture furniture)
     
     private void DrawFurnitureContents(PlacedFurniture placed, int centerX, int centerY)
 {
-    var items = placed.GetAllItems();
-    GD.Print($"[DEBUG DRAW] Витрина ID:{placed.InstanceId} | Отрисовка предметов: {items?.Count ?? 0}");
-    if (items.Count == 0) return;
+        var items = placed.GetAllItems();
+    GD.Print($"[DEBUG DRAW] Мебель ID:{placed.InstanceId} | Предметов: {items?.Count ?? 0}");
+    if (items == null || items.Count == 0) return;
     
     var isoPos = IsoUtils.GridToIso(centerX, centerY);
     
-    int maxItems;
+    int maxItems = 1; // По умолчанию 1 (для пьедестала)
     Vector2 startPos;
-    
-    if (placed.Size.X == 1 && placed.Size.Y == 1)
+    int iconSize = 24; // Базовый размер иконки
+
+    // === 1. ЛОГИКА ДЛЯ ПЬЕДЕСТАЛОВ ===
+    if (placed.Furniture is Pedestal)
     {
-        maxItems = 1;
-        startPos = new Vector2(GridOffsetX + isoPos.X + 20, GridOffsetY + isoPos.Y - 51);
+        maxItems = 1; // Пьедестал всегда вмещает только 1 экспонат (коллекцию)
+        iconSize = 96; // Для пьедестала делаем иконку крупной (спрайт целого скелета)
+
+        if (placed.Size.X == 2 && placed.Size.Y == 2)
+        {
+            
+            startPos = new Vector2(GridOffsetX + isoPos.X - 40, GridOffsetY + isoPos.Y - 130); 
+        }
+        else if (placed.Size.X == 3 && placed.Size.Y == 3)
+        {
+            // Большой пьедестал 3x3
+            // Он шире, поэтому экспонат должен быть строго по центру (X = 0 относительно isoPos)
+            // Y подбираем так, чтобы скелет "стоял" на площадке, а не парил или не проваливался
+            startPos = new Vector2(GridOffsetX + isoPos.X, GridOffsetY + isoPos.Y - 50); 
+        }
+        else
+        {
+            // Запасной вариант для любого другого размера пьедестала
+            startPos = new Vector2(GridOffsetX + isoPos.X, GridOffsetY + isoPos.Y - 40);
+        }
     }
-    else if (placed.Size.X == 2 && placed.Size.Y == 1)
+    // === 2. ЛОГИКА ДЛЯ ВИТРИН (ваша старая, проверенная) ===
+    else if (placed.Furniture is DisplayCase)
     {
-        maxItems = 2;
-        // Ваши отрегулированные параметры
-        startPos = new Vector2(GridOffsetX + isoPos.X + 5, GridOffsetY + isoPos.Y - 70);
+        if (placed.Size.X == 1 && placed.Size.Y == 1)
+        {
+            maxItems = 1;
+            startPos = new Vector2(GridOffsetX + isoPos.X + 20, GridOffsetY + isoPos.Y - 35);
+        }
+        else if (placed.Size.X == 2 && placed.Size.Y == 1)
+        {
+            maxItems = 2;
+            startPos = new Vector2(GridOffsetX + isoPos.X + 5, GridOffsetY + isoPos.Y - 57);
+        }
+        else
+        {
+            maxItems = 3; // Или сколько там у вас для больших витрин
+            startPos = new Vector2(GridOffsetX + isoPos.X - 30, GridOffsetY + isoPos.Y - 50);
+        }
     }
     else
     {
-        maxItems = 3;
-        startPos = new Vector2(GridOffsetX + isoPos.X - 30, GridOffsetY + isoPos.Y - 50);
+        // На всякий случай, если появится новая мебель
+        startPos = new Vector2(GridOffsetX + isoPos.X, GridOffsetY + isoPos.Y - 40);
     }
     
     int displayCount = Mathf.Min(items.Count, maxItems);
-    int iconSize = 24; // Чуть увеличили размер для лучшей видимости деталей (было 16)
     
     // Изометрический шаг для большой витрины
     float isoStepX = IsoUtils.TileWidth / 2f;  // 32
@@ -315,19 +340,19 @@ private string GetFurnitureTexturePath(Furniture furniture)
             continue; // Пропускаем добавление textureRect
         }
         
-        // 2. Обработка качества (Damaged)
-        if (item.Quality == Quality.Damaged)
-        {
-            // Затемняем текстуру на 50%
-            textureRect.Modulate = new Color(0.5f, 0.5f, 0.5f, 1.0f);
-        }
-        else
-        {
-            // Можно добавить легкий цветовой оттенок в зависимости от редкости
-            Color rarityTint = GetRarityColor(resource.Rarity);
-            // Смешиваем белый с цветом редкости, чтобы не перекрывать детали спрайта полностью
-            textureRect.Modulate = new Color(1f, 1f, 1f, 1f).Lerp(rarityTint, 0.3f); 
-        }
+        // // 2. Обработка качества (Damaged)
+        // if (item.Quality == Quality.Damaged)
+        // {
+        //     // Затемняем текстуру на 50%
+        //     textureRect.Modulate = new Color(0.5f, 0.5f, 0.5f, 1.0f);
+        // }
+        // else
+        // {
+        //     // Можно добавить легкий цветовой оттенок в зависимости от редкости
+        //     Color rarityTint = GetRarityColor(resource.Rarity);
+        //     // Смешиваем белый с цветом редкости, чтобы не перекрывать детали спрайта полностью
+        //     textureRect.Modulate = new Color(1f, 1f, 1f, 1f).Lerp(rarityTint, 0.3f); 
+        // }
         
         _roomContainer.AddChild(textureRect);
         _furnitureRects.Add(textureRect);
@@ -353,6 +378,84 @@ private string GetExhibitTexturePath(string resourceId)
     
     if (lowerId.Contains("tooth") || lowerId.Contains("artifact"))
         return "res://assets/museum/items/item_tooth.png";
+
+     //Tricerapots assets path   
+    if (lowerId.Equals("triceratops_skull"))
+        return "res://assets/museum/items/triceratops/skull.png";
+        
+    if (lowerId.Equals("triceratops_body"))
+        return "res://assets/museum/items/triceratops/body.png";
+        
+    if (lowerId.Equals("triceratops_tail"))
+        return "res://assets/museum/items/triceratops/tail.png";
+
+    if (lowerId.Equals("triceratops"))
+        return "res://assets/museum/items/triceratops/full.png";
+
+        //velociraptor assets path   
+    if (lowerId.Equals("velociraptor_skull"))
+        return "res://assets/museum/items/velociraptor/skull.png";
+        
+    if (lowerId.Equals("velociraptor_body"))
+        return "res://assets/museum/items/velociraptor/body.png";
+        
+    if (lowerId.Equals("velociraptor_tail"))
+        return "res://assets/museum/items/velociraptor/tail.png";
+
+    if (lowerId.Equals("velociraptor"))
+        return "res://assets/museum/items/velociraptor/full.png";
+
+        //protoceratops assets path   
+    if (lowerId.Equals("protoceratops_skull"))
+        return "res://assets/museum/items/protoceratops/skull.png";
+        
+    if (lowerId.Equals("protoceratops_body"))
+        return "res://assets/museum/items/protoceratops/body.png";
+        
+    if (lowerId.Equals("protoceratops_tail"))
+        return "res://assets/museum/items/protoceratops/tail.png";
+
+    if (lowerId.Equals("protoceratops"))
+        return "res://assets/museum/items/protoceratops/full.png";
+
+        //therizinosaurus assets path   
+    if (lowerId.Equals("therizinosaurus_skull"))
+        return "res://assets/museum/items/therizinosaurus/skull.png";
+        
+    if (lowerId.Equals("therizinosaurus_body"))
+        return "res://assets/museum/items/therizinosaurus/body.png";
+        
+    if (lowerId.Equals("therizinosaurus_tail"))
+        return "res://assets/museum/items/therizinosaurus/tail.png";
+
+    if (lowerId.Equals("therizinosaurus"))
+        return "res://assets/museum/items/therizinosaurus/full.png";
+
+        //ichthyosaurus assets path   
+    if (lowerId.Equals("ichthyosaurus_skull"))
+        return "res://assets/museum/items/ichthyosaurus/skull.png";
+        
+    if (lowerId.Equals("ichthyosaurus_body"))
+        return "res://assets/museum/items/ichthyosaurus/body.png";
+        
+    if (lowerId.Equals("ichthyosaurus_tail"))
+        return "res://assets/museum/items/ichthyosaurus/tail.png";
+
+    if (lowerId.Equals("ichthyosaurus"))
+        return "res://assets/museum/items/ichthyosaurus/full.png";
+
+        //plesiosaurus assets path   
+    if (lowerId.Equals("plesiosaurus_skull"))
+        return "res://assets/museum/items/plesiosaurus/skull.png";
+        
+    if (lowerId.Equals("plesiosaurus_body"))
+        return "res://assets/museum/items/plesiosaurus/body.png";
+        
+    if (lowerId.Equals("plesiosaurus_tail"))
+        return "res://assets/museum/items/plesiosaurus/tail.png";
+
+    if (lowerId.Equals("plesiosaurus"))
+        return "res://assets/museum/items/plesiosaurus/full.png";
     
     // Если ничего не подошло, возвращаем несуществующий путь, 
     // чтобы сработал запасной вариант с ColorRect
@@ -555,13 +658,9 @@ private void DrawDoors(Room room)
     }
 }
     
-    private void ShowEnhancedFurnitureMenu(PlacedFurniture placed)
+private void ShowEnhancedFurnitureMenu(PlacedFurniture placed)
 {
-    if (placed == null)
-    {
-        GD.PrintErr("[RoomView] Placed furniture is null!");
-        return;
-    }
+    if (placed == null) return;
     
     if (_activeFurnitureMenu != null)
     {
@@ -575,16 +674,9 @@ private void DrawDoors(Room room)
     _activeFurnitureMenu.ZIndex = 100;
 
     Viewport viewport = GetViewport();
-    if (viewport == null)
-    {
-        GD.PrintErr("[RoomView] Viewport is null!");
-        _activeFurnitureMenu.QueueFree();
-        return;
-    }
-    
     Vector2 screenSize = viewport.GetVisibleRect().Size;
     _activeFurnitureMenu.Position = new Vector2(screenSize.X / 2f - 150, screenSize.Y / 2f - 150);
-    _activeFurnitureMenu.Size = new Vector2(300, 300); // Увеличили высоту для новой кнопки
+    _activeFurnitureMenu.Size = new Vector2(300, 280);
 
     var style = new StyleBoxFlat();
     style.BgColor = new Color(0.15f, 0.15f, 0.2f, 0.95f);
@@ -602,7 +694,6 @@ private void DrawDoors(Room room)
     vbox.AddThemeConstantOverride("separation", 10);
     _activeFurnitureMenu.AddChild(vbox);
 
-    // Заголовок
     var title = new Label();
     title.Text = placed.Furniture?.DisplayName ?? "Мебель";
     title.HorizontalAlignment = HorizontalAlignment.Center;
@@ -610,7 +701,6 @@ private void DrawDoors(Room room)
     title.AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.5f));
     vbox.AddChild(title);
 
-    // Секция текущих экспонатов
     var items = placed.GetAllItems();
     var contentsLabel = new Label();
     contentsLabel.Text = items.Count > 0 ? $"Экспонатов: {items.Count}" : "Пусто";
@@ -618,43 +708,37 @@ private void DrawDoors(Room room)
     contentsLabel.HorizontalAlignment = HorizontalAlignment.Center;
     vbox.AddChild(contentsLabel);
 
-    // Кнопка "Убрать первый экспонат" - задизейблена если витрина пуста
+    // 1. Убрать экспонат
     var btnRemove = new Button();
     btnRemove.Text = "Убрать первый экспонат";
-    btnRemove.Disabled = (items == null || items.Count == 0); // ← БЛОКИРОВКА
+    btnRemove.Disabled = (items == null || items.Count == 0);
     btnRemove.Pressed += () => OnRemoveFossil(placed);
     vbox.AddChild(btnRemove);
 
-    // Кнопка "Добавить из инвентаря"
+    // 2. Добавить из инвентаря (ОТКРЫВАЕТ НАШ СПИСОК ВЫБОРА ДЛЯ ВИТРИНЫ)
     var btnAdd = new Button();
     btnAdd.Text = "Добавить из инвентаря";
     btnAdd.Pressed += () => ShowInventorySelector(placed);
     vbox.AddChild(btnAdd);
 
-    // НОВАЯ КНОПКА: "Продать витрину"
+    // 3. Продать витрину
     var btnSell = new Button();
     btnSell.Text = "Продать витрину";
-    btnSell.AddThemeColorOverride("font_color", new Color(1f, 0.5f, 0.5f)); // Красный текст
+    btnSell.AddThemeColorOverride("font_color", new Color(1f, 0.5f, 0.5f));
     btnSell.Pressed += () => OnSellFurniture(placed);
     vbox.AddChild(btnSell);
 
-    // Кнопка "Закрыть"
+    // 4. Закрыть
     var btnClose = new Button();
     btnClose.Text = "Закрыть";
     btnClose.Pressed += () => 
     {
-        if (_activeFurnitureMenu != null)
-        {
-            _activeFurnitureMenu.QueueFree();
-            _activeFurnitureMenu = null;
-        }
+        _activeFurnitureMenu?.QueueFree();
+        _activeFurnitureMenu = null;
         ResetZoom();
     };
     vbox.AddChild(btnClose);
-    
-    GD.Print("[RoomView] Furniture menu created successfully");
-}
-    
+}    
     private void OnAddFromInventory(PlacedFurniture placed)
     {
         var room = MuseumSystem.Instance.GetCurrentRoom();
@@ -816,14 +900,35 @@ scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
     foreach (var invItem in inventoryItems)
     {
         var resource = GameData.GetResource(invItem.ResourceId);
-    if (resource == null) continue;
+        if (resource == null) continue;
 
-if (resource is FossilDefinition fossil && !fossil.CanExhibitAlone)
-{
-    continue; 
-}
-
-    hasItems = true;
+       if (placed.Furniture is Pedestal)
+        {
+            // Для пьедестала показываем ТОЛЬКО собранные коллекции
+            bool isAssembledCollection = GameData.GetCollection(invItem.ResourceId) != null;
+            if (!isAssembledCollection) 
+            {
+                continue; // Пропускаем обычные фрагменты
+            }
+        }
+        else
+        {
+            if (GameData.GetCollection(invItem.ResourceId) != null)
+            {
+                continue; 
+            }
+            // Для витрин показываем только окаменелости, которые можно выставить по отдельности
+            // Приводим тип к FossilDefinition, чтобы получить доступ к CanExhibitAlone
+            if (resource is FossilDefinition fossil && fossil.CanExhibitAlone)
+            {
+                // Всё ок, показываем
+            }
+            else
+            {
+                continue; // Пропускаем всё остальное (части коллекций, минералы и т.д.)
+            }
+        }
+        hasItems = true;
     var itemRow = new HBoxContainer();
         itemRow.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         itemRow.AddThemeConstantOverride("separation", 10);
@@ -1043,12 +1148,10 @@ if (resource is FossilDefinition fossil && !fossil.CanExhibitAlone)
     {
         foreach (var cell in _gridCells) cell.QueueFree();
         foreach (var rect in _furnitureRects) rect.QueueFree();
-        foreach (var label in _furnitureLabels) label.QueueFree();
         foreach (var rect in _doorRects) rect.QueueFree();
         
         _gridCells.Clear();
         _furnitureRects.Clear();
-        _furnitureLabels.Clear();
         _doorRects.Clear();
     }
     
@@ -1085,5 +1188,15 @@ public void ResetZoom()
     
     _zoomTween.TweenProperty(_roomContainer, "scale", Vector2.One, 0.3f).SetTrans(Tween.TransitionType.Cubic);
     _zoomTween.Parallel().TweenProperty(_roomContainer, "position", Vector2.Zero, 0.3f).SetTrans(Tween.TransitionType.Cubic);
+    if (_activeFurnitureMenu != null)
+    {
+        _activeFurnitureMenu.QueueFree();
+        _activeFurnitureMenu = null;
+    }
+    if (_inventorySelector != null)
+    {
+        _inventorySelector.QueueFree();
+        _inventorySelector = null;
+    }
 }
 }

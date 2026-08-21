@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c5e035nk52fso"
-path="res://.godot/imported/pedestal_small.png-6b976aef9ca3ef37bf9bdf0b9ba5037c.ctex"
+uid="uid://cd8rn82owivoe"
+path="res://.godot/imported/tail.png-c403ff516b11977538adfc169edc98cd.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/museum/furniture/pedestal_small.png"
-dest_files=["res://.godot/imported/pedestal_small.png-6b976aef9ca3ef37bf9bdf0b9ba5037c.ctex"]
+source_file="res://assets/museum/items/triceratops/tail.png"
+dest_files=["res://.godot/imported/tail.png-c403ff516b11977538adfc169edc98cd.ctex"]
 
 [params]
 

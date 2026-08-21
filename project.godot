@@ -28,6 +28,7 @@ InventorySystem="*uid://b2128j5kneu10"
 ToolSystem="*uid://b7v5o1h5myn5r"
 LocationSystem="*uid://bd51n4lyoje0c"
 VisitorManager="*uid://d0c28a01q1e54"
+InventoryUI="*uid://b8mwd7fgnhr4s"
 SaveSystem="*uid://b410ajj2b4wt5"
 
 [display]

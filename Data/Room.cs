@@ -135,7 +135,13 @@ public partial class Room : Resource
                 PositionY = placed.Position.Y,
                 SizeX = placed.Size.X,
                 SizeY = placed.Size.Y,
-                FurnitureSaveData = placed.Furniture.GetSaveData()
+                FurnitureSaveData =  new FurnitureSaveData
+{
+    FurnitureType = placed.Furniture.GetType().Name, // Или placed.FurnitureTypeId
+    PedestalCollectionId = null, // Если нужно
+    // БЕРЕМ ПРЕДМЕТЫ ИЗ ЭКЗЕМПЛЯРА, А НЕ ИЗ ШАБЛОНА!
+    DisplayCaseItems = new List<FoundItem>(placed.Items) 
+}
             });
         }
         

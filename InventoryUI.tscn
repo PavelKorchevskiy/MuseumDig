@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://d032g4i13u5le" path="res://InventoryUI.cs" id="1_dsn3v"]
 
 [node name="InventoryUI" type="CanvasLayer" unique_id=1499071112]
+layer = 100
 script = ExtResource("1_dsn3v")
 
 [node name="DimBackground" type="ColorRect" parent="." unique_id=1788810863]

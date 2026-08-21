@@ -181,4 +181,66 @@ public partial class InventorySystem : Node
         SaveSystem.Instance?.MarkDirty();
         GD.Print($"[Inventory] Removed {amount}x {resourceId} ({quality})");
     }
+
+	    // ===== ЛОГИКА СБОРА КОЛЛЕКЦИЙ =====
+
+    /// <summary>
+    /// Проверяет, можно ли собрать хотя бы 1 экземпляр коллекции
+    /// </summary>
+    public bool CanAssembleCollection(CollectionDefinition collection)
+    {
+        if (collection == null || collection.Pieces == null) return false;
+
+        foreach (var piece in collection.Pieces)
+        {
+            // Нам нужна хотя бы 1 штука любого качества
+            if (GetTotalAmount(piece.Id) < 1)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Собирает 1 экземпляр коллекции: списывает по 1 фрагменту и добавляет собранную коллекцию
+    /// </summary>
+    public bool AssembleCollection(CollectionDefinition collection)
+    {
+        if (!CanAssembleCollection(collection))
+        {
+            GD.PrintErr($"[Inventory] Невозможно собрать коллекцию: {collection.DisplayName}");
+            return false;
+        }
+
+        // 1. Списываем фрагменты
+        foreach (var piece in collection.Pieces)
+        {
+            // Ищем, какое качество этого фрагмента у нас есть
+            foreach (Quality q in System.Enum.GetValues(typeof(Quality)))
+            {
+                var item = GetItem(piece.Id, q);
+                if (item != null && item.Amount >= 1)
+                {
+                    RemoveItem(piece.Id, q, 1);
+                    break; // Переходим к следующему фрагменту
+                }
+            }
+        }
+
+        // 2. Добавляем собранную коллекцию в инвентарь (всегда качества Good)
+        AddItem(collection.Id, Quality.Good, 1);
+        GD.Print($"[Inventory] Успешно собрана коллекция: {collection.DisplayName}");
+        
+        return true;
+    }
+
+    /// <summary>
+    /// Возвращает количество предмета конкретного качества (вспомогательный метод)
+    /// </summary>
+    public int GetAmountByQuality(string resourceId, Quality quality)
+    {
+        var item = GetItem(resourceId, quality);
+        return item != null ? item.Amount : 0;
+    }
 }

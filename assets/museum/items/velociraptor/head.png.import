@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c5e035nk52fso"
-path="res://.godot/imported/pedestal_small.png-6b976aef9ca3ef37bf9bdf0b9ba5037c.ctex"
+uid="uid://dm2rjwa0m1dsc"
+path="res://.godot/imported/head.png-f09584c5a07ad79da41eaabe209e2dcb.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/museum/furniture/pedestal_small.png"
-dest_files=["res://.godot/imported/pedestal_small.png-6b976aef9ca3ef37bf9bdf0b9ba5037c.ctex"]
+source_file="res://assets/museum/items/velociraptor/head.png"
+dest_files=["res://.godot/imported/head.png-f09584c5a07ad79da41eaabe209e2dcb.ctex"]
 
 [params]
 

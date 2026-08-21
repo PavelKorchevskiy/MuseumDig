@@ -74,6 +74,21 @@ public static class GameData
             MinSizeX = 2, MinSizeY = 2,
             Pieces = new List<FossilDefinition> { skull, body, tail }
         };
+
+        _resources[colId] = new FossilDefinition 
+        { 
+            Id = colId, 
+            DisplayName = "Triceratops (Собранная коллекция)", 
+            Description = "Полный скелет Трицератопса, готовый к выставке.", 
+            Type = ResourceType.Bone, // Или создайте ResourceType.Collection
+            Rarity = rarity, 
+            BaseSellPrice = 200, // Бонус за сбор
+            BaseMuseumIncome = 15, 
+            CollectionId = "", // Пусто, так как это уже собранное целое
+            PieceIndex = -1, 
+            TotalPieces = 1, 
+            CanExhibitAlone = true // Можно ставить на пьедестал!
+        };
     }
 
     private static void RegisterProtoceratops()
@@ -87,7 +102,22 @@ public static class GameData
 
         _resources[skull.Id] = skull; _resources[body.Id] = body; _resources[tail.Id] = tail;
 
-        _collections[colId] = new CollectionDefinition { Id = colId, DisplayName = "Protoceratops", Description = "A sheep-sized ceratopsian from the sands of the Gobi Desert.", LocationId = "gobi", Rarity = rarity, CollectionBonus = 2.5f, MinSizeX = 1, MinSizeY = 1, Pieces = new List<FossilDefinition> { skull, body, tail } };
+       
+     _collections[colId] = new CollectionDefinition { Id = colId, DisplayName = "Protoceratops", Description = "A sheep-sized ceratopsian from the sands of the Gobi Desert.", LocationId = "gobi", Rarity = rarity, CollectionBonus = 2.5f, MinSizeX = 1, MinSizeY = 1, Pieces = new List<FossilDefinition> { skull, body, tail } };
+    _resources[colId] = new FossilDefinition 
+        { 
+            Id = colId, 
+            DisplayName = "Protoceratops (Собранная коллекция)", 
+            Description = "Полный скелет Protoceratops, готовый к выставке.", 
+            Type = ResourceType.Bone, // Или создайте ResourceType.Collection
+            Rarity = rarity, 
+            BaseSellPrice = 200, // Бонус за сбор
+            BaseMuseumIncome = 15, 
+            CollectionId = "", // Пусто, так как это уже собранное целое
+            PieceIndex = -1, 
+            TotalPieces = 1, 
+            CanExhibitAlone = true // Можно ставить на пьедестал!
+        };
     }
 
     private static void RegisterVelociraptor()
@@ -101,6 +131,20 @@ public static class GameData
 
         _resources[skull.Id] = skull; _resources[body.Id] = body; _resources[tail.Id] = tail;
         _collections[colId] = new CollectionDefinition { Id = colId, DisplayName = "Velociraptor", Description = "A swift, feathered predator made famous by movies.", LocationId = "gobi", Rarity = rarity, CollectionBonus = 2.5f, MinSizeX = 1, MinSizeY = 1, Pieces = new List<FossilDefinition> { skull, body, tail } };
+    _resources[colId] = new FossilDefinition 
+        { 
+            Id = colId, 
+            DisplayName = "Velociraptor (Собранная коллекция)", 
+            Description = "Полный скелет Velociraptor, готовый к выставке.", 
+            Type = ResourceType.Bone, // Или создайте ResourceType.Collection
+            Rarity = rarity, 
+            BaseSellPrice = 200, // Бонус за сбор
+            BaseMuseumIncome = 15, 
+            CollectionId = "", // Пусто, так как это уже собранное целое
+            PieceIndex = -1, 
+            TotalPieces = 1, 
+            CanExhibitAlone = true // Можно ставить на пьедестал!
+        };
     }
 
     private static void RegisterTherizinosaurus()
@@ -114,6 +158,20 @@ public static class GameData
 
         _resources[skull.Id] = skull; _resources[body.Id] = body; _resources[tail.Id] = tail;
         _collections[colId] = new CollectionDefinition { Id = colId, DisplayName = "Therizinosaurus", Description = "A bizarre giant herbivore with meter-long claws.", LocationId = "gobi", Rarity = rarity, CollectionBonus = 2.5f, MinSizeX = 1, MinSizeY = 1, Pieces = new List<FossilDefinition> { skull, body, tail } };
+    _resources[colId] = new FossilDefinition 
+        { 
+            Id = colId, 
+            DisplayName = "therizinosaurus (Собранная коллекция)", 
+            Description = "Полный скелет therizinosaurus, готовый к выставке.", 
+            Type = ResourceType.Bone, // Или создайте ResourceType.Collection
+            Rarity = rarity, 
+            BaseSellPrice = 200, // Бонус за сбор
+            BaseMuseumIncome = 15, 
+            CollectionId = "", // Пусто, так как это уже собранное целое
+            PieceIndex = -1, 
+            TotalPieces = 1, 
+            CanExhibitAlone = true // Можно ставить на пьедестал!
+        };
     }
 
     private static void RegisterIchthyosaurus()
@@ -127,6 +185,20 @@ public static class GameData
 
         _resources[skull.Id] = skull; _resources[body.Id] = body; _resources[tail.Id] = tail;
         _collections[colId] = new CollectionDefinition { Id = colId, DisplayName = "Ichthyosaurus", Description = "A dolphin-like marine reptile from the Jurassic seas of Undoria.", LocationId = "undoria", Rarity = rarity, CollectionBonus = 2.5f, MinSizeX = 1, MinSizeY = 1, Pieces = new List<FossilDefinition> { skull, body, tail } };
+        _resources[colId] = new FossilDefinition 
+        { 
+            Id = colId, 
+            DisplayName = "ichthyosaurus (Собранная коллекция)", 
+            Description = "Полный скелет ichthyosaurus, готовый к выставке.", 
+            Type = ResourceType.Bone, // Или создайте ResourceType.Collection
+            Rarity = rarity, 
+            BaseSellPrice = 200, // Бонус за сбор
+            BaseMuseumIncome = 15, 
+            CollectionId = "", // Пусто, так как это уже собранное целое
+            PieceIndex = -1, 
+            TotalPieces = 1, 
+            CanExhibitAlone = true // Можно ставить на пьедестал!
+        };
     }
 
     private static void RegisterPlesiosaurus()
@@ -140,6 +212,20 @@ public static class GameData
 
         _resources[skull.Id] = skull; _resources[body.Id] = body; _resources[tail.Id] = tail;
         _collections[colId] = new CollectionDefinition { Id = colId, DisplayName = "Plesiosaurus", Description = "An elegant long-necked predator of the ancient Volga sea.", LocationId = "undoria", Rarity = rarity, CollectionBonus = 2.5f, MinSizeX = 2, MinSizeY = 2, Pieces = new List<FossilDefinition> { skull, body, tail } };
+        _resources[colId] = new FossilDefinition 
+        { 
+            Id = colId, 
+            DisplayName = "plesiosaurus (Собранная коллекция)", 
+            Description = "Полный скелет plesiosaurus, готовый к выставке.", 
+            Type = ResourceType.Bone, // Или создайте ResourceType.Collection
+            Rarity = rarity, 
+            BaseSellPrice = 200, // Бонус за сбор
+            BaseMuseumIncome = 15, 
+            CollectionId = "", // Пусто, так как это уже собранное целое
+            PieceIndex = -1, 
+            TotalPieces = 1, 
+            CanExhibitAlone = true // Можно ставить на пьедестал!
+        };
     }
 
     public static void RegisterStandaloneFossils()
