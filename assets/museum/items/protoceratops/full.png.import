@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c61v0cbmk062s"
-path="res://.godot/imported/full.png-3dca7119922972ca80179bcb22ccec51.ctex"
+uid="uid://bx20ybqvly5fv"
+path="res://.godot/imported/full.png-5321cad8d5ae622dab8dfba6471ff7eb.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/museum/items/triceratops/full.png"
-dest_files=["res://.godot/imported/full.png-3dca7119922972ca80179bcb22ccec51.ctex"]
+source_file="res://assets/museum/items/protoceratops/full.png"
+dest_files=["res://.godot/imported/full.png-5321cad8d5ae622dab8dfba6471ff7eb.ctex"]
 
 [params]
 

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c61v0cbmk062s"
-path="res://.godot/imported/full.png-3dca7119922972ca80179bcb22ccec51.ctex"
+uid="uid://dm2rjwa0m1dsc"
+path="res://.godot/imported/skull.png-354807438793679f52170e32375072b0.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/museum/items/triceratops/full.png"
-dest_files=["res://.godot/imported/full.png-3dca7119922972ca80179bcb22ccec51.ctex"]
+source_file="res://assets/museum/items/velociraptor/skull.png"
+dest_files=["res://.godot/imported/skull.png-354807438793679f52170e32375072b0.ctex"]
 
 [params]
 

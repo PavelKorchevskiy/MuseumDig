@@ -30,7 +30,6 @@ public class PlacedFurnitureSaveData
 public class FurnitureSaveData
 {
     public string FurnitureType { get; set; }
-    public string PedestalCollectionId { get; set; }
     public List<FoundItem> DisplayCaseItems { get; set; }
-    public Dictionary<string, int> PedestalParts { get; set; }
+    public bool IsFlipped = false;
 }

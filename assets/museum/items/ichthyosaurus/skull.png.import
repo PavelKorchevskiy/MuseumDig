@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://2f43yaf1bke5"
-path="res://.godot/imported/head.png-5d4a96b666244b47ba14204ea4663c51.ctex"
+uid="uid://cgfwliafnufbl"
+path="res://.godot/imported/skull.png-ee1dd28d634e4913dfde342fdd43ab6f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/museum/items/triceratops/head.png"
-dest_files=["res://.godot/imported/head.png-5d4a96b666244b47ba14204ea4663c51.ctex"]
+source_file="res://assets/museum/items/ichthyosaurus/skull.png"
+dest_files=["res://.godot/imported/skull.png-ee1dd28d634e4913dfde342fdd43ab6f.ctex"]
 
 [params]
 

@@ -5,49 +5,49 @@ public partial class Room : Resource
 {
     [Export] public string Id = "";
     [Export] public string DisplayName = "";
-    
+
     // Позиция зала на глобальной карте музея (без [Export], так как это Vector2I)
     public Vector2I GlobalPosition;
-    
+
     // Размеры зала
     [Export] public int Width = 10;
     [Export] public int Height = 10;
-    
+
     // Это главный зал (с дверью на улицу)
     [Export] public bool IsMainHall = false;
-    
+
     // Сетка занятости (true = занята мебелью ИЛИ буферной зоной)
-    private bool[,] _occupancyGrid;
-    
+    public bool[,] _occupancyGrid;
+
     // Размещённая мебель
     public List<PlacedFurniture> PlacedFurnitureList = new();
-    
+
     // Двери (4 стены)
     public Dictionary<Direction, Door> Doors = new();
-    
+
     // ===== ИНИЦИАЛИЗАЦИЯ =====
-    
+
     public void InitializeGrid()
     {
         _occupancyGrid = new bool[Width, Height];
     }
-    
+
     // ===== ГЕТТЕРЫ =====
-    
+
     public bool IsCellOccupied(int x, int y)
     {
         if (x < 0 || x >= Width || y < 0 || y >= Height) return true; // Стена = занята
         return _occupancyGrid[x, y];
     }
-    
+
     public Door GetDoor(Direction dir)
     {
         return Doors.TryGetValue(dir, out var door) ? door : null;
     }
-    
+
     // ===== РАЗМЕЩЕНИЕ МЕБЕЛИ =====
-    
-        public bool CanPlaceFurniture(Vector2I position, Vector2I size)
+
+    public bool CanPlaceFurniture(Vector2I position, Vector2I size)
     {
         // 1. Проверка границ с отступом 1 клетка от стен
         // Зал имеет клетки от 0 до Width-1. Отступ 1 значит:
@@ -94,13 +94,13 @@ public partial class Room : Resource
     {
         PlacedFurnitureList.Remove(placed);
     }
-    
+
     // ===== ДЛЯ ПОИСКА ПУТИ (задел на посетителей) =====
-    
+
     public bool IsWalkable(int x, int y)
     {
         if (x < 0 || x >= Width || y < 0 || y >= Height) return false;
-        
+
         foreach (var placed in PlacedFurnitureList)
         {
             if (x >= placed.Position.X && x < placed.Position.X + placed.Size.X &&
@@ -109,12 +109,12 @@ public partial class Room : Resource
                 return false;
             }
         }
-        
+
         return true;
     }
-    
+
     // ===== СОХРАНЕНИЕ =====
-    
+
     public RoomSaveData GetSaveData()
     {
         var data = new RoomSaveData
@@ -124,7 +124,7 @@ public partial class Room : Resource
             GlobalPositionY = GlobalPosition.Y,
             Furniture = new List<PlacedFurnitureSaveData>()
         };
-        
+
         foreach (var placed in PlacedFurnitureList)
         {
             data.Furniture.Add(new PlacedFurnitureSaveData
@@ -135,22 +135,21 @@ public partial class Room : Resource
                 PositionY = placed.Position.Y,
                 SizeX = placed.Size.X,
                 SizeY = placed.Size.Y,
-                FurnitureSaveData =  new FurnitureSaveData
-{
-    FurnitureType = placed.Furniture.GetType().Name, // Или placed.FurnitureTypeId
-    PedestalCollectionId = null, // Если нужно
-    // БЕРЕМ ПРЕДМЕТЫ ИЗ ЭКЗЕМПЛЯРА, А НЕ ИЗ ШАБЛОНА!
-    DisplayCaseItems = new List<FoundItem>(placed.Items) 
-}
+                FurnitureSaveData = new FurnitureSaveData
+                {
+                    FurnitureType = placed.Furniture.GetType().Name, // Или placed.FurnitureTypeId
+                    IsFlipped = placed.IsFlipped,                                                 // БЕРЕМ ПРЕДМЕТЫ ИЗ ЭКЗЕМПЛЯРА, А НЕ ИЗ ШАБЛОНА!
+                    DisplayCaseItems = new List<FoundItem>(placed.Items)
+                }
             });
         }
-        
+
         data.Doors = new Dictionary<int, string>();
         foreach (var kvp in Doors)
         {
             data.Doors[(int)kvp.Key] = kvp.Value.ConnectedRoomId;
         }
-        
+
         return data;
     }
 }

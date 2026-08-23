@@ -6,7 +6,7 @@ public partial class EnergySystem : Node
 	
 	// Текущие значения
 	private int _currentEnergy;
-	private int _maxEnergy = 20;
+	private int _maxEnergy = 200;
 	private int _energyLevel = 1;
 	
 	// Восстановление

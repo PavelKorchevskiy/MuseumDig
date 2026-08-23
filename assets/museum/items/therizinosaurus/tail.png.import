@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ckxn4p1n6lfdw"
-path="res://.godot/imported/pedestal_large.png-4cedccf3cef3237cfa580e10fcdedd69.ctex"
+uid="uid://cjini1hokrics"
+path="res://.godot/imported/tail.png-823fee3d5ca88d366a65ccd0f2cf5745.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/museum/furniture/pedestal_large.png"
-dest_files=["res://.godot/imported/pedestal_large.png-4cedccf3cef3237cfa580e10fcdedd69.ctex"]
+source_file="res://assets/museum/items/therizinosaurus/tail.png"
+dest_files=["res://.godot/imported/tail.png-823fee3d5ca88d366a65ccd0f2cf5745.ctex"]
 
 [params]
 

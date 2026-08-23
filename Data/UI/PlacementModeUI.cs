@@ -173,25 +173,6 @@ public partial class PlacementModeUI : CanvasLayer
     
     // ===== УТИЛИТЫ =====
     
-    private string GetFurnitureTexturePath(Furniture furniture)
-    {
-        if (furniture is DisplayCase)
-        {
-            if (furniture.Size.X == 1 && furniture.Size.Y == 1)
-                return "res://assets/museum/furniture/display_case_small.png";
-            else
-                return "res://assets/museum/furniture/display_case_large.png";
-        }
-        else if (furniture is Pedestal)
-        {
-            if (furniture.Size.X == 2 && furniture.Size.Y == 2)
-                return "res://assets/museum/furniture/pedestal_small.png";
-            else
-                return "res://assets/museum/furniture/pedestal_large.png";
-        }
-        
-        return "";
-    }
     
     private void ClearGrid()
     {

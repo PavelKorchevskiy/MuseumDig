@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c61v0cbmk062s"
-path="res://.godot/imported/full.png-3dca7119922972ca80179bcb22ccec51.ctex"
+uid="uid://b1q4hu7qlp1er"
+path="res://.godot/imported/ammonite.png-1ff9a5b742531711535790500d89d72b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/museum/items/triceratops/full.png"
-dest_files=["res://.godot/imported/full.png-3dca7119922972ca80179bcb22ccec51.ctex"]
+source_file="res://assets/museum/items/common/ammonite.png"
+dest_files=["res://.godot/imported/ammonite.png-1ff9a5b742531711535790500d89d72b.ctex"]
 
 [params]
 

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c61v0cbmk062s"
-path="res://.godot/imported/full.png-3dca7119922972ca80179bcb22ccec51.ctex"
+uid="uid://82j0cwfnqqc1"
+path="res://.godot/imported/precious_gem.png-00f266e1bc1cfb9248465ec813b4c595.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/museum/items/triceratops/full.png"
-dest_files=["res://.godot/imported/full.png-3dca7119922972ca80179bcb22ccec51.ctex"]
+source_file="res://assets/museum/items/common/precious_gem.png"
+dest_files=["res://.godot/imported/precious_gem.png-00f266e1bc1cfb9248465ec813b4c595.ctex"]
 
 [params]
 

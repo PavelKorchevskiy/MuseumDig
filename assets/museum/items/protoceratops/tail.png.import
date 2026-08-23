@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://n3jxxtia8bu2"
-path="res://.godot/imported/item_egg.png-c20c3f81437f6ebc6efbea50cfcb2b03.ctex"
+uid="uid://dfvf44lamud80"
+path="res://.godot/imported/tail.png-996ba46c52001969991a27fbeed5d508.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/museum/items/item_egg.png"
-dest_files=["res://.godot/imported/item_egg.png-c20c3f81437f6ebc6efbea50cfcb2b03.ctex"]
+source_file="res://assets/museum/items/protoceratops/tail.png"
+dest_files=["res://.godot/imported/tail.png-996ba46c52001969991a27fbeed5d508.ctex"]
 
 [params]
 

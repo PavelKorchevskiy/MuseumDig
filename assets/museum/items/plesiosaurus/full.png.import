@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c61v0cbmk062s"
-path="res://.godot/imported/full.png-3dca7119922972ca80179bcb22ccec51.ctex"
+uid="uid://b5ssk2gpeirjj"
+path="res://.godot/imported/full.png-e97529620e03596282e9d99f030dc481.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/museum/items/triceratops/full.png"
-dest_files=["res://.godot/imported/full.png-3dca7119922972ca80179bcb22ccec51.ctex"]
+source_file="res://assets/museum/items/plesiosaurus/full.png"
+dest_files=["res://.godot/imported/full.png-e97529620e03596282e9d99f030dc481.ctex"]
 
 [params]
 
