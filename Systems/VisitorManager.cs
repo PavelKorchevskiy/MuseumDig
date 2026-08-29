@@ -1,5 +1,6 @@
 using Godot;
 using System.Collections.Generic;
+using System.Linq;
 
 public partial class VisitorManager : CanvasLayer
 {
@@ -7,7 +8,11 @@ public partial class VisitorManager : CanvasLayer
     
     private List<Visitor> _visitors = new();
     private float _spawnTimer = 0f;
-    private const float SpawnInterval = 5.0f;
+    private const float SpawnInterval = 10.0f;
+
+    private Control _roomContainer;
+    private int _gridOffsetX = 500;
+    private int _gridOffsetY = 100;
     
     public override void _Ready()
     {
@@ -37,41 +42,63 @@ public partial class VisitorManager : CanvasLayer
     private int GetMaxVisitors()
     {
         if (MuseumSystem.Instance == null) return 0;
-        return MuseumSystem.Instance.GetAllRooms().Count * 5;
+        return MuseumSystem.Instance.GetAllRooms().Count * 2;
     }
     
     private void UpdateVisitorVisibility()
     {
-        var museum = GetTree().CurrentScene as Museum;
-        bool inMuseum = museum != null;
-        Room playerRoom = inMuseum ? MuseumSystem.Instance?.GetCurrentRoom() : null;
-        
-        foreach (var visitor in _visitors)
-        {
-            if (visitor == null || !IsInstanceValid(visitor)) continue;
-            
-            // Показываем только если игрок в музее и в том же зале
-            visitor.Visible = inMuseum && playerRoom != null && 
-                             visitor.CurrentRoom != null && 
-                             visitor.CurrentRoom.Id == playerRoom.Id;
-        }
+        _visitors.RemoveAll(v => v == null || !IsInstanceValid(v));
     }
     
-    private void SpawnVisitor()
+        private void SpawnVisitor()
     {
-        var mainHall = MuseumSystem.Instance?.GetAllRooms().Find(r => r.IsMainHall);
-        if (mainHall == null) return;
+        // Спавним в ТЕКУЩЕЙ комнате
+        var currentRoom = MuseumSystem.Instance?.GetCurrentRoom();
+        if (currentRoom == null) return;
         
-        var streetDoor = mainHall.GetDoor(Direction.Bottom);
-        if (streetDoor == null || !streetDoor.IsExitToStreet) return;
+        // === ИСПРАВЛЕНИЕ: Явно ищем НИЖНЮЮ дверь (выход на улицу) ===
+        Door spawnDoor = null;
+        
+        if (currentRoom.Doors.ContainsKey(Direction.Bottom))
+        {
+            spawnDoor = currentRoom.Doors[Direction.Bottom];
+        }
+        else
+        {
+            // Запасной вариант: ищем любую дверь с флагом IsExitToStreet
+            spawnDoor = currentRoom.Doors.Values.FirstOrDefault(d => d.IsExitToStreet);
+        }
+        
+        if (spawnDoor == null)
+        {
+            GD.PrintErr("[VisitorManager] В текущей комнате нет нижней двери для спавна!");
+            return;
+        }
+        // ================================================================
         
         var visitor = new Visitor();
         visitor.Name = $"Visitor_{GD.RandRange(1000, 9999)}";
         
-        AddChild(visitor);
-        visitor.Initialize(mainHall, streetDoor.Position);
+        if (_roomContainer != null)
+        {
+            _roomContainer.AddChild(visitor);
+        }
+        else
+        {
+            AddChild(visitor);
+        }
+        
+        visitor.Initialize(currentRoom, spawnDoor.Position, _gridOffsetX, _gridOffsetY, "1");
         
         _visitors.Add(visitor);
-        GD.Print($"[VisitorManager] Spawned visitor (total: {_visitors.Count}/{GetMaxVisitors()})");
+        GD.Print($"[VisitorManager] Спавн посетителя в {currentRoom.Id} через нижнюю дверь (всего: {_visitors.Count}/{GetMaxVisitors()})");
+    }
+
+    public void SetRoomContainer(Control roomContainer, int gridOffsetX, int gridOffsetY)
+    {
+        _roomContainer = roomContainer;
+        _gridOffsetX = gridOffsetX;
+        _gridOffsetY = gridOffsetY;
+        GD.Print($"[VisitorManager] Привязан к комнате. Смещения: {_gridOffsetX}, {_gridOffsetY}");
     }
 }

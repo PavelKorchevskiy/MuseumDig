@@ -97,17 +97,18 @@ public partial class Room : Resource
 
     // ===== ДЛЯ ПОИСКА ПУТИ (задел на посетителей) =====
 
-    public bool IsWalkable(int x, int y)
+        public bool IsWalkable(int x, int y)
     {
-        if (x < 0 || x >= Width || y < 0 || y >= Height) return false;
-
-        foreach (var placed in PlacedFurnitureList)
+        // 1. ЖЕСТКАЯ проверка границ. Если x или y меньше 0, сразу возвращаем false.
+        if (x < 0 || y < 0 || x >= Width || y >= Height)
         {
-            if (x >= placed.Position.X && x < placed.Position.X + placed.Size.X &&
-                y >= placed.Position.Y && y < placed.Position.Y + placed.Size.Y)
-            {
-                return false;
-            }
+            return false;
+        }
+
+        // 2. Проверка занятости мебелью
+        if (_occupancyGrid[x, y])
+        {
+            return false;
         }
 
         return true;
@@ -137,7 +138,7 @@ public partial class Room : Resource
                 SizeY = placed.Size.Y,
                 FurnitureSaveData = new FurnitureSaveData
                 {
-                    FurnitureType = placed.Furniture.GetType().Name, // Или placed.FurnitureTypeId
+                    FurnitureType = placed.Furniture.GetType().Name,
                     IsFlipped = placed.IsFlipped,                                                 // БЕРЕМ ПРЕДМЕТЫ ИЗ ЭКЗЕМПЛЯРА, А НЕ ИЗ ШАБЛОНА!
                     DisplayCaseItems = new List<FoundItem>(placed.Items)
                 }

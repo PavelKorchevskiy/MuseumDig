@@ -38,6 +38,11 @@ public partial class RoomViewUI : CanvasLayer
         _roomContainer.MouseFilter = Control.MouseFilterEnum.Ignore;
         AddChild(_roomContainer);
 
+        if (VisitorManager.Instance != null)
+        {
+            VisitorManager.Instance.SetRoomContainer(_roomContainer, GridOffsetX, GridOffsetY);
+        }
+
         _background = new ColorRect();
         _background.Color = new Color(0.1f, 0.1f, 0.15f);
         _background.SetAnchorsPreset(Control.LayoutPreset.FullRect);
@@ -80,66 +85,105 @@ public partial class RoomViewUI : CanvasLayer
         _roomNameLabel.Text = room.DisplayName;
 
         DrawGrid(room);
+        DrawWalls(room);
         DrawFurniture(room);
         DrawDoors(room);
+        DrawOccupancyGrid(room);
     }
 
-    private void DrawGrid(Room room)
+       private void DrawGrid(Room room)
     {
-        GD.Print($"[RoomViewUI] Drawing isometric grid {room.Width}x{room.Height}");
-
-        Texture2D floorTexture = null;
-        if (ResourceLoader.Exists("res://assets/museum/floor.png"))
+        for (int x = 0; x < room.Width; x++)
         {
-            floorTexture = GD.Load<Texture2D>("res://assets/museum/floor.png");
+            for (int y = 0; y < room.Height; y++)
+            {
+                var isoPos = IsoUtils.GridToIso(x, y);
+                
+                // === ШАХМАТНЫЙ ПОРЯДОК ===
+                // Если (x + y) чётное — тайл 1, если нечётное — тайл 2
+                string texturePath = ((x + y) % 2 == 0) 
+                    ? "res://assets/museum/floor/1.png" 
+                    : "res://assets/museum/floor/2.png";
+                // ==========================
+                
+                Texture2D floorTexture = null;
+                if (ResourceLoader.Exists(texturePath))
+                {
+                    floorTexture = GD.Load<Texture2D>(texturePath);
+                }
+                else
+                {
+                    GD.PrintErr($"[RoomViewUI] Текстура пола не найдена: {texturePath}");
+                    continue;
+                }
+
+                var tileRect = new TextureRect();
+                tileRect.Position = new Vector2(
+                    GridOffsetX + isoPos.X,
+                    GridOffsetY + isoPos.Y
+                );
+                tileRect.Size = new Vector2(IsoUtils.TileWidth, IsoUtils.TileHeight);
+                tileRect.Texture = floorTexture;
+                tileRect.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
+                tileRect.MouseFilter = Control.MouseFilterEnum.Ignore;
+                tileRect.Name = $"floor_{x}_{y}";
+                tileRect.ZIndex = IsoUtils.GetZOrder(x, y);
+                
+                _roomContainer.AddChild(tileRect);
+            }
         }
+    }
+
+    private bool _showOccupancyDebug = false;
+
+    // === ПУБЛИЧНЫЙ МЕТОД ===
+    public void ToggleOccupancyDebug()
+    {
+        _showOccupancyDebug = !_showOccupancyDebug;
+        GD.Print($"[RoomViewUI] Отладка занятости: {_showOccupancyDebug}");
+
+        // Перерисовываем комнату
+        var museum = GetTree().CurrentScene as Museum;
+        museum?.RefreshRoomView();
+    }
+
+    private void DrawOccupancyGrid(Room room)
+    {
+        if (!_showOccupancyDebug)
+        {
+            GD.Print("[DrawOccupancyGrid] Отладка отключена");
+            return;
+        }
+
+        GD.Print($"[DrawOccupancyGrid] Рисую занятые клетки для комнаты {room.Id}");
+
+        int occupiedCount = 0;
 
         for (int x = 0; x < room.Width; x++)
         {
             for (int y = 0; y < room.Height; y++)
             {
-                Control cell;
-
-                var isoPos = IsoUtils.GridToIso(x, y);
-                var position = new Vector2(GridOffsetX + isoPos.X, GridOffsetY + isoPos.Y);
-
-                if (floorTexture != null)
+                if (room._occupancyGrid[x, y])
                 {
-                    var textureRect = new TextureRect();
-                    textureRect.Position = position;
+                    occupiedCount++;
 
-                    // ИСПРАВЛЕНИЕ: Используем точный размер тайла без зазоров
-                    textureRect.Size = new Vector2(IsoUtils.TileWidth, IsoUtils.TileHeight);
-                    textureRect.Texture = floorTexture;
+                    var isoPos = IsoUtils.GridToIso(x, y);
+                    var rect = new ColorRect();
+                    rect.Position = new Vector2(GridOffsetX + isoPos.X, GridOffsetY + isoPos.Y);
+                    rect.Size = new Vector2(IsoUtils.TileWidth, IsoUtils.TileHeight);
+                    rect.Color = new Color(1f, 0f, 0f, 0.5f); // Ярко-красный
+                    rect.MouseFilter = Control.MouseFilterEnum.Ignore;
+                    rect.ZIndex = IsoUtils.GetZOrder(x, y) + 1;
+                    rect.Name = $"occupancy_{x}_{y}";
 
-                    // ИСПРАВЛЕНИЕ: StretchMode.Covered заполняет всю область без зазоров
-                    textureRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered;
+                    _roomContainer.AddChild(rect);
 
-                    cell = textureRect;
+                    GD.Print($"[DrawOccupancyGrid] Клетка ({x}, {y}) занята");
                 }
-                else
-                {
-                    var colorRect = new ColorRect();
-                    colorRect.Position = position;
-                    colorRect.Size = new Vector2(IsoUtils.TileWidth, IsoUtils.TileHeight);
-                    bool isEven = (x + y) % 2 == 0;
-                    colorRect.Color = isEven ? new Color(0.3f, 0.25f, 0.2f) : new Color(0.35f, 0.3f, 0.25f);
-                    cell = colorRect;
-                }
-
-                cell.MouseFilter = Control.MouseFilterEnum.Stop;
-                cell.Name = $"cell_{x}_{y}";
-                cell.ZIndex = IsoUtils.GetZOrder(x, y);
-
-                _roomContainer.AddChild(cell);
-                _gridCells.Add(cell);
             }
         }
 
-        if (floorTexture == null)
-        {
-            GD.Print("[RoomViewUI] Using fallback color grid (floor.png not found)");
-        }
+        GD.Print($"[DrawOccupancyGrid] Всего нарисовано {occupiedCount} занятых клеток");
     }
 
     private void DrawFurniture(Room room)
@@ -208,8 +252,11 @@ public partial class RoomViewUI : CanvasLayer
                     textureRect.FlipH = true;
                 }
 
-                // Z-порядок: мебель рисуется поверх пола
-                textureRect.ZIndex = IsoUtils.GetZOrder(centerX, centerY) + 5;
+                int sortX = placed.Position.X + (placed.Size.X / 2);
+                int sortY = placed.Position.Y + placed.Size.Y - 1;
+                int baseZ = IsoUtils.GetZOrder(sortX, sortY) + 2;
+
+                textureRect.ZIndex = baseZ;
 
                 furnitureControl = textureRect;
             }
@@ -240,7 +287,7 @@ public partial class RoomViewUI : CanvasLayer
             _furnitureRects.Add(furnitureControl);
 
             // Рисуем экспонаты поверх мебели
-            DrawFurnitureContents(placed, centerX, centerY);
+            DrawFurnitureContents(placed, centerX, centerY, 99);
         }
     }
 
@@ -270,43 +317,40 @@ public partial class RoomViewUI : CanvasLayer
         return "";
     }
 
-    private void DrawFurnitureContents(PlacedFurniture placed, int centerX, int centerY)
+    // === ИЗМЕНЕНА СИГНАТУРА: добавлен параметр baseZIndex ===
+    private void DrawFurnitureContents(PlacedFurniture placed, int sortX, int sortY, int baseZIndex)
     {
         var items = placed.GetAllItems();
         GD.Print($"[DEBUG DRAW] Мебель ID:{placed.InstanceId} | Предметов: {items?.Count ?? 0}");
         if (items == null || items.Count == 0) return;
 
-        var isoPos = IsoUtils.GridToIso(centerX, centerY);
+        // Используем sortX и sortY для позиционирования, если нужно, но главное - для Z
+        var isoPos = IsoUtils.GridToIso(sortX, sortY);
 
-        int maxItems = 1; // По умолчанию 1 (для пьедестала)
+        int maxItems = 1;
         Vector2 startPos;
-        int iconSize = 24; // Базовый размер иконки
+        int iconSize = 24;
 
         // === 1. ЛОГИКА ДЛЯ ПЬЕДЕСТАЛОВ ===
         if (placed.Furniture is CollectionExhibit)
         {
-            maxItems = 1; // Пьедестал всегда вмещает только 1 экспонат (коллекцию)
-            iconSize = 96; // Для пьедестала делаем иконку крупной (спрайт целого скелета)
+            maxItems = 1;
+            iconSize = 96;
 
             if (placed.Size.X == 2 && placed.Size.Y == 2)
             {
-
                 startPos = new Vector2(GridOffsetX + isoPos.X - 40, GridOffsetY + isoPos.Y - 130);
             }
             else if (placed.Size.X == 3 && placed.Size.Y == 3)
             {
-                // Большой пьедестал 3x3
-                // Он шире, поэтому экспонат должен быть строго по центру (X = 0 относительно isoPos)
-                // Y подбираем так, чтобы скелет "стоял" на площадке, а не парил или не проваливался
                 startPos = new Vector2(GridOffsetX + isoPos.X, GridOffsetY + isoPos.Y - 50);
             }
             else
             {
-                // Запасной вариант для любого другого размера пьедестала
                 startPos = new Vector2(GridOffsetX + isoPos.X, GridOffsetY + isoPos.Y - 40);
             }
         }
-        // === 2. ЛОГИКА ДЛЯ ВИТРИН (ваша старая, проверенная) ===
+        // === 2. ЛОГИКА ДЛЯ ВИТРИН ===
         else if (placed.Furniture is DisplayCase)
         {
             if (placed.Size.X == 1 && placed.Size.Y == 1)
@@ -321,21 +365,18 @@ public partial class RoomViewUI : CanvasLayer
             }
             else
             {
-                maxItems = 3; // Или сколько там у вас для больших витрин
+                maxItems = 3;
                 startPos = new Vector2(GridOffsetX + isoPos.X - 30, GridOffsetY + isoPos.Y - 50);
             }
         }
         else
         {
-            // На всякий случай, если появится новая мебель
             startPos = new Vector2(GridOffsetX + isoPos.X, GridOffsetY + isoPos.Y - 40);
         }
 
         int displayCount = Mathf.Min(items.Count, maxItems);
-
-        // Изометрический шаг для большой витрины
-        float isoStepX = IsoUtils.TileWidth / 2f;  // 32
-        float isoStepY = IsoUtils.TileHeight / 2f; // 16
+        float isoStepX = IsoUtils.TileWidth / 2f;
+        float isoStepY = IsoUtils.TileHeight / 2f;
 
         for (int i = 0; i < displayCount; i++)
         {
@@ -357,156 +398,40 @@ public partial class RoomViewUI : CanvasLayer
                 itemPosition = startPos + new Vector2(col * (iconSize + spacing), row * (iconSize + spacing));
             }
 
-            // === НОВОЕ: Используем TextureRect вместо ColorRect ===
             var textureRect = new TextureRect();
             textureRect.Position = itemPosition;
             textureRect.CustomMinimumSize = new Vector2(iconSize, iconSize);
             textureRect.Size = new Vector2(iconSize, iconSize);
             textureRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
             textureRect.MouseFilter = Control.MouseFilterEnum.Ignore;
-            textureRect.ZIndex = IsoUtils.GetZOrder(centerX, centerY) + 10;
 
-            // 1. Загружаем текстуру экспоната
-            string texturePath = GetExhibitTexturePath(resource.Id); // Или resource.Name, зависит от вашей структуры
+            // === ИСПРАВЛЕНИЕ: Используем baseZIndex + 1 вместо + 10 ===
+            // +1 гарантирует, что предмет лежит "на" витрине, но не перекрывает посетителя, 
+            // который стоит на клетке с большим Y (ближе к камере).
+            textureRect.ZIndex = baseZIndex + 1;
+
+            string texturePath = GetExhibitTexturePath(resource.Id);
             if (ResourceLoader.Exists(texturePath))
             {
                 textureRect.Texture = GD.Load<Texture2D>(texturePath);
             }
             else
             {
-                // ЗАПАСНОЙ ВАРИАНТ: Если спрайт не найден, рисуем цветной квадрат по редкости
                 var fallbackRect = new ColorRect();
                 fallbackRect.Position = itemPosition;
                 fallbackRect.Size = new Vector2(iconSize, iconSize);
-                fallbackRect.Color = GetRarityColor(resource.Rarity);
+                fallbackRect.Color = GetRarityColor(resource.Rarity); // Убедитесь, что этот метод у вас есть
                 fallbackRect.MouseFilter = Control.MouseFilterEnum.Ignore;
-                fallbackRect.ZIndex = IsoUtils.GetZOrder(centerX, centerY) + 10;
+                fallbackRect.ZIndex = baseZIndex + 1; // То же самое для запасного варианта
                 _roomContainer.AddChild(fallbackRect);
                 _furnitureRects.Add(fallbackRect);
-                continue; // Пропускаем добавление textureRect
+                continue;
             }
-
-            // // 2. Обработка качества (Damaged)
-            // if (item.Quality == Quality.Damaged)
-            // {
-            //     // Затемняем текстуру на 50%
-            //     textureRect.Modulate = new Color(0.5f, 0.5f, 0.5f, 1.0f);
-            // }
-            // else
-            // {
-            //     // Можно добавить легкий цветовой оттенок в зависимости от редкости
-            //     Color rarityTint = GetRarityColor(resource.Rarity);
-            //     // Смешиваем белый с цветом редкости, чтобы не перекрывать детали спрайта полностью
-            //     textureRect.Modulate = new Color(1f, 1f, 1f, 1f).Lerp(rarityTint, 0.3f); 
-            // }
 
             _roomContainer.AddChild(textureRect);
             _furnitureRects.Add(textureRect);
         }
     }
-
-    // === НОВЫЙ МЕТОД: Маппинг ID ресурса на путь к спрайту ===
-    // private string GetExhibitTexturePath(string resourceId)
-    // {
-    //     // Приведите эти строки в соответствие с тем, как у вас называются ресурсы в GameData
-    //     // Например, если resourceId == "dino_skull", вернется путь к черепу.
-
-    //     string lowerId = resourceId.ToLower();
-
-    //     if (lowerId.Contains("skull") || lowerId.Contains("bone"))
-    //         return "res://assets/museum/items/item_skull.png";
-
-    //     if (lowerId.Contains("ammonite") || lowerId.Contains("fossil"))
-    //         return "res://assets/museum/items/item_ammonite.png";
-
-    //     if (lowerId.Contains("egg"))
-    //         return "res://assets/museum/items/item_egg.png";
-
-    //     if (lowerId.Contains("tooth") || lowerId.Contains("artifact"))
-    //         return "res://assets/museum/items/item_tooth.png";
-
-    //     //Tricerapots assets path   
-    //     if (lowerId.Equals("triceratops_skull"))
-    //         return "res://assets/museum/items/triceratops/skull.png";
-
-    //     if (lowerId.Equals("triceratops_body"))
-    //         return "res://assets/museum/items/triceratops/body.png";
-
-    //     if (lowerId.Equals("triceratops_tail"))
-    //         return "res://assets/museum/items/triceratops/tail.png";
-
-    //     if (lowerId.Equals("triceratops"))
-    //         return "res://assets/museum/items/triceratops/full.png";
-
-    //     //velociraptor assets path   
-    //     if (lowerId.Equals("velociraptor_skull"))
-    //         return "res://assets/museum/items/velociraptor/skull.png";
-
-    //     if (lowerId.Equals("velociraptor_body"))
-    //         return "res://assets/museum/items/velociraptor/body.png";
-
-    //     if (lowerId.Equals("velociraptor_tail"))
-    //         return "res://assets/museum/items/velociraptor/tail.png";
-
-    //     if (lowerId.Equals("velociraptor"))
-    //         return "res://assets/museum/items/velociraptor/full.png";
-
-    //     //protoceratops assets path   
-    //     if (lowerId.Equals("protoceratops_skull"))
-    //         return "res://assets/museum/items/protoceratops/skull.png";
-
-    //     if (lowerId.Equals("protoceratops_body"))
-    //         return "res://assets/museum/items/protoceratops/body.png";
-
-    //     if (lowerId.Equals("protoceratops_tail"))
-    //         return "res://assets/museum/items/protoceratops/tail.png";
-
-    //     if (lowerId.Equals("protoceratops"))
-    //         return "res://assets/museum/items/protoceratops/full.png";
-
-    //     //therizinosaurus assets path   
-    //     if (lowerId.Equals("therizinosaurus_skull"))
-    //         return "res://assets/museum/items/therizinosaurus/skull.png";
-
-    //     if (lowerId.Equals("therizinosaurus_body"))
-    //         return "res://assets/museum/items/therizinosaurus/body.png";
-
-    //     if (lowerId.Equals("therizinosaurus_tail"))
-    //         return "res://assets/museum/items/therizinosaurus/tail.png";
-
-    //     if (lowerId.Equals("therizinosaurus"))
-    //         return "res://assets/museum/items/therizinosaurus/full.png";
-
-    //     //ichthyosaurus assets path   
-    //     if (lowerId.Equals("ichthyosaurus_skull"))
-    //         return "res://assets/museum/items/ichthyosaurus/skull.png";
-
-    //     if (lowerId.Equals("ichthyosaurus_body"))
-    //         return "res://assets/museum/items/ichthyosaurus/body.png";
-
-    //     if (lowerId.Equals("ichthyosaurus_tail"))
-    //         return "res://assets/museum/items/ichthyosaurus/tail.png";
-
-    //     if (lowerId.Equals("ichthyosaurus"))
-    //         return "res://assets/museum/items/ichthyosaurus/full.png";
-
-    //     //plesiosaurus assets path   
-    //     if (lowerId.Equals("plesiosaurus_skull"))
-    //         return "res://assets/museum/items/plesiosaurus/skull.png";
-
-    //     if (lowerId.Equals("plesiosaurus_body"))
-    //         return "res://assets/museum/items/plesiosaurus/body.png";
-
-    //     if (lowerId.Equals("plesiosaurus_tail"))
-    //         return "res://assets/museum/items/plesiosaurus/tail.png";
-
-    //     if (lowerId.Equals("plesiosaurus"))
-    //         return "res://assets/museum/items/plesiosaurus/full.png";
-
-    //     // Если ничего не подошло, возвращаем несуществующий путь, 
-    //     // чтобы сработал запасной вариант с ColorRect
-    //     return "res://assets/museum/items/missing.png";
-    // }
 
     private string GetExhibitTexturePath(string resourceId)
     {
@@ -640,7 +565,7 @@ public partial class RoomViewUI : CanvasLayer
                 textureRect.Texture = doorTexture;
                 textureRect.FlipH = flipHorizontal; // ← КЛЮЧЕВОЕ ИЗМЕНЕНИЕ
                 textureRect.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
-                textureRect.ZIndex = IsoUtils.GetZOrder(doorGridPos.X, doorGridPos.Y) + 10;
+                textureRect.ZIndex = IsoUtils.GetZOrder(doorGridPos.X, doorGridPos.Y) + 3;
 
                 doorControl = textureRect;
             }
@@ -867,6 +792,8 @@ public partial class RoomViewUI : CanvasLayer
             btnRotateCase.Text = "🔃 Повернуть";
             btnRotateCase.CustomMinimumSize = new Vector2(120, 0);
             btnRotateCase.Pressed += () => OnRotateFurniture(placed);
+            bool isSquareCase = placed.Size.X == placed.Size.Y;
+            btnRotateCase.Disabled = !isSquareCase;
             hbox.AddChild(btnRotateCase);
 
             var btnSell = new Button();
@@ -1801,5 +1728,74 @@ public partial class RoomViewUI : CanvasLayer
 
         var museum = GetTree().CurrentScene as Museum;
         museum?.RefreshRoomView();
+    }
+
+       private void DrawWalls(Room room)
+    {
+        string wallTexturePath = "res://assets/museum/wall/wall.png"; 
+        Texture2D wallTexture = null;
+        
+        if (ResourceLoader.Exists(wallTexturePath))
+        {
+            wallTexture = GD.Load<Texture2D>(wallTexturePath);
+        }
+        else
+        {
+            GD.PrintErr($"[RoomViewUI] Текстура стены не найдена: {wallTexturePath}");
+            return;
+        }
+
+        float wallWidth = wallTexture.GetWidth();
+        float wallHeight = wallTexture.GetHeight();
+
+        // === НАСТРОЙКА СМЕЩЕНИЯ СТЕН ===
+        float wallAdjustY = 10f; 
+        // =================================
+
+        // === СЕВЕРО-ЗАПАДНАЯ СТЕНА (левая верхняя грань, x=0) ===
+        // Убран лишний тайл на y=-1. Теперь от y=0 до y=Height
+        for (int y = 0; y <= room.Height; y++)
+        {
+            var isoPos = IsoUtils.GridToIso(0, y);
+            var wallRect = new TextureRect();
+            
+            wallRect.Position = new Vector2(
+                GridOffsetX + isoPos.X,
+                GridOffsetY + isoPos.Y - wallHeight + wallAdjustY
+            );
+            
+            wallRect.Size = new Vector2(wallWidth, wallHeight);
+            wallRect.Texture = wallTexture;
+            wallRect.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
+            wallRect.MouseFilter = Control.MouseFilterEnum.Ignore;
+            wallRect.Name = $"wall_nw_0_{y}";
+            wallRect.FlipH = false;
+            wallRect.ZIndex = IsoUtils.GetZOrder(0, y) + 1;
+            
+            _roomContainer.AddChild(wallRect);
+        }
+
+        // === СЕВЕРО-ВОСТОЧНАЯ СТЕНА (правая верхняя грань, y=0) ===
+        // Убран лишний тайл на x=-1. Теперь от x=0 до x=Width
+        for (int x = 0; x <= room.Width; x++)
+        {
+            var isoPos = IsoUtils.GridToIso(x, 0);
+            var wallRect = new TextureRect();
+            
+            wallRect.Position = new Vector2(
+                GridOffsetX + isoPos.X,
+                GridOffsetY + isoPos.Y - wallHeight + wallAdjustY
+            );
+            
+            wallRect.Size = new Vector2(wallWidth, wallHeight);
+            wallRect.Texture = wallTexture;
+            wallRect.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
+            wallRect.MouseFilter = Control.MouseFilterEnum.Ignore;
+            wallRect.Name = $"wall_ne_{x}_0";
+            wallRect.FlipH = true;
+            wallRect.ZIndex = IsoUtils.GetZOrder(x, 0) + 1;
+            
+            _roomContainer.AddChild(wallRect);
+        }
     }
 }

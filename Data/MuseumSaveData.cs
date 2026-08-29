@@ -31,5 +31,5 @@ public class FurnitureSaveData
 {
     public string FurnitureType { get; set; }
     public List<FoundItem> DisplayCaseItems { get; set; }
-    public bool IsFlipped = false;
+    public bool IsFlipped { get; set; } = false;
 }

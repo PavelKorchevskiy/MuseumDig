@@ -479,6 +479,7 @@ public partial class MuseumSystem : Node
                             Furniture = furniture
                         };
 
+
                         // Загружаем предметы ТОЛЬКО для витрин
                         if (furniture is DisplayCase && furnData.FurnitureSaveData?.DisplayCaseItems != null)
                         {
@@ -505,7 +506,7 @@ public partial class MuseumSystem : Node
                     }
                 }
 
-                // Пересчитываем occupancy grid (ИСПРАВЛЕННЫЙ синтаксис для bool[,])
+                                // Пересчитываем occupancy grid (ИСПРАВЛЕННЫЙ синтаксис для bool[,])
                 foreach (var placed in room.PlacedFurnitureList)
                 {
                     for (int x = placed.Position.X; x < placed.Position.X + placed.Size.X; x++)
@@ -519,6 +520,18 @@ public partial class MuseumSystem : Node
                         }
                     }
                 }
+                
+                // === НОВЫЙ ЛОГ: Проверяем, сколько клеток помечено ===
+                int occupiedCount = 0;
+                for (int x = 0; x < room.Width; x++)
+                {
+                    for (int y = 0; y < room.Height; y++)
+                    {
+                        if (room._occupancyGrid[x, y]) occupiedCount++;
+                    }
+                }
+                GD.Print($"[MuseumSystem] Комната {room.Id}: помечено {occupiedCount} занятых клеток");
+                // ======================================================
             }
 
             _rooms[room.GlobalPosition] = room;

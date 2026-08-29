@@ -92,6 +92,16 @@ _buttonPanel.AddChild(invBtn);
         var saveBtn = new Button { Text = "💾 Сохранить и выйти", CustomMinimumSize = new Vector2(150, 40) };
         saveBtn.Pressed += () => SaveSystem.Instance?.ForceSaveAndQuit();
         _buttonPanel.AddChild(saveBtn);
+
+        var debugBtn = new Button();
+    debugBtn.Text = "🔍 Занятые клетки";
+    debugBtn.CustomMinimumSize = new Vector2(150, 0);
+    debugBtn.Pressed += () => {
+        var museum = GetTree().CurrentScene as Museum;
+        museum?.ToggleOccupancyDebug();
+    };
+            _buttonPanel.AddChild(debugBtn);
+
     }
 
     private void UpdateDisplay()
@@ -142,6 +152,49 @@ _buttonPanel.AddChild(invBtn);
         if (_roomView != null && MuseumSystem.Instance != null)
         {
             _roomView.DisplayRoom(MuseumSystem.Instance.GetCurrentRoom());
+        }
+        
+    }
+
+            public void ToggleOccupancyDebug()
+    {
+        // Рекурсивный поиск RoomViewUI по всей сцене
+        var roomViewUI = FindNodeOfType<RoomViewUI>(this);
+        
+        if (roomViewUI != null)
+        {
+            roomViewUI.ToggleOccupancyDebug();
+        }
+        else
+        {
+            GD.PrintErr("[Museum] RoomViewUI не найден! Вывожу структуру сцены:");
+            PrintSceneTree(this, 0);
+        }
+    }
+    
+    // Рекурсивный поиск узла нужного типа
+    private T FindNodeOfType<T>(Node node) where T : class
+    {
+        if (node is T result) return result;
+        
+        foreach (var child in node.GetChildren())
+        {
+            var found = FindNodeOfType<T>(child);
+            if (found != null) return found;
+        }
+        
+        return null;
+    }
+    
+    // Вывод структуры сцены в консоль (для отладки)
+    private void PrintSceneTree(Node node, int depth)
+    {
+        string indent = new string(' ', depth * 2);
+        GD.Print($"{indent}- {node.Name} ({node.GetType().Name})");
+        
+        foreach (var child in node.GetChildren())
+        {
+            PrintSceneTree(child, depth + 1);
         }
     }
 }
