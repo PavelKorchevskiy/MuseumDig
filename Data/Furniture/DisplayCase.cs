@@ -8,10 +8,13 @@ public partial class DisplayCase : Furniture
     
     private List<FoundItem> _items = new();
     
-    public override bool CanAccept(ResourceDefinition resource, Quality quality)
+        public override bool CanAccept(ResourceDefinition resource, Quality quality)
     {
         if (_items.Count >= Capacity) return false;
-        if (resource is FossilDefinition fossil) return fossil.CanExhibitAlone;
+        if (resource is FossilDefinition fossil) 
+        {
+            return fossil.CanExhibitAlone && !fossil.IsCollection;
+        }
         return false;
     }
     

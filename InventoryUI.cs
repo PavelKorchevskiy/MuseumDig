@@ -1,13 +1,12 @@
 using Godot;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
 public partial class InventoryUI : CanvasLayer
 {
 
     public static InventoryUI _instance;
-
-    public static event System.Action<string> OnStartPlacement;
 
     private enum Tab { Items, Collections }
     private Tab _currentTab = Tab.Items;
@@ -649,14 +648,23 @@ public partial class InventoryUI : CanvasLayer
 
     // ===== ОБРАБОТЧИКИ =====
 
-    private void OnPlaceCollectionPressed(string collectionId, Quality quality)
+     private void OnPlaceCollectionPressed(string collectionId, Quality quality)
     {
+        GD.Print($"[InventoryUI] 🖱️ Кнопка 'Разместить' нажата! ID: {collectionId}, Quality: {quality}");
 
         // Скрываем инвентарь, чтобы игрок видел комнату
         this.Visible = false;
 
-        // Уведомляем RoomViewUI о начале размещения
-        OnStartPlacement?.Invoke(collectionId);
+        // === ПРЯМОЙ ВЫЗОВ MuseumSystem (синглтон, всегда доступен) ===
+        if (MuseumSystem.Instance != null)
+        {
+            MuseumSystem.Instance.StartPlacementFromInventory(collectionId, quality);
+            GD.Print("[InventoryUI] ✅ Запрос на размещение отправлен в MuseumSystem");
+        }
+        else
+        {
+            GD.PrintErr("[InventoryUI] ❌ ОШИБКА: MuseumSystem.Instance равен null!");
+        }
     }
 
     private void OnSellOnePressed(string resourceId, Quality quality)

@@ -17,6 +17,8 @@ public partial class FossilDefinition : ResourceDefinition
 	[Export] public bool CanExhibitAlone = false;
 	
 	public override bool HasQuality => true;
+
+	[Export] public bool IsCollection = false; 
 	
 	public override float GetQualityMultiplier(Quality quality)
 	{

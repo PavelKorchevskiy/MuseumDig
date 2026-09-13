@@ -90,7 +90,8 @@ public partial class MuseumShopUI : CanvasLayer
         if (_furnitureSection != null && MuseumSystem.Instance != null)
         {
             int i = 0;
-            foreach (var template in MuseumSystem.Instance.GetAvailableFurnitureTemplates())
+            var templates = MuseumSystem.Instance.GetAvailableFurnitureTemplates();
+            foreach (var template in templates)
             {
                 if (i < _furnitureSection.GetChildCount())
                 {
@@ -117,20 +118,36 @@ public partial class MuseumShopUI : CanvasLayer
             Visible = false;
             
             var pendingFurniture = MuseumSystem.Instance.GetPendingFurniture();
-            if (pendingFurniture.Count > 0)
+            if (pendingFurniture != null && pendingFurniture.Count > 0)
             {
                 var furniture = pendingFurniture[pendingFurniture.Count - 1];
                 MuseumSystem.Instance.StartPlacementMode(furniture);
                 
-                var placementUI = GetTree().Root.GetNodeOrNull<PlacementModeUI>("PlacementModeUI");
+                var currentScene = GetTree().CurrentScene;
+                var placementUI = currentScene.GetNodeOrNull<PlacementModeUI>("PlacementModeUI");
+                
                 if (placementUI == null)
                 {
                     placementUI = new PlacementModeUI();
                     placementUI.Name = "PlacementModeUI";
-                    GetTree().Root.AddChild(placementUI);
+                    currentScene.AddChild(placementUI);
+                    GD.Print("[MuseumShop] ✅ PlacementModeUI создан и добавлен в сцену");
+                }
+                else
+                {
+                    GD.Print("[MuseumShop] ✅ PlacementModeUI уже существует");
                 }
                 
-                placementUI.StartPlacement(MuseumSystem.Instance.GetCurrentRoom(), furniture);
+                // Получаем текущую комнату из MuseumSystem
+                var currentRoom = MuseumSystem.Instance.GetCurrentRoom();
+                if (currentRoom != null)
+                {
+                    placementUI.StartPlacement(currentRoom, furniture);
+                }
+                else
+                {
+                    GD.PrintErr("[MuseumShop] ❌ Не удалось получить текущую комнату!");
+                }
             }
         }
     }

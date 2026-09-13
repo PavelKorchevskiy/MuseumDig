@@ -1,18 +1,21 @@
 using Godot;
+using System.Collections.Generic;
 
 public partial class Museum : Node2D
 {
-    private RoomViewUI _roomView;
+    private GlobalRoomViewUI _globalRoomView;
+    
     private CanvasLayer _offlineReward;
     private MuseumShopUI _shopUI;
     private VBoxContainer _buttonPanel;
     
     private bool _initialDisplayUpdated = false;
     private bool _offlineRewardChecked = false;
+    private DisplayCaseUI _displayCaseUI;
 
     public override void _Ready()
     {
-        // 1. Создаем или получаем UI-слой с высоким приоритетом (чтобы быть поверх комнаты)
+        // 1. Создаем или получаем UI-слой с высоким приоритетом
         var uiLayer = GetNodeOrNull<CanvasLayer>("UI");
         if (uiLayer == null)
         {
@@ -20,7 +23,7 @@ public partial class Museum : Node2D
             AddChild(uiLayer);
         }
 
-        // 2. Офлайн-награда (если она есть в сцене)
+        // 2. Офлайн-награда
         _offlineReward = GetNodeOrNull<CanvasLayer>("UI/OfflineReward");
         if (_offlineReward != null) _offlineReward.Visible = false;
 
@@ -29,12 +32,24 @@ public partial class Museum : Node2D
         uiLayer.AddChild(_shopUI);
         _shopUI.Visible = false;
 
-        // 4. Комната музея
-        _roomView = new RoomViewUI();
-        AddChild(_roomView);
+        // 4. ГЛОБАЛЬНЫЙ вид комнаты (теперь он сам управляет отрисовкой мебели внутри себя)
+        _globalRoomView = new GlobalRoomViewUI { Name = "GlobalRoomView" };
+        AddChild(_globalRoomView);
+
+        // 5. Камера (используем синглтон MuseumLayout)
+        var camera = GetNodeOrNull<CameraController>("Camera2D");
+        if (camera != null)
+        {
+            Vector2I mainHallCenter = MuseumLayout.Instance.GetRoomGlobalCenter("main_hall");
+            camera.SnapToRoomCenter(mainHallCenter);
+        }
         
-        // 5. Панель кнопок
+        // 6. Панель кнопок
         CreateButtonPanel(uiLayer);
+
+        _displayCaseUI = new DisplayCaseUI { Name = "DisplayCaseUI" };
+        uiLayer.AddChild(_displayCaseUI);
+
     }
 
     public override void _Process(double delta)
@@ -53,6 +68,7 @@ public partial class Museum : Node2D
                 }
             }
         }
+        RefreshRoomView();
     }
 
     private void CreateButtonPanel(CanvasLayer uiLayer)
@@ -62,53 +78,36 @@ public partial class Museum : Node2D
         _buttonPanel.AddThemeConstantOverride("separation", 10);
         uiLayer.AddChild(_buttonPanel);
         
-        // Кнопка магазина
         var shopBtn = new Button { Text = "🏪 Магазин", CustomMinimumSize = new Vector2(150, 40) };
         shopBtn.Pressed += () => _shopUI.Visible = true;
         _buttonPanel.AddChild(shopBtn);
         
-        // Кнопка инвентаря
-var invBtn = new Button { Text = "🎒 Инвентарь", CustomMinimumSize = new Vector2(150, 40) };
-invBtn.Pressed += () => {
-    var invUI = InventoryUI.Instance;
-    
-    if (invUI != null && GodotObject.IsInstanceValid(invUI))
-    {
-        invUI.Visible = true;
-    }
-    else
-    {
-        GD.PrintErr("[Museum] Инвентарь недоступен. Проверьте настройки Autoload!");
-    }
-};
-_buttonPanel.AddChild(invBtn);
+        var invBtn = new Button { Text = "🎒 Инвентарь", CustomMinimumSize = new Vector2(150, 40) };
+        invBtn.Pressed += () => {
+            var invUI = InventoryUI.Instance;
+            if (invUI != null && GodotObject.IsInstanceValid(invUI))
+            {
+                invUI.Visible = true;
+            }
+        };
+        _buttonPanel.AddChild(invBtn);
         
-        // Кнопка раскопок
         var digBtn = new Button { Text = "⛏️ Раскопки", CustomMinimumSize = new Vector2(150, 40) };
         digBtn.Pressed += () => GetTree().ChangeSceneToFile("res://DigSite.tscn");
         _buttonPanel.AddChild(digBtn);
         
-        // Кнопка сохранения
         var saveBtn = new Button { Text = "💾 Сохранить и выйти", CustomMinimumSize = new Vector2(150, 40) };
         saveBtn.Pressed += () => SaveSystem.Instance?.ForceSaveAndQuit();
         _buttonPanel.AddChild(saveBtn);
-
-        var debugBtn = new Button();
-    debugBtn.Text = "🔍 Занятые клетки";
-    debugBtn.CustomMinimumSize = new Vector2(150, 0);
-    debugBtn.Pressed += () => {
-        var museum = GetTree().CurrentScene as Museum;
-        museum?.ToggleOccupancyDebug();
-    };
-            _buttonPanel.AddChild(debugBtn);
-
     }
 
     private void UpdateDisplay()
     {
-        if (MuseumSystem.Instance != null && _roomView != null)
+        if (_globalRoomView != null)
         {
-            _roomView.DisplayRoom(MuseumSystem.Instance.GetCurrentRoom());
+            // Устанавливаем активную комнату в синглтоне и обновляем вид
+            MuseumLayout.Instance.ActiveRoomId = "main_hall";
+            _globalRoomView.UpdateRoomVisibility();
         }
     }
     
@@ -147,54 +146,97 @@ _buttonPanel.AddChild(invBtn);
         }
     }
 
-    public void RefreshRoomView()
+    /// <summary>
+    /// Вызывается для обновления затемнения комнат
+    /// </summary>
+    public void SetActiveRoom(string roomId)
     {
-        if (_roomView != null && MuseumSystem.Instance != null)
+        if (_globalRoomView != null)
         {
-            _roomView.DisplayRoom(MuseumSystem.Instance.GetCurrentRoom());
+            MuseumLayout.Instance.ActiveRoomId = roomId;
+            _globalRoomView.UpdateRoomVisibility();
         }
-        
     }
 
-            public void ToggleOccupancyDebug()
+    /// <summary>
+    /// Обновляет глобальный вид (включая мебель, которая теперь рендерится внутри GlobalRoomViewUI)
+    /// </summary>
+    public void RefreshRoomView()
     {
-        // Рекурсивный поиск RoomViewUI по всей сцене
-        var roomViewUI = FindNodeOfType<RoomViewUI>(this);
-        
-        if (roomViewUI != null)
+        if (_globalRoomView != null)
         {
-            roomViewUI.ToggleOccupancyDebug();
-        }
-        else
-        {
-            GD.PrintErr("[Museum] RoomViewUI не найден! Вывожу структуру сцены:");
-            PrintSceneTree(this, 0);
+            _globalRoomView.RenderAllRooms();
         }
     }
-    
-    // Рекурсивный поиск узла нужного типа
-    private T FindNodeOfType<T>(Node node) where T : class
+
+    /// <summary>
+    /// Устаревший метод, оставлен для совместимости, если где-то вызывается.
+    /// Теперь логика перехода обрабатывается кликом по полу в GlobalRoomViewUI.
+    /// </summary>
+    public void OnDoorClicked(string targetRoomId)
     {
-        if (node is T result) return result;
-        
-        foreach (var child in node.GetChildren())
+        if (string.IsNullOrEmpty(targetRoomId)) return;
+
+        SetActiveRoom(targetRoomId);
+
+        var camera = GetNodeOrNull<CameraController>("Camera2D"); 
+        if (camera != null)
         {
-            var found = FindNodeOfType<T>(child);
-            if (found != null) return found;
+            Vector2I center = MuseumLayout.Instance.GetRoomGlobalCenter(targetRoomId);
+            camera.MoveToRoomCenter(center);
         }
-        
-        return null;
     }
-    
-    // Вывод структуры сцены в консоль (для отладки)
-    private void PrintSceneTree(Node node, int depth)
+
+    /// <summary>
+    /// Открывает боковую панель управления витриной
+    /// </summary>
+    public void OpenDisplayCaseUI(Room room, PlacedFurniture placed)
     {
-        string indent = new string(' ', depth * 2);
-        GD.Print($"{indent}- {node.Name} ({node.GetType().Name})");
-        
-        foreach (var child in node.GetChildren())
+        if (_displayCaseUI != null && placed.Furniture is DisplayCase)
         {
-            PrintSceneTree(child, depth + 1);
+            _displayCaseUI.Open(room, placed);
         }
+    }
+
+    /// <summary>
+    /// Вызывается из DisplayCaseUI для продажи
+    /// </summary>
+    public void SellCurrentDisplayCase(string roomId, PlacedFurniture placed)
+    {
+        if (MuseumSystem.Instance.SellFurnitureWithItems(roomId, placed))
+        {
+            RefreshRoomView(); // Перерисовываем, чтобы витрина исчезла
+        }
+    }
+
+        public void StartMovingFurniture(string roomId, Furniture furniture, List<FoundItem> keptItems)
+    {
+        // Создаем временный объект мебели с сохраненными предметами
+        var tempPlaced = new PlacedFurniture(furniture, Vector2I.Zero);
+        tempPlaced.Items = new List<FoundItem>(keptItems); // Создаем копию списка
+
+        GD.Print($"[Museum] Начинаем перемещение витрины с {keptItems.Count} экспонатами");
+
+        // Запускаем режим размещения
+        MuseumSystem.Instance.StartPlacementModeWithItems(furniture, tempPlaced);
+        
+        var currentScene = GetTree().CurrentScene;
+        var placementUI = currentScene.GetNodeOrNull<PlacementModeUI>("PlacementModeUI");
+        
+        if (placementUI == null)
+        {
+            placementUI = new PlacementModeUI();
+            placementUI.Name = "PlacementModeUI";
+            currentScene.AddChild(placementUI);
+        }
+        
+        var room = MuseumLayout.Instance.GetRoom(roomId);
+        placementUI.StartPlacementForMoving(room, furniture, tempPlaced);
+    }
+
+     public void OnInventoryPlaceCollection(string collectionId, Quality quality)
+    {
+        GD.Print($"[Museum] Запрошено размещение коллекции: {collectionId}");
+        MuseumSystem.Instance.StartPlacementFromInventory(collectionId, quality);
     }
 }

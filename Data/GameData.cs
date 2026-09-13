@@ -45,6 +45,7 @@ public static class GameData
         RegisterTherizinosaurus();
         RegisterIchthyosaurus();
         RegisterPlesiosaurus();
+        RegisterAllosaurus();
         
         // Одиночные находки
         RegisterStandaloneFossils();
@@ -122,6 +123,18 @@ public static class GameData
         );
     }
 
+     private static void RegisterAllosaurus()
+    {
+        RegisterDinosaurCollection(
+            colId: "allosaurus",
+            displayName: "Allosaurus",
+            description: "Allosaurus is a genus of theropod dinosaur that lived 155 to 143 million years ago during the late Jurassic period.",
+            locationId: "canada",
+            rarity: Rarity.Uncommon,
+            size: new Vector2I(3, 3)
+        );
+    }
+
     public static void RegisterStandaloneFossils()
     {
         _resources["dino_tooth"] = new FossilDefinition { Id = "dino_tooth", DisplayName = "Dinosaur Tooth", Description = "A sharp tooth from an unknown dinosaur.", Type = ResourceType.Tooth, Rarity = Rarity.Common, BaseSellPrice = 15, BaseMuseumIncome = 2, CollectionId = "", PieceIndex = -1, TotalPieces = 1, CanExhibitAlone = true };
@@ -146,6 +159,7 @@ public static class GameData
             LootTable = new List<LootEntry>()
             {
                 CreateLoot("triceratops_skull", 0.03f), CreateLoot("triceratops_body", 0.03f), CreateLoot("triceratops_tail", 0.03f),
+                CreateLoot("allosaurus_skull", 0.03f), CreateLoot("allosaurus_body", 0.03f), CreateLoot("allosaurus_tail", 0.03f),
                 CreateLoot("dino_tooth", 0.08f), CreateLoot("gold_nugget", 0.12f), CreateLoot("precious_gem", 0.04f)
             }
         };
@@ -279,7 +293,8 @@ public static class GameData
             CollectionId = "", 
             PieceIndex = -1, 
             TotalPieces = 1, 
-            CanExhibitAlone = true // Теперь это означает "Можно разместить в комнате напрямую"
+            CanExhibitAlone = true,
+            IsCollection = true
         };
     }
 }
