@@ -9,6 +9,8 @@ public partial class PlacedFurniture : Resource
     [Export] public string InstanceId { get; set; } = Guid.NewGuid().ToString();
     [Export] public Vector2I Position { get; set; }
     [Export] public Vector2I Size { get; set; }
+
+     public bool IsFlipped = false;
     [Export] public Furniture Furniture { get; set; } // Ссылка на шаблон мебели
     [Export] public string FurnitureTypeId { get; set; }
 
@@ -50,36 +52,29 @@ public partial class PlacedFurniture : Resource
 }
 
     // Метод для расчета вместимости
-    private int GetMaxCapacity()
+    public int GetMaxCapacity()
     {
         if (Furniture is DisplayCase)
         {
-            // Большая витрина (2x1) вмещает 2 предмета, малая (1x1) — 1
-            return (Size.X == 2 && Size.Y == 1) ? 2 : 1; 
-        }
-        
-        if (Furniture is Pedestal)
-        {
-            // Пьедестал обычно вмещает 1 скелет (поправьте, если у вас иначе)
-            return 1; 
+            return (Size.X == 2 && Size.Y == 2) ? 2 : 1; 
         }
         
         return 1; // По умолчанию
     }
 
     // Удалить предмет (реализация, которую мы добавляли)
-    public FoundItem RemoveItem(string resourceId, Quality quality)
+    public FoundItem RemoveItem(string resourceId)
     {
-        var item = Items.FirstOrDefault(i => i.ResourceId == resourceId && i.Quality == quality);
+        var item = Items.FirstOrDefault(i => i.ResourceId == resourceId);
         
         if (item != null)
         {
             Items.Remove(item);
-            GD.Print($"[PlacedFurniture] Удален предмет: {resourceId} ({quality})");
+            GD.Print($"[PlacedFurniture] Удален предмет: {resourceId}");
             return item;
         }
         
-        GD.PrintErr($"[PlacedFurniture] Не удалось найти предмет {resourceId} ({quality}) для удаления!");
+        GD.PrintErr($"[PlacedFurniture] Не удалось найти предмет {resourceId} для удаления!");
         return null;
     }
 }

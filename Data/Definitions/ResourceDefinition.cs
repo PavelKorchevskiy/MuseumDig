@@ -15,12 +15,6 @@ public partial class ResourceDefinition : Resource
 	// Базовый пассивный доход в музее (в секунду)
 	[Export] public int BaseMuseumIncome = 1;
 	
-	// Имеет ли этот ресурс качество?
-	public virtual bool HasQuality => false;
-	
-	// Множитель дохода в зависимости от качества
-	public virtual float GetQualityMultiplier(Quality quality) => 1.0f;
-	
 	// Множитель дохода в зависимости от редкости
 	public float GetRarityMultiplier()
 	{

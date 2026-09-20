@@ -1,11 +1,5 @@
 using System.Collections.Generic;
 
-// Класс для сохранения одного стака предметов
-public class InventorySaveData
-{
-	public int Amount { get; set; }
-	public int Quality { get; set; } // Храним enum Quality как число (0 = Damaged, 1 = Good)
-}
 
 public class LocationSaveData
 {
@@ -32,8 +26,15 @@ public class SaveData
 	public Dictionary<string, List<int>> FossilPieces { get; set; } = new();
 	public MuseumSaveData MuseumData { get; set; }
 	
-	// НОВЫЙ инвентарь: Ключ = "ResourceId_Quality", Значение = данные
-	public Dictionary<string, InventorySaveData> Inventory { get; set; } = new();
+	public Dictionary<string, int> Inventory { get; set; } = new();
+
+	    // Новые поля для отслеживания открытых предметов
+       public Dictionary<string, object> ProgressData { get; set; } = new();
+
+    public Dictionary<string, int> SkillLevels { get; set; } = new();
+    public int AvailableSkillPoints { get; set; } = 0;
+	public HashSet<string> UnlockedCollections { get; set; } = new();
+    public HashSet<string> UnlockedResources { get; set; } = new();
 	
 	public long LastSaveTimestamp { get; set; } = 0;
 }

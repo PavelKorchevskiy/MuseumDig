@@ -1,77 +1,125 @@
 using Godot;
 using System.Collections.Generic;
 
-public partial class VisitorManager : CanvasLayer
+public partial class VisitorManager : Node
 {
     public static VisitorManager Instance { get; private set; }
+
+    private List<Visitor> _visitors = new List<Visitor>();
+    private MuseumLayout _layout;
+    private bool _isInitialized = false;
     
-    private List<Visitor> _visitors = new();
+    // Таймер для контроля частоты появления
     private float _spawnTimer = 0f;
-    private const float SpawnInterval = 5.0f;
-    
+    private const float SpawnInterval = 3.0f; // Проверяем возможность спавна каждые 3 секунды
+
     public override void _Ready()
     {
         Instance = this;
-        Layer = 25; // Поверх всего
-        Name = "VisitorManager";
+        TryInitialize();
     }
-    
+
     public override void _Process(double delta)
     {
-        _spawnTimer += (float)delta;
-        
-        int maxVisitors = GetMaxVisitors();
-        
-        if (_spawnTimer >= SpawnInterval && _visitors.Count < maxVisitors)
+        if (!_isInitialized)
         {
+            TryInitialize();
+            return;
+        }
+
+        // 1. ОЧИСТКА: Удаляем из списка тех, кто уже был уничтожен (QueueFree)
+        _visitors.RemoveAll(v => !GodotObject.IsInstanceValid(v));
+
+        // 2. ПРОВЕРКА ЛИМИТА: Сколько посетителей должно быть сейчас?
+        int maxVisitors = MuseumSystem.Instance.CalculateMaxVisitors();
+
+        // 3. СПАВН: Если текущих меньше максимума, запускаем таймер
+        if (_visitors.Count < maxVisitors)
+        {
+            _spawnTimer += (float)delta;
+            if (_spawnTimer >= SpawnInterval)
+            {
+                _spawnTimer = 0f;
+                SpawnNewVisitor();
+            }
+        }
+        else
+        {
+            // Сбрасываем таймер, если лимит достигнут, чтобы не было задержки при увеличении лимита
             _spawnTimer = 0f;
-            SpawnVisitor();
         }
-        
-        _visitors.RemoveAll(v => v == null || !IsInstanceValid(v));
-        
-        // Обновляем видимость всех посетителей
-        UpdateVisitorVisibility();
     }
-    
-    private int GetMaxVisitors()
+
+    private void TryInitialize()
     {
-        if (MuseumSystem.Instance == null) return 0;
-        return MuseumSystem.Instance.GetAllRooms().Count * 5;
-    }
-    
-    private void UpdateVisitorVisibility()
-    {
-        var museum = GetTree().CurrentScene as Museum;
-        bool inMuseum = museum != null;
-        Room playerRoom = inMuseum ? MuseumSystem.Instance?.GetCurrentRoom() : null;
-        
-        foreach (var visitor in _visitors)
+        var globalView = FindNodeByType<GlobalRoomViewUI>(GetTree().CurrentScene);
+        if (globalView != null)
         {
-            if (visitor == null || !IsInstanceValid(visitor)) continue;
-            
-            // Показываем только если игрок в музее и в том же зале
-            visitor.Visible = inMuseum && playerRoom != null && 
-                             visitor.CurrentRoom != null && 
-                             visitor.CurrentRoom.Id == playerRoom.Id;
+            _layout = MuseumLayout.Instance;
+            if (_layout != null)
+            {
+                _isInitialized = true;
+                GD.Print($"[VisitorManager] ✅ Инициализация успешна! Макс. посетителей: {MuseumSystem.Instance.CalculateMaxVisitors()}");
+            }
         }
     }
-    
-    private void SpawnVisitor()
+
+    private T FindNodeByType<T>(Node node) where T : class
     {
-        var mainHall = MuseumSystem.Instance?.GetAllRooms().Find(r => r.IsMainHall);
+        if (node is T result) return result;
+        foreach (var child in node.GetChildren())
+        {
+            var found = FindNodeByType<T>(child);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private void SpawnNewVisitor()
+    {
+        var mainHall = _layout.GetRoom("main_hall");
         if (mainHall == null) return;
-        
-        var streetDoor = mainHall.GetDoor(Direction.Bottom);
-        if (streetDoor == null || !streetDoor.IsExitToStreet) return;
-        
+
         var visitor = new Visitor();
-        visitor.Name = $"Visitor_{GD.RandRange(1000, 9999)}";
-        
-        AddChild(visitor);
-        visitor.Initialize(mainHall, streetDoor.Position);
-        
+        Vector2I startPos = new Vector2I(21, 31); // Главный вход
+
+        // Проверка проходимости (на случай, если вход заблокировали мебелью)
+        if (_layout.Grid[startPos.X, startPos.Y] != TileType.Floor && _layout.Grid[startPos.X, startPos.Y] != TileType.Door)
+        {
+            startPos = FindNearestWalkable(startPos);
+        }
+
+        visitor.Initialize(_layout, startPos, mainHall.Id);
+        GetTree().CurrentScene.AddChild(visitor);
         _visitors.Add(visitor);
-        GD.Print($"[VisitorManager] Spawned visitor (total: {_visitors.Count}/{GetMaxVisitors()})");
+
+        // === ГЛАВНОЕ: Начисляем деньги за вход ===
+        MuseumSystem.Instance.OnVisitorEntered();
+        
+        GD.Print($"[VisitorManager] 🚶 Новый посетитель! Всего в музее: {_visitors.Count} / {MuseumSystem.Instance.CalculateMaxVisitors()}");
+    }
+
+    private Vector2I FindNearestWalkable(Vector2I from)
+    {
+        for (int radius = 1; radius < 5; radius++)
+        {
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                for (int dy = -radius; dy <= radius; dy++)
+                {
+                    int x = from.X + dx;
+                    int y = from.Y + dy;
+
+                    if (x < 0 || x >= MuseumLayout.GridWidth || y < 0 || y >= MuseumLayout.GridHeight)
+                        continue;
+
+                    if (_layout.Grid[x, y] == TileType.Floor || _layout.Grid[x, y] == TileType.Door)
+                    {
+                        return new Vector2I(x, y);
+                    }
+                }
+            }
+        }
+        return from;
     }
 }

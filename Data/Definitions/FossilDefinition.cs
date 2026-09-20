@@ -16,15 +16,5 @@ public partial class FossilDefinition : ResourceDefinition
 	// Можно ли выставлять в музее отдельно (зубы — да, части скелета — нет)
 	[Export] public bool CanExhibitAlone = false;
 	
-	public override bool HasQuality => true;
-	
-	public override float GetQualityMultiplier(Quality quality)
-	{
-		return quality switch
-		{
-			Quality.Damaged => 0.3f,
-			Quality.Good => 1.0f,
-			_ => 1.0f
-		};
-	}
+	[Export] public bool IsCollection = false; 
 }

@@ -1,109 +1,117 @@
 using Godot;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
 public partial class InventoryUI : CanvasLayer
 {
+    public static InventoryUI _instance;
 
-	    public static InventoryUI _instance;
-
-	private enum Tab { Items, Collections }
-    private Tab _currentTab = Tab.Items;
+    private enum Tab { Skeletons, Assembling, Findings, Bones, Tickets }
+    private Tab _currentTab = Tab.Skeletons;
 
     private Label _totalValueLabel;
     private VBoxContainer _itemsList;
-    private Button _sellAllButton;
     private Button _closeButton;
-    
-    // Новые кнопки для вкладок
-    private Button _tabItemsButton;
-    private Button _tabCollectionsButton;
+
+    private Button _tabSkeletonsButton;
+    private Button _tabAssemblingButton;
+    private Button _tabFindingsButton;
+    private Button _tabBonesButton;
+    private Button _tabTicketsButton;
 
     private Dictionary<string, Control> _rowCache = new();
+    private SellItemDialog _sellDialog;
 
-public static InventoryUI Instance
+    public static InventoryUI Instance
     {
         get
         {
-            // Если ссылка пустая или объект уничтожен — ищем заново
             if (_instance == null || !GodotObject.IsInstanceValid(_instance))
             {
-                // Ищем по АБСОЛЮТНОМУ пути в корне дерева сцены
                 var sceneTree = Engine.GetMainLoop() as SceneTree;
                 _instance = sceneTree?.Root.GetNodeOrNull<InventoryUI>("/root/InventoryUI");
-                
-                if (_instance == null)
-                {
-                    GD.PrintErr("[InventoryUI] КРИТИЧЕСКАЯ ОШИБКА: Autoload не найден в /root/InventoryUI!");
-                }
             }
             return _instance;
         }
-        private set
-        {
-            _instance = value;
-        }
+        private set { _instance = value; }
     }
-        public override void _Ready()
-    {
-		Instance = this;
-        this.Layer = 101;
-            GD.Print($"[InventoryUI] === СОЗДАН === Путь: {GetPath()}, ID объекта: {GetInstanceId()}");
 
-        // Безопасное получение узлов
+    public override void _Ready()
+    {
+        Instance = this;
+        this.Layer = 101;
+
         _totalValueLabel = GetNodeOrNull<Label>("MainPanel/Content/TotalValueLabel");
         _itemsList = GetNodeOrNull<VBoxContainer>("MainPanel/Content/ScrollContainer/ItemsList");
-        _sellAllButton = GetNodeOrNull<Button>("MainPanel/Content/ButtonsRow/SellAllButton");
         _closeButton = GetNodeOrNull<Button>("MainPanel/Content/ButtonsRow/CloseButton");
-        
+
         if (_itemsList == null)
         {
             GD.PrintErr("[InventoryUI] КРИТИЧЕСКАЯ ОШИБКА: _itemsList не найден!");
             return;
         }
-        
-        // === БЕЗОПАСНОЕ СОЗДАНИЕ ВКЛАДОК ===
-        var contentContainer = GetNode("MainPanel/Content") as VBoxContainer;
-        if (contentContainer != null)
-        {
-            var tabsContainer = new HBoxContainer();
-            tabsContainer.Name = "TabsContainer";
-            tabsContainer.AddThemeConstantOverride("separation", 10);
-            
-            _tabItemsButton = new Button { Text = "Инвентарь", Name = "TabItems" };
-            _tabItemsButton.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-            _tabItemsButton.Pressed += () => SwitchTab(Tab.Items);
-            
-            _tabCollectionsButton = new Button { Text = "Сбор коллекций", Name = "TabCollections" };
-            _tabCollectionsButton.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-            _tabCollectionsButton.Pressed += () => SwitchTab(Tab.Collections);
 
-            tabsContainer.AddChild(_tabItemsButton);
-            tabsContainer.AddChild(_tabCollectionsButton);
+        CreateTabs();
+        CreateSellDialog();
 
-            // Добавляем в MainPanel/Content и перемещаем на позицию 1 (сразу после TotalValueLabel)
-            contentContainer.AddChild(tabsContainer);
-            contentContainer.MoveChild(tabsContainer, 1);
-        }
-        // ====================================
-
-        _sellAllButton.Pressed += OnSellAllPressed;
         _closeButton.Pressed += OnClosePressed;
-        
-        _sellAllButton.Visible = (_currentTab == Tab.Items);
+    }
+
+    private void CreateTabs()
+    {
+        var contentContainer = GetNode("MainPanel/Content") as VBoxContainer;
+        if (contentContainer == null) return;
+
+        var tabsContainer = new HBoxContainer();
+        tabsContainer.Name = "TabsContainer";
+        tabsContainer.AddThemeConstantOverride("separation", 5);
+
+        _tabSkeletonsButton = CreateTabButton("ui.inventory.skeletons", Tab.Skeletons);
+        _tabAssemblingButton = CreateTabButton("ui.inventory.assembling", Tab.Assembling);
+        _tabFindingsButton = CreateTabButton("ui.inventory.findings", Tab.Findings);
+        _tabBonesButton = CreateTabButton("ui.inventory.bones", Tab.Bones);
+        _tabTicketsButton = CreateTabButton("ui.inventory.tickets", Tab.Tickets);
+
+        tabsContainer.AddChild(_tabSkeletonsButton);
+        tabsContainer.AddChild(_tabAssemblingButton);
+        tabsContainer.AddChild(_tabFindingsButton);
+        tabsContainer.AddChild(_tabBonesButton);
+        tabsContainer.AddChild(_tabTicketsButton);
+
+        contentContainer.AddChild(tabsContainer);
+        contentContainer.MoveChild(tabsContainer, 1);
+
+        SwitchTab(Tab.Skeletons);
+    }
+
+    private Button CreateTabButton(string localizationKey, Tab tab)
+    {
+        var button = new Button();
+        button.Text = LocalizationManager.Tr(localizationKey);
+        button.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        button.Pressed += () => SwitchTab(tab);
+        return button;
+    }
+
+    private void CreateSellDialog()
+    {
+        _sellDialog = new SellItemDialog();
+        _sellDialog.OnSellConfirmed += OnSellConfirmed;
+        AddChild(_sellDialog);
     }
 
     private void SwitchTab(Tab newTab)
     {
         _currentTab = newTab;
-        _rowCache.Clear(); // Очищаем кэш при смене вкладки
-        
-        // Обновляем визуальное состояние кнопок
-        _tabItemsButton.Disabled = (_currentTab == Tab.Items);
-        _tabCollectionsButton.Disabled = (_currentTab == Tab.Collections);
-        _sellAllButton.Visible = (_currentTab == Tab.Items);
+        _rowCache.Clear();
 
-        // Очищаем список
+        _tabSkeletonsButton.Disabled = (_currentTab == Tab.Skeletons);
+        _tabAssemblingButton.Disabled = (_currentTab == Tab.Assembling);
+        _tabFindingsButton.Disabled = (_currentTab == Tab.Findings);
+        _tabBonesButton.Disabled = (_currentTab == Tab.Bones);
+        _tabTicketsButton.Disabled = (_currentTab == Tab.Tickets);
+
         foreach (var child in _itemsList.GetChildren())
         {
             child.QueueFree();
@@ -114,99 +122,84 @@ public static InventoryUI Instance
     {
         if (!Visible) return;
         if (InventorySystem.Instance == null) return;
-        if (_itemsList == null) return; // Защита от null
-        
+        if (_itemsList == null) return;
+
         try
         {
-            if (_currentTab == Tab.Items)
+            switch (_currentTab)
             {
-                UpdateItemsDisplay();
-            }
-            else
-            {
-                UpdateCollectionsDisplay();
+                case Tab.Skeletons:
+                    UpdateSkeletonsDisplay();
+                    break;
+                case Tab.Assembling:
+                    UpdateAssemblingDisplay();
+                    break;
+                case Tab.Findings:
+                    UpdateFindingsDisplay();
+                    break;
+                case Tab.Bones:
+                    UpdateBonesDisplay();
+                    break;
+                case Tab.Tickets:
+                    UpdateTicketsDisplay();
+                    break;
             }
         }
-        catch (System.Exception e)
+        catch (Exception e)
         {
             GD.PrintErr($"[InventoryUI] Ошибка при отрисовке: {e.Message}");
-    GD.PrintErr($"[InventoryUI] StackTrace: {e.StackTrace}");
         }
     }
 
-    // ==========================================
-    // ВКЛАДКА 1: ОБЫЧНЫЕ ПРЕДМЕТЫ (Ваш старый код)
-    // ==========================================
-    private void UpdateItemsDisplay()
+    // ===== ВКЛАДКА 1: SKELETONS =====
+    private void UpdateSkeletonsDisplay()
     {
         var allItems = InventorySystem.Instance.GetAllItems();
-        int totalValue = allItems.Sum(item => CalculateItemValue(item) * item.Amount);
-        _totalValueLabel.Text = $"Общая стоимость: {totalValue} монет";
+        var skeletons = allItems.Where(item => GameData.GetCollection(item.ResourceId) != null).ToList();
 
-        var neededKeys = new HashSet<string>(allItems.Select(item => $"{item.ResourceId}_{(int)item.Quality}"));
+        int totalValue = skeletons.Sum(item => CalculateItemValue(item) * item.Amount);
+        _totalValueLabel.Text = LocalizationManager.TrFormat("ui.inventory.total_value", totalValue);
 
-        // Очистка кэша
-        var toRemove = _rowCache.Keys.Where(k => !neededKeys.Contains(k)).ToList();
-        foreach (var key in toRemove)
+        var neededKeys = new HashSet<string>(skeletons.Select(item => item.ResourceId));
+        RemoveCachedRows(neededKeys);
+
+        foreach (var item in skeletons)
         {
-            _rowCache[key].QueueFree();
-            _rowCache.Remove(key);
-        }
-
-        foreach (var item in allItems)
-        {
-            string key = $"{item.ResourceId}_{(int)item.Quality}";
-            if (!_rowCache.ContainsKey(key))
+            if (!_rowCache.ContainsKey(item.ResourceId))
             {
-                var row = CreateItemRow(item);
+                var row = CreateItemRow(item, true);
                 _itemsList.AddChild(row);
-                _rowCache[key] = row;
+                _rowCache[item.ResourceId] = row;
             }
-            UpdateItemRow(_rowCache[key], item);
+            UpdateItemRow(_rowCache[item.ResourceId], item);
         }
     }
 
-    // ==========================================
-    // ВКЛАДКА 2: СБОР КОЛЛЕКЦИЙ (Новая логика)
-    // ==========================================
-        private void UpdateCollectionsDisplay()
+    // ===== ВКЛАДКА 2: ASSEMBLING =====
+    private void UpdateAssemblingDisplay()
     {
-        _totalValueLabel.Text = "Соберите полные коллекции для выставки";
-        
-        // GetAllCollections возвращает List<CollectionDefinition>
-        var allCollections = GameData.GetAllCollections(); 
-        
+        _totalValueLabel.Text = LocalizationManager.Tr("ui.inventory.assembling_hint");
+
+        var allCollections = GameData.GetAllCollections();
         var eligibleCollections = new List<CollectionDefinition>();
 
-        // Перебираем напрямую коллекции, а не kvp
         foreach (var collection in allCollections)
         {
-            // Проверяем, есть ли ХОТЯ БЫ ОДИН фрагмент от этой коллекции в инвентаре
             bool hasAnyPiece = collection.Pieces.Any(piece => InventorySystem.Instance.GetTotalAmount(piece.Id) > 0);
-            
             if (hasAnyPiece)
             {
                 eligibleCollections.Add(collection);
             }
         }
 
-        // Сортировка: 1) Можно собрать (true сначала), 2) По алфавиту (DisplayName)
         var sortedCollections = eligibleCollections
             .OrderByDescending(c => InventorySystem.Instance.CanAssembleCollection(c))
             .ThenBy(c => c.DisplayName)
             .ToList();
 
         var neededKeys = new HashSet<string>(sortedCollections.Select(c => c.Id));
+        RemoveCachedRows(neededKeys);
 
-        // Очистка кэша (удаляем строки, которых больше нет в отфильтрованном списке)
-        var toRemove = _rowCache.Keys.Where(k => !neededKeys.Contains(k)).ToList();
-        foreach (var key in toRemove)
-        {
-            _rowCache[key].QueueFree();
-            _rowCache.Remove(key);
-        }
-
-        // Создаем или обновляем строки
         foreach (var collection in sortedCollections)
         {
             if (!_rowCache.ContainsKey(collection.Id))
@@ -219,35 +212,255 @@ public static InventoryUI Instance
         }
     }
 
-                   private Control CreateCollectionRow(CollectionDefinition collection)
+    // ===== ВКЛАДКА 3: FINDINGS =====
+    private void UpdateFindingsDisplay()
+    {
+        var allItems = InventorySystem.Instance.GetAllItems();
+        var findings = allItems.Where(item =>
+        {
+            var res = GameData.GetResource(item.ResourceId);
+            return res != null &&
+                   GameData.GetCollection(item.ResourceId) == null && // Не коллекция
+                   !(res is FossilDefinition fossil && !string.IsNullOrEmpty(fossil.CollectionId)); // Не часть коллекции
+        }).ToList();
+
+        int totalValue = findings.Sum(item => CalculateItemValue(item) * item.Amount);
+        _totalValueLabel.Text = LocalizationManager.TrFormat("ui.inventory.total_value", totalValue);
+
+        var neededKeys = new HashSet<string>(findings.Select(item => item.ResourceId));
+        RemoveCachedRows(neededKeys);
+
+        foreach (var item in findings)
+        {
+            if (!_rowCache.ContainsKey(item.ResourceId))
+            {
+                var row = CreateItemRow(item, false);
+                _itemsList.AddChild(row);
+                _rowCache[item.ResourceId] = row;
+            }
+            UpdateItemRow(_rowCache[item.ResourceId], item);
+        }
+    }
+
+    // ===== ВКЛАДКА 4: BONES =====
+    private void UpdateBonesDisplay()
+    {
+        var allItems = InventorySystem.Instance.GetAllItems();
+        var bones = allItems.Where(item =>
+        {
+            var res = GameData.GetResource(item.ResourceId);
+            return res is FossilDefinition fossil && !string.IsNullOrEmpty(fossil.CollectionId);
+        }).ToList();
+
+        int totalValue = bones.Sum(item => CalculateItemValue(item) * item.Amount);
+        _totalValueLabel.Text = LocalizationManager.TrFormat("ui.inventory.total_value", totalValue);
+
+        var neededKeys = new HashSet<string>(bones.Select(item => item.ResourceId));
+        RemoveCachedRows(neededKeys);
+
+        foreach (var item in bones)
+        {
+            if (!_rowCache.ContainsKey(item.ResourceId))
+            {
+                var row = CreateItemRow(item, false);
+                _itemsList.AddChild(row);
+                _rowCache[item.ResourceId] = row;
+            }
+            UpdateItemRow(_rowCache[item.ResourceId], item);
+        }
+    }
+
+    // ===== ВКЛАДКА 5: TICKETS =====
+    private void UpdateTicketsDisplay()
+    {
+        _totalValueLabel.Text = LocalizationManager.Tr("ui.inventory.empty_tickets");
+
+        var neededKeys = new HashSet<string>();
+        RemoveCachedRows(neededKeys);
+    }
+
+    // ===== УТИЛИТЫ =====
+    private void RemoveCachedRows(HashSet<string> neededKeys)
+    {
+        var toRemove = _rowCache.Keys.Where(k => !neededKeys.Contains(k)).ToList();
+        foreach (var key in toRemove)
+        {
+            _rowCache[key].QueueFree();
+            _rowCache.Remove(key);
+        }
+    }
+
+    private Control CreateItemRow(FoundItem item, bool isCollection)
+    {
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 10);
+        row.SetMeta("resource_id", item.ResourceId);
+
+        var iconRect = new TextureRect();
+        iconRect.Name = "IconRect";
+        iconRect.CustomMinimumSize = new Vector2(40, 40);
+        iconRect.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
+        iconRect.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        iconRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+        iconRect.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
+        row.AddChild(iconRect);
+
+        var nameLabel = new Label();
+        nameLabel.Name = "NameLabel";
+        nameLabel.AddThemeFontSizeOverride("font_size", 14);
+        row.AddChild(nameLabel);
+
+        var amountLabel = new Label();
+        amountLabel.Name = "AmountLabel";
+        amountLabel.AddThemeFontSizeOverride("font_size", 12);
+        amountLabel.AddThemeColorOverride("font_color", new Color(0.7f, 0.7f, 0.7f));
+        row.AddChild(amountLabel);
+
+        var priceLabel = new Label();
+        priceLabel.Name = "PriceLabel";
+        priceLabel.AddThemeFontSizeOverride("font_size", 12);
+        priceLabel.AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.5f));
+        row.AddChild(priceLabel);
+
+        if (isCollection)
+        {
+            var placeBtn = new Button();
+            placeBtn.Name = "PlaceButton";
+            placeBtn.Text = LocalizationManager.Tr("ui.inventory.place");
+            placeBtn.CustomMinimumSize = new Vector2(120, 0);
+            placeBtn.Pressed += () => OnPlaceCollectionPressed((string)row.GetMeta("resource_id"));
+            row.AddChild(placeBtn);
+        }
+
+        var sellBtn = new Button();
+        sellBtn.Name = "SellButton";
+        sellBtn.Text = LocalizationManager.Tr("ui.inventory.sell");
+        sellBtn.CustomMinimumSize = new Vector2(90, 0);
+        sellBtn.Pressed += () => OnSellPressed((string)row.GetMeta("resource_id"));
+        row.AddChild(sellBtn);
+
+
+        return row;
+    }
+
+    private void UpdateItemRow(Control row, FoundItem item)
+    {
+        var resource = GameData.GetResource(item.ResourceId);
+        if (resource == null) return;
+
+        row.SetMeta("resource_id", item.ResourceId);
+
+        var iconRect = row.GetNodeOrNull<TextureRect>("IconRect");
+        if (iconRect != null)
+        {
+            string iconPath = GetResourceIconPath(item.ResourceId);
+            if (!string.IsNullOrEmpty(iconPath) && ResourceLoader.Exists(iconPath))
+            {
+                iconRect.Texture = GD.Load<Texture2D>(iconPath);
+                iconRect.Visible = true;
+            }
+        }
+
+        var nameLabel = row.GetNodeOrNull<Label>("NameLabel");
+        if (nameLabel != null) nameLabel.Text = resource.DisplayName;
+
+        var amountLabel = row.GetNodeOrNull<Label>("AmountLabel");
+        if (amountLabel != null) amountLabel.Text = $"x{item.Amount}";
+
+        var priceLabel = row.GetNodeOrNull<Label>("PriceLabel");
+        if (priceLabel != null)
+        {
+            int price = CalculateItemValue(item) * item.Amount;
+            priceLabel.Text = $"{price} 🪙";
+        }
+    }
+
+    private int CalculateItemValue(FoundItem item)
+    {
+        var resource = GameData.GetResource(item.ResourceId);
+        if (resource == null) return 0;
+        float multiplier = resource.GetRarityMultiplier();
+        return (int)(resource.BaseSellPrice * multiplier);
+    }
+
+    private string GetResourceIconPath(string resourceId)
+    {
+        var collection = GameData.GetCollection(resourceId);
+        if (collection != null) return collection.TexturePath;
+
+        var resource = GameData.GetResource(resourceId);
+        if (resource is FossilDefinition fossil && !string.IsNullOrEmpty(fossil.CollectionId))
+        {
+            string partName = fossil.Id.Replace($"{fossil.CollectionId}_", "");
+            return $"res://assets/museum/items/{fossil.CollectionId}/{partName}.png";
+        }
+
+        string commonPath = $"res://assets/museum/items/common/{resourceId}.png";
+        if (ResourceLoader.Exists(commonPath)) return commonPath;
+
+        return "res://icon.svg";
+    }
+
+    // ===== ОБРАБОТЧИКИ =====
+    private void OnPlaceCollectionPressed(string collectionId)
+    {
+        this.Visible = false;
+        MuseumSystem.Instance?.StartPlacementFromInventory(collectionId);
+    }
+
+    private void OnSellPressed(string resourceId)
+    {
+        var item = InventorySystem.Instance.GetItem(resourceId);
+        if (item == null || item.Amount <= 0) return;
+
+        int pricePerUnit = CalculateItemValue(item);
+        _sellDialog.Open(resourceId, item.Amount, pricePerUnit);
+    }
+
+    private void OnSellConfirmed(string resourceId, int amount)
+    {
+        int earned = InventorySystem.Instance.SellItem(resourceId, amount);
+        if (earned > 0)
+        {
+            GD.Print($"[InventoryUI] Продано {amount}x {resourceId} за {earned} монет");
+        }
+    }
+
+    private void OnClosePressed()
+    {
+        Visible = false;
+    }
+
+    public override void _ExitTree()
+    {
+        if (_instance == this) _instance = null;
+    }
+
+    // ===== КОЛЛЕКЦИИ (из старого кода) =====
+    private Control CreateCollectionRow(CollectionDefinition collection)
     {
         var row = new VBoxContainer();
         row.AddThemeConstantOverride("separation", 5);
 
-        // 1. Название (прямой ребенок row)
         var nameLabel = new Label();
         nameLabel.Name = "NameLabel";
         nameLabel.AddThemeFontSizeOverride("font_size", 16);
         nameLabel.AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.5f));
         row.AddChild(nameLabel);
 
-        // 2. Контейнер иконок (прямой ребенок row)
         var iconsRow = new HBoxContainer();
-        iconsRow.Name = "IconsRow"; // ВАЖНО: задаем имя для поиска
+        iconsRow.Name = "IconsRow";
         iconsRow.AddThemeConstantOverride("separation", 15);
         iconsRow.Alignment = BoxContainer.AlignmentMode.Center;
         row.AddChild(iconsRow);
 
-        // Иконка собранной коллекции
-        var assembledIcon = new Label();
+        var assembledIcon = new TextureRect();
         assembledIcon.Name = "AssembledIcon";
-        assembledIcon.Text = ""; 
         assembledIcon.CustomMinimumSize = new Vector2(40, 40);
-        assembledIcon.HorizontalAlignment = HorizontalAlignment.Center;
-        assembledIcon.VerticalAlignment = VerticalAlignment.Center;
+        assembledIcon.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
+        assembledIcon.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
         iconsRow.AddChild(assembledIcon);
 
-        // Стрелка <=
         var arrowLabel = new Label();
         arrowLabel.Name = "ArrowLabel";
         arrowLabel.Text = "<=";
@@ -255,26 +468,24 @@ public static InventoryUI Instance
         arrowLabel.VerticalAlignment = VerticalAlignment.Center;
         iconsRow.AddChild(arrowLabel);
 
-        // Контейнер для частей
         var piecesContainer = new HBoxContainer();
-        piecesContainer.Name = "PiecesContainer"; // ВАЖНО: задаем имя
+        piecesContainer.Name = "PiecesContainer";
         piecesContainer.AddThemeConstantOverride("separation", 10);
         iconsRow.AddChild(piecesContainer);
 
-        // Создаем слоты для частей
         for (int i = 0; i < collection.Pieces.Count; i++)
         {
             var pieceSlot = new VBoxContainer();
-            pieceSlot.Name = $"PieceSlot_{i}"; // ВАЖНО: задаем имя слоту
+            pieceSlot.Name = $"PieceSlot_{i}";
             pieceSlot.Alignment = BoxContainer.AlignmentMode.Center;
 
-            var iconLabel = new Label();
-            iconLabel.Name = $"PieceIcon_{i}";
-            iconLabel.Text = GetResourceIcon(collection.Pieces[i].Type);
-            iconLabel.CustomMinimumSize = new Vector2(32, 32);
-            iconLabel.HorizontalAlignment = HorizontalAlignment.Center;
-            iconLabel.VerticalAlignment = VerticalAlignment.Center;
-            pieceSlot.AddChild(iconLabel);
+            var iconRect = new TextureRect();
+            iconRect.Name = $"PieceIcon_{i}";
+            iconRect.CustomMinimumSize = new Vector2(32, 32);
+            iconRect.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
+            iconRect.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+            iconRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+            pieceSlot.AddChild(iconRect);
 
             var countLabel = new Label();
             countLabel.Name = $"PieceCount_{i}";
@@ -283,7 +494,7 @@ public static InventoryUI Instance
             pieceSlot.AddChild(countLabel);
 
             piecesContainer.AddChild(pieceSlot);
-            
+
             if (i < collection.Pieces.Count - 1)
             {
                 var plus = new Label();
@@ -294,15 +505,11 @@ public static InventoryUI Instance
             }
         }
 
-        // 3. Кнопка сборки (прямой ребенок row)
         var assembleBtn = new Button();
         assembleBtn.Name = "AssembleButton";
-        assembleBtn.Text = "Собрать";
+        assembleBtn.Text = LocalizationManager.Tr("ui.inventory.assemble");
         assembleBtn.CustomMinimumSize = new Vector2(120, 0);
-        
-        // Подписываемся на нажатие ОДИН раз при создании
         assembleBtn.Pressed += () => OnAssemblePressed(collection);
-        
         row.AddChild(assembleBtn);
 
         return row;
@@ -310,11 +517,9 @@ public static InventoryUI Instance
 
     private void UpdateCollectionRow(Control row, CollectionDefinition collection)
     {
-        // 1. Название (прямой ребенок)
         var nameLabel = row.GetNodeOrNull<Label>("NameLabel");
         if (nameLabel != null) nameLabel.Text = collection.DisplayName;
 
-        // 2. Стрелка (внутри IconsRow)
         var arrowLabel = row.GetNodeOrNull<Label>("IconsRow/ArrowLabel");
         bool canAssemble = InventorySystem.Instance.CanAssembleCollection(collection);
         if (arrowLabel != null)
@@ -322,17 +527,43 @@ public static InventoryUI Instance
             arrowLabel.Modulate = canAssemble ? new Color(0.4f, 1f, 0.4f) : new Color(0.5f, 0.5f, 0.5f);
         }
 
-        // 3. Части (внутри IconsRow -> PiecesContainer -> PieceSlot_i)
+        var assembledIcon = row.GetNodeOrNull<TextureRect>("IconsRow/AssembledIcon");
+        if (assembledIcon != null)
+        {
+            string collectionIconPath = GetResourceIconPath(collection.Id);
+            if (!string.IsNullOrEmpty(collectionIconPath) && ResourceLoader.Exists(collectionIconPath))
+            {
+                assembledIcon.Texture = GD.Load<Texture2D>(collectionIconPath);
+                assembledIcon.Visible = true;
+            }
+            else
+            {
+                assembledIcon.Visible = false;
+            }
+        }
+
         for (int i = 0; i < collection.Pieces.Count; i++)
         {
             var piece = collection.Pieces[i];
-            
-            // ИСПОЛЬЗУЕМ ПРАВИЛЬНЫЙ ПУТЬ!
-            var iconLabel = row.GetNodeOrNull<Label>($"IconsRow/PiecesContainer/PieceSlot_{i}/PieceIcon_{i}");
-            var countLabel = row.GetNodeOrNull<Label>($"IconsRow/PiecesContainer/PieceSlot_{i}/PieceCount_{i}");
 
+            var iconRect = row.GetNodeOrNull<TextureRect>($"IconsRow/PiecesContainer/PieceSlot_{i}/PieceIcon_{i}");
+            if (iconRect != null)
+            {
+                string partIconPath = GetResourceIconPath(piece.Id);
+                if (!string.IsNullOrEmpty(partIconPath) && ResourceLoader.Exists(partIconPath))
+                {
+                    iconRect.Texture = GD.Load<Texture2D>(partIconPath);
+                    iconRect.Visible = true;
+                }
+                else
+                {
+                    iconRect.Visible = false;
+                }
+            }
+
+            var countLabel = row.GetNodeOrNull<Label>($"IconsRow/PiecesContainer/PieceSlot_{i}/PieceCount_{i}");
             int amount = InventorySystem.Instance.GetTotalAmount(piece.Id);
-            
+
             if (countLabel != null)
             {
                 if (amount > 0)
@@ -346,14 +577,8 @@ public static InventoryUI Instance
                     countLabel.Modulate = new Color(0.5f, 0.5f, 0.5f);
                 }
             }
-            
-            if (iconLabel != null)
-            {
-                iconLabel.Modulate = amount > 0 ? Colors.White : new Color(0.3f, 0.3f, 0.3f);
-            }
         }
 
-        // 4. Кнопка сборки (прямой ребенок)
         var assembleBtn = row.GetNodeOrNull<Button>("AssembleButton");
         if (assembleBtn != null)
         {
@@ -367,8 +592,6 @@ public static InventoryUI Instance
         if (InventorySystem.Instance.AssembleCollection(collection))
         {
             GD.Print($"[UI] Коллекция '{collection.DisplayName}' успешно собрана!");
-            
-            // Очищаем кэш и перерисовываем список, чтобы обновить количества фрагментов
             _rowCache.Clear();
             foreach (var child in _itemsList.GetChildren())
             {
@@ -377,178 +600,7 @@ public static InventoryUI Instance
         }
         else
         {
-            GD.PrintErr("[UI] Не удалось собрать коллекцию (не хватает фрагментов).");
-        }
-    }
-	
-	// ===== СОЗДАНИЕ СТРОКИ =====
-	
-	private Control CreateItemRow(FoundItem item)
-	{
-		var resource = GameData.GetResource(item.ResourceId);
-		
-		// Контейнер строки
-		var row = new HBoxContainer();
-		row.AddThemeConstantOverride("separation", 10);
-		
-		// Иконка (пока текстовая)
-		var iconLabel = new Label();
-		iconLabel.CustomMinimumSize = new Vector2(40, 0);
-		iconLabel.Text = GetResourceIcon(resource.Type);
-		iconLabel.HorizontalAlignment = HorizontalAlignment.Center;
-		row.AddChild(iconLabel);
-		
-		// Название + качество
-		var nameLabel = new Label();
-		nameLabel.Name = "NameLabel";
-		nameLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-		row.AddChild(nameLabel);
-		
-		// Количество
-		var amountLabel = new Label();
-		amountLabel.Name = "AmountLabel";
-		amountLabel.CustomMinimumSize = new Vector2(60, 0);
-		amountLabel.HorizontalAlignment = HorizontalAlignment.Right;
-		row.AddChild(amountLabel);
-		
-		// Цена за штуку
-		var priceLabel = new Label();
-		priceLabel.Name = "PriceLabel";
-		priceLabel.CustomMinimumSize = new Vector2(100, 0);
-		priceLabel.HorizontalAlignment = HorizontalAlignment.Right;
-		row.AddChild(priceLabel);
-		
-		// Кнопка "Продать 1"
-		var sellOneButton = new Button();
-		sellOneButton.Name = "SellOneButton";
-		sellOneButton.Text = "Sell 1";
-		sellOneButton.CustomMinimumSize = new Vector2(70, 0);
-		sellOneButton.Pressed += () => OnSellOnePressed(item.ResourceId, item.Quality);
-		row.AddChild(sellOneButton);
-		
-		// Кнопка "Продать всё"
-		var sellAllOfItemButton = new Button();
-		sellAllOfItemButton.Name = "SellAllOfItemButton";
-		sellAllOfItemButton.Text = "Sell All";
-		sellAllOfItemButton.CustomMinimumSize = new Vector2(80, 0);
-		sellAllOfItemButton.Pressed += () => OnSellAllOfItemPressed(item.ResourceId, item.Quality);
-		row.AddChild(sellAllOfItemButton);
-		
-		return row;
-	}
-	
-	// ===== ОБНОВЛЕНИЕ СТРОКИ =====
-	
-	private void UpdateItemRow(Control row, FoundItem item)
-	{
-		var resource = GameData.GetResource(item.ResourceId);
-		if (resource == null) return;
-		
-		var nameLabel = row.GetNode<Label>("NameLabel");
-		var amountLabel = row.GetNode<Label>("AmountLabel");
-		var priceLabel = row.GetNode<Label>("PriceLabel");
-		
-		// Название с цветом качества
-		string qualityText = resource.HasQuality ? $" [{item.Quality}]" : "";
-		nameLabel.Text = $"{resource.DisplayName}{qualityText}";
-		nameLabel.Modulate = GetQualityColor(item.Quality, resource.HasQuality);
-		
-		// Количество
-		amountLabel.Text = $"x{item.Amount}";
-		
-		// Цена за штуку
-		int pricePerUnit = CalculateItemValue(item);
-		priceLabel.Text = $"{pricePerUnit}💰";
-	}
-	
-	// ===== РАСЧЁТ СТОИМОСТИ =====
-	
-	private int CalculateItemValue(FoundItem item)
-	{
-		var resource = GameData.GetResource(item.ResourceId);
-		if (resource == null) return 0;
-		
-		float multiplier = resource.GetRarityMultiplier() * resource.GetQualityMultiplier(item.Quality);
-		return (int)(resource.BaseSellPrice * multiplier);
-	}
-	
-	// ===== УТИЛИТЫ =====
-	
-	private string GetResourceIcon(ResourceType type)
-	{
-		return type switch
-		{
-			ResourceType.Bone => "🦴",
-			ResourceType.Tooth => "🦷",
-			ResourceType.Gold => "💰",
-			ResourceType.Gem => "💎",
-			_ => "❓"
-		};
-	}
-	
-	private Color GetQualityColor(Quality quality, bool hasQuality)
-	{
-		if (!hasQuality) return Colors.White;
-		
-		return quality switch
-		{
-			Quality.Damaged => new Color(1f, 0.4f, 0.4f),  // Красноватый
-			Quality.Good => new Color(0.4f, 1f, 0.4f),     // Зеленоватый
-			_ => Colors.White
-		};
-	}
-	
-	// ===== ОБРАБОТЧИКИ =====
-	
-	private void OnSellOnePressed(string resourceId, Quality quality)
-	{
-		int earned = InventorySystem.Instance.SellItem(resourceId, quality, 1);
-		if (earned > 0)
-		{
-			GD.Print($"[InventoryUI] Sold 1 for {earned} coins");
-		}
-	}
-	
-	private void OnSellAllOfItemPressed(string resourceId, Quality quality)
-	{
-		var item = InventorySystem.Instance.GetItem(resourceId, quality);
-		if (item != null && item.Amount > 0)
-		{
-			int earned = InventorySystem.Instance.SellItem(resourceId, quality, item.Amount);
-			GD.Print($"[InventoryUI] Sold all for {earned} coins");
-		}
-	}
-	
-	private void OnSellAllPressed()
-	{
-		var allItems = InventorySystem.Instance.GetAllItems();
-		int totalEarned = 0;
-		
-		// Копируем список, чтобы не модифицировать во время итерации
-		var itemsCopy = new List<FoundItem>(allItems);
-		
-		foreach (var item in itemsCopy)
-		{
-			int earned = InventorySystem.Instance.SellItem(item.ResourceId, item.Quality, item.Amount);
-			totalEarned += earned;
-		}
-		
-		GD.Print($"[InventoryUI] Sold everything for {totalEarned} coins");
-	}
-	
-	private void OnClosePressed()
-	{
-		Visible = false;
-	}
-
-    public override void _ExitTree()
-    {
-            GD.Print($"[InventoryUI] === УНИЧТОЖАЕТСЯ === Путь: {GetPath()}, ID объекта: {GetInstanceId()}");
-
-        // Когда узел уничтожается — очищаем ссылку, чтобы Instance пересоздался
-        if (_instance == this)
-        {
-            _instance = null;
+            GD.PrintErr("[UI] Не удалось собрать коллекцию.");
         }
     }
 }

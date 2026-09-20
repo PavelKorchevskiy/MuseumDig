@@ -1,0 +1,43 @@
+ui.skills.upgrade,Upgrade,Улучшить
+ui.skills.max_level,Max Level ({0}),Максимальный уровень ({0})
+ui.skills.current_level,Level: {0} / {1},Уровень: {0} / {1}
+ui.skills.upgrade_cost,Upgrade ({0} pts),Улучшить ({0} очк.)
+ui.skills.maxed,Maxed,Максимум
+ui.skills.branch_museum,Museum Branch,Ветка Музея
+ui.skills.branch_digging,Digging Branch,Ветка Раскопок
+
+skill.museum.ticket_price.name,Ticket Price,Цена билета
+skill.museum.ticket_price.desc,Increases coins earned per visitor.,Увеличивает монеты за каждого посетителя.
+skill.museum.visitors_common.name,Common Appeal,Привлекательность (Обычные)
+skill.museum.visitors_common.desc,Increases max visitors from Common/Uncommon skeletons.,Увеличивает макс. посетителей от Обычных/Необычных скелетов.
+skill.museum.visitors_rare.name,Rare Appeal,Привлекательность (Редкие)
+skill.museum.visitors_rare.desc,Increases max visitors from Rare skeletons.,Увеличивает макс. посетителей от Редких скелетов.
+skill.museum.visitors_epic_legendary.name,Epic Appeal,Привлекательность (Эпические)
+skill.museum.visitors_epic_legendary.desc,Increases max visitors from Epic/Legendary skeletons.,Увеличивает макс. посетителей от Эпических/Легендарных скелетов.
+skill.museum.ticket_chance.name,Ticket Chance,Шанс билета
+skill.museum.ticket_chance.desc,Visitors have a chance to give you digging tickets.,Посетители могут дать билеты на раскопки.
+skill.museum.new_room.name,New Room,Новая комната
+skill.museum.new_room.desc,Unlocks a new exhibition hall.,Открывает новый выставочный зал.
+skill.museum.large_display.name,Large Display,Большая витрина
+skill.museum.large_display.desc,Allows purchasing large display cases.,Позволяет покупать большие витрины.
+
+skill.digging.diggers_count.name,More Diggers,Больше землекопов
+skill.digging.diggers_count.desc,Increases the number of active diggers.,Увеличивает количество активных землекопов.
+skill.digging.extractors_count.name,More Extractors,Больше извлекателей
+skill.digging.extractors_count.desc,Increases the number of active extractors.,Увеличивает количество активных извлекателей.
+skill.digging.diggers_speed.name,Digger Speed,Скорость землекопов
+skill.digging.diggers_speed.desc,Diggers work faster.,Землекопы работают быстрее.
+skill.digging.extractors_speed.name,Extractor Speed,Скорость извлекателей
+skill.digging.extractors_speed.desc,Extractors work faster.,Извлекатели работают быстрее.
+skill.digging.excavator.name,Excavator,Экскаватор
+skill.digging.excavator.desc,Unlocks the excavator for digging.,Открывает экскаватор для раскопок.
+
+ui.progress.skeletons_title,Unlocked Skeletons,Открытые скелеты
+ui.progress.no_skeletons,No skeletons discovered yet,Пока не открыто ни одного скелета
+ui.progress.findings_title,Unlocked Findings,Открытые находки
+ui.progress.no_findings,No findings discovered yet,Пока не открыто ни одной находки
+rarity.common,Common,Обычный
+rarity.uncommon,Uncommon,Необычный
+rarity.rare,Rare,Редкий
+rarity.epic,Epic,Эпический
+rarity.legendary,Legendary,Легендарный

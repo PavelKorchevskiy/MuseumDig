@@ -40,6 +40,10 @@ window/stretch/aspect="expand"
 
 project/assembly_name="MuseumDig"
 
+[internationalization]
+
+locale/translations=PackedStringArray("res://localization/translations_en.en.translation", "res://localization/translations_en.ru.translation", "res://localization/translations_ru.en.translation", "res://localization/translations_ru.ru.translation")
+
 [physics]
 
 3d/physics_engine="Jolt Physics"
