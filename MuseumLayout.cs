@@ -128,4 +128,21 @@ public class MuseumLayout
     }
 
     public Room GetRoom(string roomId) => Rooms.Find(r => r.Id == roomId);
+
+        /// <summary>
+    /// Проверяет, занята ли указанная глобальная клетка мебелью в ЛЮБОЙ комнате
+    /// </summary>
+    public bool IsGlobalCellOccupiedByFurniture(Vector2I globalPos)
+    {
+        foreach (var room in Rooms)
+        {
+            if (!room.IsUnlocked) continue;
+            
+            if (room.IsCellOccupiedByFurniture(globalPos))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 }

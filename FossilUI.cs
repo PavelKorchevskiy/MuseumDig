@@ -149,14 +149,16 @@ if (_saveQuitButton != null)
 		_fossilLabel.Text = text;
 	}
 	
-	private void UpdateCoinsDisplay()
-	{
-		if (_coinsLabel == null) return; // ← ЗАЩИТА
-		
-		int coins = Wallet.Instance.GetCoins();
-		int income = MuseumSystem.Instance.GetTotalIncomePerSecond();
-		_coinsLabel.Text = $"Coins: {coins}\nIncome: {income}/sec";
-	}
+	    private void UpdateCoinsDisplay()
+    {
+        if (_coinsLabel == null) return;
+        
+        int coins = Wallet.Instance.GetCoins();
+        int maxVisitors = MuseumSystem.Instance.CalculateMaxVisitors();
+        
+        // Показываем монеты и вместимость музея
+        _coinsLabel.Text = $"Coins: {coins}\nMax Visitors: {maxVisitors}";
+    }
 	
 	private void UpdateEnergyDisplay()
 	{

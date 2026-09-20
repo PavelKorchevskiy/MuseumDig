@@ -56,26 +56,25 @@ public partial class PlacedFurniture : Resource
     {
         if (Furniture is DisplayCase)
         {
-            // Большая витрина (2x1) вмещает 2 предмета, малая (1x1) — 1
-            return (Size.X == 2 && Size.Y == 1) ? 2 : 1; 
+            return (Size.X == 2 && Size.Y == 2) ? 2 : 1; 
         }
         
         return 1; // По умолчанию
     }
 
     // Удалить предмет (реализация, которую мы добавляли)
-    public FoundItem RemoveItem(string resourceId, Quality quality)
+    public FoundItem RemoveItem(string resourceId)
     {
-        var item = Items.FirstOrDefault(i => i.ResourceId == resourceId && i.Quality == quality);
+        var item = Items.FirstOrDefault(i => i.ResourceId == resourceId);
         
         if (item != null)
         {
             Items.Remove(item);
-            GD.Print($"[PlacedFurniture] Удален предмет: {resourceId} ({quality})");
+            GD.Print($"[PlacedFurniture] Удален предмет: {resourceId}");
             return item;
         }
         
-        GD.PrintErr($"[PlacedFurniture] Не удалось найти предмет {resourceId} ({quality}) для удаления!");
+        GD.PrintErr($"[PlacedFurniture] Не удалось найти предмет {resourceId} для удаления!");
         return null;
     }
 }

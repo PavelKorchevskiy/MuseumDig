@@ -143,12 +143,11 @@ public partial class DisplayCaseUI : CanvasLayer
             {
                 var item = _currentPlacedFurniture.Items[i];
                 var res = GameData.GetResource(item.ResourceId);
-                itemLabel.Text = $"{res?.DisplayName} ({item.Quality})";
+                itemLabel.Text = $"{res?.DisplayName}";
                 removeBtn.Disabled = false;
                 
                 string resId = item.ResourceId;
-                Quality q = item.Quality;
-                removeBtn.Pressed += () => RemoveItem(resId, q);
+                removeBtn.Pressed += () => RemoveItem(resId);
             }
 
             row.AddChild(itemLabel);
@@ -185,8 +184,7 @@ public partial class DisplayCaseUI : CanvasLayer
                 else
                 {
                     string resId = invItem.ResourceId;
-                    Quality q = invItem.Quality;
-                    addBtn.Pressed += () => AddItem(resId, q);
+                    addBtn.Pressed += () => AddItem(resId);
                 }
 
                 row.AddChild(infoLabel);
@@ -201,14 +199,14 @@ public partial class DisplayCaseUI : CanvasLayer
         }
     }
 
-    private void AddItem(string resourceId, Quality quality)
+    private void AddItem(string resourceId)
     {
         var res = GameData.GetResource(resourceId);
-        var newItem = new FoundItem(resourceId, quality, 1);
+        var newItem = new FoundItem(resourceId, 1);
 
         if (_currentPlacedFurniture.AddItem(newItem))
         {
-            InventorySystem.Instance.RemoveItem(resourceId, quality, 1);
+            InventorySystem.Instance.RemoveItem(resourceId, 1);
             RenderSlots();
             RenderInventory();
             SaveSystem.Instance?.MarkDirty();
@@ -219,12 +217,12 @@ public partial class DisplayCaseUI : CanvasLayer
         }
     }
 
-    private void RemoveItem(string resourceId, Quality quality)
+    private void RemoveItem(string resourceId)
     {
-        var removed = _currentPlacedFurniture.RemoveItem(resourceId, quality);
+        var removed = _currentPlacedFurniture.RemoveItem(resourceId);
         if (removed != null)
         {
-            InventorySystem.Instance.AddItem(removed.ResourceId, removed.Quality, removed.Amount);
+            InventorySystem.Instance.AddItem(removed.ResourceId, removed.Amount);
             RenderSlots();
             RenderInventory();
             SaveSystem.Instance?.MarkDirty();
@@ -236,21 +234,20 @@ public partial class DisplayCaseUI : CanvasLayer
 
         private void OnMovePressed()
     {
-        // 1. Сохраняем предметы во временное хранилище
-        var itemsToKeep = new List<FoundItem>(_currentPlacedFurniture.Items);
-        
-        // 2. Удаляем витрину с текущего места
+        GD.Print($"[DisplayCaseUI] 📦 Начинаем перемещение витрины с {_currentPlacedFurniture.Items.Count} экспонатами. TypeId: {_currentPlacedFurniture.FurnitureTypeId}");
+
+        // 1. Удаляем витрину с текущего места (но объект в памяти остается живым!)
         _currentRoom.RemoveFurniture(_currentPlacedFurniture);
         
-        // === НОВОЕ: Сразу перерисовываем, чтобы старая витрина исчезла ===
+        // 2. Сразу перерисовываем, чтобы старая витрина исчезла
         var museum = GetTree().CurrentScene as Museum;
         museum?.RefreshRoomView();
         
         // 3. Закрываем UI и сбрасываем камеру
         OnClosePressed();
 
-        // 4. Запускаем режим размещения для этой же мебели, передавая сохраненные предметы
-        museum?.StartMovingFurniture(_currentRoom.Id, _currentPlacedFurniture.Furniture, itemsToKeep);
+        // 4. Передаем ВЕСЬ объект _currentPlacedFurniture для перемещения
+        museum?.StartMovingFurniture(_currentRoom.Id, _currentPlacedFurniture);
     }
 
     private void OnSellPressed()

@@ -14,6 +14,9 @@ public partial class MuseumSystem : Node
     private FoundItem _pendingCollectionToReturn = null;
     private int _instanceCounter = 0;
     private double _incomeTimer = 0;
+    private const int BaseVisitorTicketPrice = 50;
+
+
 
     public override void _Ready()
     {
@@ -22,22 +25,12 @@ public partial class MuseumSystem : Node
         if (MuseumLayout.Instance == null) _ = new MuseumLayout();
     }
 
-    public override void _Process(double delta)
-    {
-        _incomeTimer += delta;
-        if (_incomeTimer >= 1.0)
-        {
-            _incomeTimer = 0;
-            GenerateIncome();
-        }
-    }
-
     public List<FurnitureTemplate> GetAvailableFurnitureTemplates()
     {
         return new List<FurnitureTemplate>
         {
             new FurnitureTemplate { TypeId = "display_case_1x1", DisplayName = "Малая витрина", Size = new Vector2I(1, 1), BuyPrice = 200, CreateFunc = () => new DisplayCase { TypeId = "display_case_1x1", DisplayName = "Малая витрина", Size = new Vector2I(1, 1), BuyPrice = 200, Capacity = 5 } },
-            new FurnitureTemplate { TypeId = "display_case_2x1", DisplayName = "Большая витрина", Size = new Vector2I(2, 1), BuyPrice = 400, CreateFunc = () => new DisplayCase { TypeId = "display_case_2x1", DisplayName = "Большая витрина", Size = new Vector2I(2, 1), BuyPrice = 400, Capacity = 10 } },
+            new FurnitureTemplate { TypeId = "display_case_2x2", DisplayName = "Большая витрина", Size = new Vector2I(2, 2), BuyPrice = 400, CreateFunc = () => new DisplayCase { TypeId = "display_case_2x2", DisplayName = "Большая витрина", Size = new Vector2I(2, 2), BuyPrice = 400, Capacity = 10 } },
         };
     }
 
@@ -71,10 +64,10 @@ public partial class MuseumSystem : Node
     
 
 
-        /// <summary>
+    /// <summary>
     /// Запускает режим размещения для собранной коллекции из инвентаря
     /// </summary>
-    public void StartPlacementFromInventory(string collectionId, Quality quality)
+    public void StartPlacementFromInventory(string collectionId)
     {
         var collectionDef = GameData.GetCollection(collectionId);
         if (collectionDef == null) 
@@ -83,13 +76,12 @@ public partial class MuseumSystem : Node
             return;
         }
 
-        // 1. Создаем объект мебели
+        // 1. Создаем объект мебели (шаблон)
         var exhibit = new CollectionExhibit(collectionDef);
 
         // 2. Временно списываем из инвентаря (вернем, если игрок нажмет Esc)
-        InventorySystem.Instance.RemoveItem(collectionId, quality, 1);
-        _pendingCollectionToReturn = new FoundItem(collectionId, quality, 1);
-
+        InventorySystem.Instance.RemoveItem(collectionId, 1);
+        _pendingCollectionToReturn = new FoundItem(collectionId, 1);
         // 3. Запускаем режим размещения
         _isPlacementMode = true;
         _furnitureToPlace = exhibit;
@@ -108,6 +100,8 @@ public partial class MuseumSystem : Node
         
         var currentRoom = GetCurrentRoom();
         placementUI.StartPlacementForCollection(currentRoom, exhibit);
+        
+        GD.Print($"[MuseumSystem] 🚀 Размещение коллекции '{collectionId}' запущено");
     }
 
     /// <summary>
@@ -118,7 +112,7 @@ public partial class MuseumSystem : Node
         // Если мы размещали коллекцию из инвентаря и отменили действие — возвращаем предмет
         if (_pendingCollectionToReturn != null)
         {
-            InventorySystem.Instance.AddItem(_pendingCollectionToReturn.ResourceId, _pendingCollectionToReturn.Quality, _pendingCollectionToReturn.Amount);
+            InventorySystem.Instance.AddItem(_pendingCollectionToReturn.ResourceId, _pendingCollectionToReturn.Amount);
             _pendingCollectionToReturn = null;
             GD.Print("[MuseumSystem] Коллекция возвращена в инвентарь после отмены");
         }
@@ -133,17 +127,24 @@ public partial class MuseumSystem : Node
         var room = MuseumLayout.Instance.GetRoom(roomId);
         if (room == null || !room.IsUnlocked || !room.CanPlaceFurniture(localPosition, furniture.Size)) return false;
 
-        var placed = new PlacedFurniture
+         var placed = new PlacedFurniture
         {
             InstanceId = $"furn_{_instanceCounter++}",
             FurnitureTypeId = furniture.TypeId,
             Position = localPosition,
             Size = furniture.Size,
             Furniture = furniture,
-            Items = new List<FoundItem>()
+            Items = new List<FoundItem>(),
         };
+        
+        // Сбрасываем качество после использования, чтобы не повлияло на следующие покупки
 
         room.PlaceFurniture(placed);
+        if (_pendingCollectionToReturn != null && furniture is CollectionExhibit)
+        {
+            _pendingCollectionToReturn = null;
+            GD.Print("[MuseumSystem] ✅ Коллекция успешно размещена, возврат в инвентарь отменен.");
+        }
         _pendingFurniture.Remove(furniture);
         SaveSystem.Instance?.MarkDirty();
         return true;
@@ -164,7 +165,7 @@ public partial class MuseumSystem : Node
         int refund = placed.Furniture.SellPrice;
         foreach (var item in placed.Furniture.GetAllItems())
         {
-            InventorySystem.Instance.AddItem(item.ResourceId, item.Quality, item.Amount);
+            InventorySystem.Instance.AddItem(item.ResourceId, item.Amount);
         }
 
         Wallet.Instance.AddCoins(refund);
@@ -232,47 +233,6 @@ public partial class MuseumSystem : Node
         GD.Print($"[MuseumSystem] Загружено {MuseumLayout.Instance.Rooms.Count} комнат.");
     }
 
-        // ===== РАСЧЁТ ДОХОДА (Публичный метод для UI) =====
-
-    public int GetTotalIncomePerSecond()
-    {
-        int total = 0;
-        foreach (var room in MuseumLayout.Instance.Rooms)
-        {
-            if (!room.IsUnlocked) continue; // Закрытые комнаты не приносят доход
-
-            foreach (var placed in room.PlacedFurnitureList)
-            {
-                foreach (var item in placed.Furniture.GetAllItems())
-                {
-                    var resource = GameData.GetResource(item.ResourceId);
-                    if (resource == null) continue;
-
-                    float mult = resource.GetRarityMultiplier() * resource.GetQualityMultiplier(item.Quality);
-                    int baseIncome = (int)(resource.BaseMuseumIncome * mult);
-
-                    var collection = GameData.GetCollection(placed.FurnitureTypeId);
-                    if (collection != null)
-                    {
-                        baseIncome = (int)(baseIncome * collection.CollectionBonus);
-                    }
-                    total += baseIncome;
-                }
-            }
-        }
-        return total;
-    }
-
-    private void GenerateIncome()
-    {
-        // Теперь этот метод просто использует публичный расчёт и выплачивает деньги
-        int totalIncome = GetTotalIncomePerSecond();
-        if (totalIncome > 0) 
-        {
-            Wallet.Instance.AddCoins(totalIncome);
-        }
-    }
-
         public bool SellFurnitureWithItems(string roomId, PlacedFurniture placed)
     {
         var room = MuseumLayout.Instance.GetRoom(roomId);
@@ -283,7 +243,7 @@ public partial class MuseumSystem : Node
         {
             foreach (var item in placed.Items)
             {
-                InventorySystem.Instance.AddItem(item.ResourceId, item.Quality, item.Amount);
+                InventorySystem.Instance.AddItem(item.ResourceId, item.Amount);
             }
         }
 
@@ -298,7 +258,112 @@ public partial class MuseumSystem : Node
         SaveSystem.Instance?.MarkDirty();
         return true;
     }
+
+       /// <summary>
+    /// Рассчитывает максимальное количество посетителей на основе ТОЛЬКО скелетов (CollectionExhibit)
+    /// С учётом модификаторов из дерева навыков
+    /// </summary>
+    public int CalculateMaxVisitors()
+    {
+        int maxVisitors = 0;
+        
+        // Получаем модификаторы из дерева навыков
+        float commonBonus = SkillSystem.Instance.GetModifier("max_visitors_common_uncommon");
+        float rareBonus = SkillSystem.Instance.GetModifier("max_visitors_rare");
+        float epicLegendaryBonus = SkillSystem.Instance.GetModifier("max_visitors_epic_legendary");
+        
+        foreach (var room in MuseumLayout.Instance.Rooms)
+        {
+            if (!room.IsUnlocked) continue;
+
+            foreach (var placed in room.PlacedFurnitureList)
+            {
+                if (placed.Furniture is CollectionExhibit)
+                {
+                    var collection = GameData.GetCollection(placed.FurnitureTypeId);
+                    if (collection != null)
+                    {
+                        int baseVisitors = collection.Rarity switch
+                        {
+                            Rarity.Common => 1,
+                            Rarity.Uncommon => 3,
+                            Rarity.Rare => 6,
+                            Rarity.Epic => 9,
+                            Rarity.Legendary => 20,
+                            _ => 1
+                        };
+                        
+                        // Применяем модификаторы
+                        int bonus = 0;
+                        if (collection.Rarity == Rarity.Common || collection.Rarity == Rarity.Uncommon)
+                        {
+                            bonus = (int)commonBonus;
+                        }
+                        else if (collection.Rarity == Rarity.Rare)
+                        {
+                            bonus = (int)rareBonus;
+                        }
+                        else if (collection.Rarity == Rarity.Epic || collection.Rarity == Rarity.Legendary)
+                        {
+                            bonus = (int)epicLegendaryBonus;
+                        }
+                        
+                        maxVisitors += baseVisitors + bonus;
+                    }
+                }
+            }
+        }
+
+        return 3 + maxVisitors; 
+    }
+
+        public void OnVisitorEntered()
+    {
+        float ticketPriceModifier = SkillSystem.Instance.GetModifier("visitor_ticket_price");
+        int ticketPrice = ticketPriceModifier > 0 ? (int)ticketPriceModifier : BaseVisitorTicketPrice;
+        
+        Wallet.Instance.AddCoins(ticketPrice);
+        
+        // === Шанс получить билет на раскопки ===
+        float ticketChance = SkillSystem.Instance.GetModifier("ticket_drop_chance");
+        if (ticketChance > 0 && GD.Randf() < ticketChance)
+        {
+            // Пока просто логируем, позже добавим реальную систему билетов
+            GD.Print($"[Museum] 🎫 Посетитель дал билет на раскопки! (шанс: {ticketChance * 100}%)");
+            // TODO: InventorySystem.Instance.AddItem("digging_ticket", 1);
+        }
+        
+        GD.Print($"[Museum] Посетитель вошел! +{ticketPrice} монет");
+    }
+
+    /// <summary>
+    /// Создаёт всплывающий текст над главным входом
+    /// </summary>
+    private void SpawnFloatingText(string text, Color color)
+    {
+        // Временная реализация - просто выводим в консоль
+        // Полноценный UI с анимацией добавим позже
+        GD.Print($"[FloatingText] {text}");
+    }
+
+     /// <summary>
+    /// Возвращает расчетный доход в секунду при полной загрузке музея.
+    /// Используется для UI и расчета офлайн-наград.
+    /// </summary>
+    public int GetEstimatedIncomePerSecond()
+    {
+        int maxVisitors = CalculateMaxVisitors();
+        
+        // Формула: (Макс. посетителей / Интервал спавна) * Цена билета
+        // Если интервал спавна 3 сек, а билет 50 монет:
+        const int spawnInterval = 3;
+        const int ticketPrice = 50;
+        
+        return (maxVisitors * ticketPrice) / spawnInterval;
+    }
 }
+
+
 
 public class FurnitureTemplate
 {

@@ -166,8 +166,9 @@ public partial class PlacementModeUI : Node2D
         UpdateGhostSprite(canPlace);
     }
     
-    private void UpdateGhostSprite(bool canPlace)
+        private void UpdateGhostSprite(bool canPlace)
     {
+        // Создаём "призрак" при первом вызове
         if (_ghostSprite == null)
         {
             _ghostSprite = new TextureRect();
@@ -177,6 +178,7 @@ public partial class PlacementModeUI : Node2D
             AddChild(_ghostSprite);
         }
         
+        // Загружаем текстуру
         string texturePath = GetFurnitureTexturePath(_furnitureToPlace);
         if (ResourceLoader.Exists(texturePath))
         {
@@ -184,34 +186,45 @@ public partial class PlacementModeUI : Node2D
         }
         else
         {
-            GD.PrintErr($"[PlacementMode] Текстура витрины не найдена: {texturePath}");
+            GD.PrintErr($"[PlacementMode] Текстура не найдена: {texturePath}");
             _ghostSprite.Visible = false;
             return;
         }
         
-        // === ИСПРАВЛЕНИЕ 1: GlobalPosition -> GlobalOffset ===
+        // Глобальные координаты левого верхнего угла выделения
         int globalX = _currentRoom.GlobalOffset.X + _hoveredLocalCell.X;
         int globalY = _currentRoom.GlobalOffset.Y + _hoveredLocalCell.Y;
         
-        var isoPos = IsoUtils.GridToIso(globalX, globalY);
+        // === ИСПРАВЛЕНИЕ: Привязка к НИЖНЕМУ РЯДУ footprint'а ===
+        int anchorGridX = globalX + _furnitureToPlace.Size.X - 1;
+        int anchorGridY = globalY + _furnitureToPlace.Size.Y - 1; // ← Нижний ряд, а не центр!
         
-        // === ИСПРАВЛЕНИЕ 4: РЕАЛЬНЫЙ РАЗМЕР ТЕКСТУРЫ (как в GlobalRoomViewUI) ===
+        var anchorIsoPos = IsoUtils.GridToIso(anchorGridX, anchorGridY);
+        
+        // Базовая точка привязки: нижний центр нижней клетки объекта
+        float centerX = MuseumConstants.GridOffsetX + anchorIsoPos.X + IsoUtils.TileWidth / 2f;
+        float centerY = MuseumConstants.GridOffsetY + anchorIsoPos.Y + IsoUtils.TileHeight;
+
+        // Реальный размер текстуры
         var texture = _ghostSprite.Texture;
         float realWidth = texture.GetWidth();
         float realHeight = texture.GetHeight();
         _ghostSprite.Size = new Vector2(realWidth, realHeight);
 
-        // Позиционирование: нижний центр спрайта совпадает с нижним центром тайла
-        float centerX = MuseumConstants.GridOffsetX + isoPos.X + IsoUtils.TileWidth / 2f;
-        float centerY = MuseumConstants.GridOffsetY + isoPos.Y + IsoUtils.TileHeight;
-        
+        // Позиционируем спрайт так, чтобы его нижний центр совпал с точкой привязки
         _ghostSprite.Position = new Vector2(
             centerX - realWidth / 2f,
             centerY - realHeight
         );
         
+        // Цвет: зелёный если можно поставить, красный если нельзя
         _ghostSprite.Modulate = canPlace ? new Color(1, 1, 1, 0.6f) : new Color(1, 0.3f, 0.3f, 0.6f);
-        _ghostSprite.ZIndex = IsoUtils.GetZOrder(globalX, globalY) + 25;
+        
+                // Z-индекс призрака: та же логика, что и у финального объекта
+        int zAnchorX = globalX + _furnitureToPlace.Size.X / 2;
+        int zAnchorY = globalY + _furnitureToPlace.Size.Y / 2;
+        _ghostSprite.ZIndex = IsoUtils.GetZOrder(zAnchorX, zAnchorY) + (_furnitureToPlace.Size.X + _furnitureToPlace.Size.Y) / 2;
+
         _ghostSprite.Visible = true;
     }
     
@@ -227,7 +240,7 @@ public partial class PlacementModeUI : Node2D
         if (furniture.TypeId == "display_case_1x1")
             return "res://assets/museum/furniture/display_case_small.png";
             
-        if (furniture.TypeId == "display_case_2x1")
+        if (furniture.TypeId == "display_case_2x2")
             return "res://assets/museum/furniture/display_case_large.png";
         
         // Fallback для любой другой обычной мебели (если появится)
@@ -257,16 +270,27 @@ public partial class PlacementModeUI : Node2D
         /// <summary>
     /// Запускает режим размещения специально для перемещения существующей мебели
     /// </summary>
-    public void StartPlacementForMoving(Room room, Furniture furniture, PlacedFurniture placedToMove)
+        public void StartPlacementForMoving(Room room, Furniture furniture, PlacedFurniture placedToMove)
     {
         _currentRoom = room;
         _furnitureToPlace = furniture;
-        _placedToMove = placedToMove; // Сохраняем ссылку на объект с его предметами (Items)
         
-        ClearGrid();
+        // 1. Сначала сохраняем ссылку во временную переменную
+        var tempSave = placedToMove;
+        
+        // 2. Очищаем старое (это обнулит _placedToMove)
+        ClearGrid();  
+        
+        // 3. Восстанавливаем ссылку на оригинальный объект с его TypeId и Items!
+        _placedToMove = tempSave;
+        
         CreateGrid();
         
-        // Меняем текст инструкции для перемещения
+        if (_instructionLabel != null)
+        {
+            _instructionLabel.QueueFree();
+        }
+        
         _instructionLabel = new Label();
         _instructionLabel.Text = $"Перемещение: {_furnitureToPlace.DisplayName}\nЛКМ = установить | Esc = отмена";
         _instructionLabel.Position = new Vector2(20, 20);
@@ -275,7 +299,7 @@ public partial class PlacementModeUI : Node2D
         _uiLayer.AddChild(_instructionLabel);
         
         Visible = true;
-        GD.Print($"[PlacementMode] 📦 Начато перемещение {_furnitureToPlace.DisplayName}");
+        GD.Print($"[PlacementMode] 📦 Режим перемещения активирован. TypeId: {_placedToMove.FurnitureTypeId}, Экспонатов: {_placedToMove.Items.Count}");
     }
     
     // ===== РАЗМЕЩЕНИЕ И ОТМЕНА =====
@@ -289,6 +313,8 @@ public partial class PlacementModeUI : Node2D
         // === СЦЕНАРИЙ А: Перемещение существующей мебели ===
         if (_placedToMove != null)
         {
+                        GD.Print($"[PlacementMode] 🔍 Проверка перемещения. В объекте сейчас {_placedToMove.Items.Count} экспонатов.");
+
             // Временно убираем, чтобы проверка коллизий не считала её препятствием самой для себя
             _currentRoom.RemoveFurniture(_placedToMove);
             

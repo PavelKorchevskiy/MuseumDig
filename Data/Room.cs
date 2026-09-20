@@ -48,6 +48,26 @@ public partial class Room : Resource
         return true;
     }
 
+        /// <summary>
+    /// Проверяет, занята ли указанная глобальная клетка мебелью
+    /// </summary>
+    public bool IsCellOccupiedByFurniture(Vector2I globalPos)
+    {
+        int localX = globalPos.X - GlobalOffset.X;
+        int localY = globalPos.Y - GlobalOffset.Y;
+
+        foreach (var placed in PlacedFurnitureList)
+        {
+            // Проверяем, попадает ли клетка в footprint мебели
+            if (localX >= placed.Position.X && localX < placed.Position.X + placed.Size.X &&
+                localY >= placed.Position.Y && localY < placed.Position.Y + placed.Size.Y)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void PlaceFurniture(PlacedFurniture placed)
     {
         PlacedFurnitureList.Add(placed);

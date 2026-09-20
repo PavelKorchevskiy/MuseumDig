@@ -189,18 +189,10 @@ public partial class Tile : ColorRect
 		private void ExtractOrDamage()
 	{
 		var tool = ToolSystem.Instance.GetCurrentTool();
-		Quality finalQuality = Quality.Good;
 		
-		if (tool != null && tool.CanDamageFossil && _hiddenResource.HasQuality)
-		{
-			if (GD.Randf() < UpgradeSystem.Instance.GetToolDamageChance(ToolType.Shovel)) // Используем реальный шанс из UpgradeSystem!
-			{
-				finalQuality = Quality.Damaged;
-				SpawnFloatingText("Damaged!", new Color(1f, 0.3f, 0.3f)); // Красный текст
-			}
-		}
 		
-		InventorySystem.Instance.AddItem(_hiddenResource.Id, finalQuality, _hiddenAmount);
+		
+		InventorySystem.Instance.AddItem(_hiddenResource.Id, _hiddenAmount);
 		
 		// Показываем, что нашли
 		SpawnFloatingText($"+1 {_hiddenResource.DisplayName}", new Color(0.3f, 1f, 0.3f)); // Зеленый текст

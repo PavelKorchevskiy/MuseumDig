@@ -14,7 +14,7 @@ public partial class CollectionExhibit : Furniture
     }
 
     // Коллекция не может принять дополнительные предметы (она уже полная)
-    public override bool CanAccept(ResourceDefinition resource, Quality quality)
+    public override bool CanAccept(ResourceDefinition resource)
     {
         return false;
     }

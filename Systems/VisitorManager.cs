@@ -8,6 +8,10 @@ public partial class VisitorManager : Node
     private List<Visitor> _visitors = new List<Visitor>();
     private MuseumLayout _layout;
     private bool _isInitialized = false;
+    
+    // Таймер для контроля частоты появления
+    private float _spawnTimer = 0f;
+    private const float SpawnInterval = 3.0f; // Проверяем возможность спавна каждые 3 секунды
 
     public override void _Ready()
     {
@@ -20,23 +24,42 @@ public partial class VisitorManager : Node
         if (!_isInitialized)
         {
             TryInitialize();
+            return;
+        }
+
+        // 1. ОЧИСТКА: Удаляем из списка тех, кто уже был уничтожен (QueueFree)
+        _visitors.RemoveAll(v => !GodotObject.IsInstanceValid(v));
+
+        // 2. ПРОВЕРКА ЛИМИТА: Сколько посетителей должно быть сейчас?
+        int maxVisitors = MuseumSystem.Instance.CalculateMaxVisitors();
+
+        // 3. СПАВН: Если текущих меньше максимума, запускаем таймер
+        if (_visitors.Count < maxVisitors)
+        {
+            _spawnTimer += (float)delta;
+            if (_spawnTimer >= SpawnInterval)
+            {
+                _spawnTimer = 0f;
+                SpawnNewVisitor();
+            }
+        }
+        else
+        {
+            // Сбрасываем таймер, если лимит достигнут, чтобы не было задержки при увеличении лимита
+            _spawnTimer = 0f;
         }
     }
 
     private void TryInitialize()
     {
-        // Ищем узел по типу (самый надёжный способ в Godot)
         var globalView = FindNodeByType<GlobalRoomViewUI>(GetTree().CurrentScene);
-
         if (globalView != null)
         {
-            _layout = MuseumLayout.Instance; // ТЕПЕРЬ БЕРЁМ НАПРЯМУЮ ИЗ СИНГЛТОНА
-
+            _layout = MuseumLayout.Instance;
             if (_layout != null)
             {
                 _isInitialized = true;
-                GD.Print("[VisitorManager] ✅ Инициализация успешна! Layout получен.");
-                SpawnInitialVisitors();
+                GD.Print($"[VisitorManager] ✅ Инициализация успешна! Макс. посетителей: {MuseumSystem.Instance.CalculateMaxVisitors()}");
             }
         }
     }
@@ -44,82 +67,38 @@ public partial class VisitorManager : Node
     private T FindNodeByType<T>(Node node) where T : class
     {
         if (node is T result) return result;
-
         foreach (var child in node.GetChildren())
         {
             var found = FindNodeByType<T>(child);
             if (found != null) return found;
         }
-
         return null;
     }
 
-    private void SpawnInitialVisitors()
+    private void SpawnNewVisitor()
     {
         var mainHall = _layout.GetRoom("main_hall");
-        if (mainHall == null)
-        {
-            GD.PrintErr("[VisitorManager] ❌ ОШИБКА: Комната 'main_hall' не найдена в Layout!");
-            return;
-        }
+        if (mainHall == null) return;
 
-        GD.Print($"[VisitorManager] ✅ Найден главный зал: '{mainHall.Id}'");
-        GD.Print($"[VisitorManager]    Глобальный оффсет: {mainHall.GlobalOffset}, Размер: {mainHall.Width}x{mainHall.Height}");
-
-        // Спавним 5 посетителей
-        for (int i = 0; i < 20; i++)
-        {
-            SpawnVisitorInRoom(mainHall);
-        }
-    }
-
-    // === ИСПРАВЛЕНО: RoomConfig заменён на Room ===
-    private void SpawnVisitorInRoom(Room room)
-    {
         var visitor = new Visitor();
-        Vector2I startPos;
+        Vector2I startPos = new Vector2I(21, 31); // Главный вход
 
-        // Поскольку мы убрали список Doors, мы просто используем известные координаты главного входа
-        // В MuseumLayout.BuildLayout главный вход находится на (21, 32) и (22, 32)
-        if (room.Id == "main_hall")
+        // Проверка проходимости (на случай, если вход заблокировали мебелью)
+        if (_layout.Grid[startPos.X, startPos.Y] != TileType.Floor && _layout.Grid[startPos.X, startPos.Y] != TileType.Door)
         {
-            // Спавним чуть внутри комнаты (на 1 клетку выше входа)
-            startPos = new Vector2I(21, 31);
-            GD.Print($"[VisitorManager] 🚶 Спавн посетителя у главного входа: {startPos}");
-        }
-        else
-        {
-            // Для других комнат спавним в центре
-            startPos = new Vector2I(
-                room.GlobalOffset.X + room.Width / 2,
-                room.GlobalOffset.Y + room.Height / 2
-            );
-            GD.Print($"[VisitorManager] 🚶 Спавн посетителя в центре комнаты {room.Id}: {startPos}");
-        }
-
-        // Проверка границ
-        if (startPos.X < 0 || startPos.X >= MuseumLayout.GridWidth ||
-            startPos.Y < 0 || startPos.Y >= MuseumLayout.GridHeight)
-        {
-            GD.PrintErr($"[VisitorManager] Позиция {startPos} вне сетки! Используем центр.");
-            startPos = new Vector2I(room.GlobalOffset.X + room.Width / 2, room.GlobalOffset.Y + room.Height / 2);
-        }
-        // Проверка проходимости
-        else if (_layout.Grid[startPos.X, startPos.Y] != TileType.Floor &&
-                 _layout.Grid[startPos.X, startPos.Y] != TileType.Door)
-        {
-            GD.PrintErr($"[VisitorManager] Позиция {startPos} непроходима (тайл: {_layout.Grid[startPos.X, startPos.Y]})! Ищем ближайшую...");
             startPos = FindNearestWalkable(startPos);
         }
 
-        visitor.Initialize(_layout, startPos, room.Id);
+        visitor.Initialize(_layout, startPos, mainHall.Id);
         GetTree().CurrentScene.AddChild(visitor);
         _visitors.Add(visitor);
+
+        // === ГЛАВНОЕ: Начисляем деньги за вход ===
+        MuseumSystem.Instance.OnVisitorEntered();
+        
+        GD.Print($"[VisitorManager] 🚶 Новый посетитель! Всего в музее: {_visitors.Count} / {MuseumSystem.Instance.CalculateMaxVisitors()}");
     }
 
-    /// <summary>
-    /// Ищет ближайшую проходимую клетку к указанной позиции
-    /// </summary>
     private Vector2I FindNearestWalkable(Vector2I from)
     {
         for (int radius = 1; radius < 5; radius++)
@@ -131,8 +110,7 @@ public partial class VisitorManager : Node
                     int x = from.X + dx;
                     int y = from.Y + dy;
 
-                    if (x < 0 || x >= MuseumLayout.GridWidth ||
-                        y < 0 || y >= MuseumLayout.GridHeight)
+                    if (x < 0 || x >= MuseumLayout.GridWidth || y < 0 || y >= MuseumLayout.GridHeight)
                         continue;
 
                     if (_layout.Grid[x, y] == TileType.Floor || _layout.Grid[x, y] == TileType.Door)
@@ -142,6 +120,6 @@ public partial class VisitorManager : Node
                 }
             }
         }
-        return from; // Если ничего не нашли, возвращаем исходную
+        return from;
     }
 }

@@ -41,16 +41,12 @@ public partial class OfflineRewardUI : CanvasLayer
 		
 		string timeText = OfflineRewardSystem.Instance.GetFormattedTime();
 		int coins = OfflineRewardSystem.Instance.GetOfflineCoins();
-		int energy = OfflineRewardSystem.Instance.GetOfflineEnergy();
 		
 		_timeValueLabel.Text = timeText;
 		
 		_coinsRewardLabel.Text = coins > 0 ? $"💰 {coins} coins" : "";
 		_coinsRewardLabel.Visible = coins > 0;
-		
-		_energyRewardLabel.Text = energy > 0 ? $"⚡ {energy} energy" : "";
-		_energyRewardLabel.Visible = energy > 0;
-	}
+			}
 	
 	private void OnCollectPressed()
 	{

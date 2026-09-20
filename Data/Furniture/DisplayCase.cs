@@ -8,7 +8,7 @@ public partial class DisplayCase : Furniture
     
     private List<FoundItem> _items = new();
     
-        public override bool CanAccept(ResourceDefinition resource, Quality quality)
+        public override bool CanAccept(ResourceDefinition resource)
     {
         if (_items.Count >= Capacity) return false;
         if (resource is FossilDefinition fossil) 
@@ -23,7 +23,7 @@ public partial class DisplayCase : Furniture
     public override bool AddItem(FoundItem item)
     {
         if (_items.Count >= Capacity) return false;
-        if (!CanAccept(GameData.GetResource(item.ResourceId), item.Quality)) return false;
+        if (!CanAccept(GameData.GetResource(item.ResourceId))) return false;
         _items.Add(item);
         return true;
     }

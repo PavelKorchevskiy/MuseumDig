@@ -46,6 +46,9 @@ public static class GameData
         RegisterIchthyosaurus();
         RegisterPlesiosaurus();
         RegisterAllosaurus();
+        RegisterDilophosaurus();
+        RegisterDimetrodon();
+        RegisterStegosaurus();
         
         // Одиночные находки
         RegisterStandaloneFossils();
@@ -129,9 +132,45 @@ public static class GameData
             colId: "allosaurus",
             displayName: "Allosaurus",
             description: "Allosaurus is a genus of theropod dinosaur that lived 155 to 143 million years ago during the late Jurassic period.",
+            locationId: "morrison",
+            rarity: Rarity.Uncommon,
+            size: new Vector2I(5, 5)
+        );
+    }
+
+     private static void RegisterDilophosaurus()
+    {
+        RegisterDinosaurCollection(
+            colId: "dilophosaurus",
+            displayName: "Dilophosaurus",
+            description: "Dilophosaurus is a genus of theropod dinosaurs that lived in what is now North America during the Early Jurassic, about 186 million years ago.",
             locationId: "canada",
             rarity: Rarity.Uncommon,
-            size: new Vector2I(3, 3)
+            size: new Vector2I(2, 2)
+        );
+    }
+
+     private static void RegisterDimetrodon()
+    {
+        RegisterDinosaurCollection(
+            colId: "dimetrodon",
+            displayName: "Dimetrodon",
+            description: "Dimetrodon is an extinct genus of sphenacodontid synapsid that lived during the Cisuralian to early Guadalupian epoch of the Permian period, around 294.1–271 million years ago.",
+            locationId: "texas",
+            rarity: Rarity.Uncommon,
+            size: new Vector2I(2, 2)
+        );
+    }
+
+     private static void RegisterStegosaurus()
+    {
+        RegisterDinosaurCollection(
+            colId: "stegosaurus",
+            displayName: "Stegosaurus",
+            description: "Stegosaurus is a genus of extinct herbivorous four-legged armored dinosaurs from the Late Jurassic.",
+            locationId: "morrison",
+            rarity: Rarity.Uncommon,
+            size: new Vector2I(5, 5)
         );
     }
 
@@ -158,8 +197,8 @@ public static class GameData
             UnlockCost = 0, RequiredPlayerLevel = 1, GridWidth = 8, GridHeight = 12, BaseTileHp = 3, TileHpGrowthPerRow = 1.15f,
             LootTable = new List<LootEntry>()
             {
-                CreateLoot("triceratops_skull", 0.03f), CreateLoot("triceratops_body", 0.03f), CreateLoot("triceratops_tail", 0.03f),
-                CreateLoot("allosaurus_skull", 0.03f), CreateLoot("allosaurus_body", 0.03f), CreateLoot("allosaurus_tail", 0.03f),
+                CreateLoot("triceratops_skull", 0.3f), CreateLoot("triceratops_body", 0.3f), CreateLoot("triceratops_tail", 0.3f),
+                CreateLoot("dilophosaurus_skull", 0.3f), CreateLoot("dilophosaurus_body", 0.3f), CreateLoot("dilophosaurus_tail", 0.3f),
                 CreateLoot("dino_tooth", 0.08f), CreateLoot("gold_nugget", 0.12f), CreateLoot("precious_gem", 0.04f)
             }
         };
@@ -188,6 +227,62 @@ public static class GameData
                 CreateLoot("ammonite", 0.08f), CreateLoot("gold_nugget", 0.12f), CreateLoot("precious_gem", 0.05f)
             }
         };
+
+        _locations["texas"] = new LocationDefinition
+{
+    Id = "texas", 
+    DisplayName = "Texas Red Beds", 
+    Description = "Seymour, Texas. Permian period fossils in the ancient red clay deposits.",
+    UnlockCost = 2500, 
+    RequiredPlayerLevel = 5, 
+    GridWidth = 12, 
+    GridHeight = 16, 
+    BaseTileHp = 8, 
+    TileHpGrowthPerRow = 1.35f,
+    LootTable = new List<LootEntry>()
+    {
+        // Dimetrodon collection (rare)
+        CreateLoot("dimetrodon_skull", 0.03f), 
+        CreateLoot("dimetrodon_body", 0.03f), 
+        CreateLoot("dimetrodon_tail", 0.03f),
+        
+        // Resources
+        CreateLoot("gold_nugget", 0.15f), 
+        CreateLoot("precious_gem", 0.06f),
+    }
+};
+
+    _locations["morrison"] = new LocationDefinition
+{
+    Id = "morrison", 
+    DisplayName = "Morrison Formation", 
+    Description = "Colorado & Utah, USA. Late Jurassic period. One of the richest dinosaur fossil sites in the world.",
+    UnlockCost = 5000, 
+    RequiredPlayerLevel = 8, 
+    GridWidth = 16, 
+    GridHeight = 20, 
+    BaseTileHp = 12, 
+    TileHpGrowthPerRow = 1.50f,
+    LootTable = new List<LootEntry>()
+    {
+        // Stegosaurus collection (rare)
+        CreateLoot("stegosaurus_skull", 0.02f), 
+        CreateLoot("stegosaurus_body", 0.02f), 
+        CreateLoot("stegosaurus_tail", 0.02f),
+        
+        // Allosaurus collection (rare) - уже есть у вас
+        CreateLoot("allosaurus_skull", 0.025f), 
+        CreateLoot("allosaurus_body", 0.025f), 
+        CreateLoot("allosaurus_tail", 0.025f),
+        
+        CreateLoot("ammonite", 0.12f), 
+        
+        // Premium resources
+        CreateLoot("gold_nugget", 0.15f), 
+        CreateLoot("precious_gem", 0.08f),
+        CreateLoot("dino_egg", 0.05f)
+    }
+};
     }
 
     // ===== РЕГИСТРАЦИЯ ИНСТРУМЕНТОВ =====

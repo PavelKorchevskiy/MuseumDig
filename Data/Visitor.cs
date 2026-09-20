@@ -45,7 +45,7 @@ public partial class Visitor : Control
     private bool _isFlipped = false;
     private string _visitorFolder = "1";
 
-    public override void _Ready()
+        public override void _Ready()
     {
         CustomMinimumSize = new Vector2(64, 64);
         MouseFilter = MouseFilterEnum.Ignore;
@@ -56,9 +56,10 @@ public partial class Visitor : Control
         _sprite.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
         _sprite.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
         _sprite.MouseFilter = MouseFilterEnum.Ignore;
-        AddChild(_sprite);
         
-        _sprite.Texture = GD.Load<Texture2D>("res://icon.svg");
+        _sprite.Visible = false; 
+        
+        AddChild(_sprite);
     }
     
     public void Initialize(MuseumLayout layout, Vector2I startGlobalCell, string startRoomId)
@@ -67,13 +68,15 @@ public partial class Visitor : Control
         _globalCell = startGlobalCell;
         _currentRoomId = startRoomId;
 
-        int randomVariant = (int)(GD.Randi() % 2) + 1; 
+        int randomVariant = (int)(GD.Randi() % 3) + 1; 
         _visitorFolder = randomVariant.ToString();
         
         GD.Print($"[Visitor] Спавн посетителя. Внешность: папка {_visitorFolder}");
         
         _path.Clear();
         _pathIndex = 0;
+
+        ApplyFrameToSprite();
         
         UpdateVisualPosition();
         FindNewWanderTarget();
@@ -281,7 +284,7 @@ public partial class Visitor : Control
         _pathIndex = 0;
     }
     
-    private List<Vector2I> FindPath(Vector2I start, Vector2I goal)
+        private List<Vector2I> FindPath(Vector2I start, Vector2I goal)
     {
         var queue = new Queue<Vector2I>();
         var cameFrom = new Dictionary<Vector2I, Vector2I>();
@@ -311,6 +314,11 @@ public partial class Visitor : Control
                 var tile = _layout.Grid[next.X, next.Y];
                 if (tile != TileType.Floor && tile != TileType.Door)
                     continue;
+
+                if (_layout.IsGlobalCellOccupiedByFurniture(next))
+                {
+                    continue; // Пропускаем эту клетку, она занята мебелью в любой комнате
+                }
 
                 if (!cameFrom.ContainsKey(next))
                 {
@@ -474,6 +482,7 @@ public partial class Visitor : Control
         {
             _sprite.Texture = GD.Load<Texture2D>(texturePath);
             _sprite.FlipH = _isFlipped;
+            _sprite.Visible = true;
         }
         else
         {

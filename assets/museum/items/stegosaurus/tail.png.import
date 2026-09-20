@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dnyojrlt7ktlt"
-path="res://.godot/imported/head.png-4248137d4cf921a9aedde0dd50ad6e07.ctex"
+uid="uid://bth0jf8bcrprt"
+path="res://.godot/imported/tail.png-01035ced67d049ae146cd18ad01c5b2d.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/museum/items/allosaurus/head.png"
-dest_files=["res://.godot/imported/head.png-4248137d4cf921a9aedde0dd50ad6e07.ctex"]
+source_file="res://assets/museum/items/stegosaurus/tail.png"
+dest_files=["res://.godot/imported/tail.png-01035ced67d049ae146cd18ad01c5b2d.ctex"]
 
 [params]
 

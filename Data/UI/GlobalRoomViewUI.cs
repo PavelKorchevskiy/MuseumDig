@@ -392,10 +392,11 @@ public partial class GlobalRoomViewUI : Node2D
 
         if (placed.Size.X > 1 || placed.Size.Y > 1)
         {
-            // Для больших объектов (коллекции 3x3 и т.д.):
-            // Находим центральную клетку объекта в сетке и используем её isoPos
-            int anchorGridX = globalX + placed.Size.X / 2;
-            int anchorGridY = globalY + placed.Size.Y / 2;
+            // Для больших объектов: используем НИЖНИЙ ЦЕНТР footprint'а
+            // В изометрии "земля" — это нижний ряд плиток, а не геометрический центр
+            int anchorGridX = globalX + placed.Size.X - 1;
+            int anchorGridY = globalY + placed.Size.Y - 1;
+            
             var anchorIsoPos = IsoUtils.GridToIso(anchorGridX, anchorGridY);
             
             centerX = GridOffsetX + anchorIsoPos.X + IsoUtils.TileWidth / 2f;
@@ -413,11 +414,16 @@ public partial class GlobalRoomViewUI : Node2D
             centerY - realHeight
         );
 
-        sprite.ZIndex = IsoUtils.GetZOrder(globalX, globalY) + 10;
+                // === Z-индекс на основе ЦЕНТРА footprint'а ===
+        // Это гарантирует правильную сортировку: посетители ниже перекрывают скелет,
+        // а посетители выше (позади) остаются позади
+        int zAnchorX = globalX + placed.Size.X / 2;
+        int zAnchorY = globalY + placed.Size.Y / 2;
+        sprite.ZIndex = IsoUtils.GetZOrder(zAnchorX, zAnchorY) + (placed.Size.X + placed.Size.Y) / 2;
         
         float darkness = GetRoomDarkness(room.Id);
         sprite.Modulate = new Color(darkness, darkness, darkness, 1.0f);
-
+        var museum = GetTree().CurrentScene as Museum;
 
         // Делаем витрину кликабельной
         if (placed.Furniture is DisplayCase)
@@ -428,7 +434,20 @@ public partial class GlobalRoomViewUI : Node2D
                 if (@event is InputEventMouseButton mouseEvent && 
                     mouseEvent.Pressed && mouseEvent.ButtonIndex == MouseButton.Left)
                 {
-                    var museum = GetTree().CurrentScene as Museum;
+                    if (room.Id != MuseumLayout.Instance.ActiveRoomId)
+                    {
+                        MuseumLayout.Instance.ActiveRoomId = room.Id;
+                        UpdateRoomVisibility();
+                        
+                        // Перемещаем камеру к центру новой комнаты
+                        var camera = museum?.GetNodeOrNull<CameraController>("Camera2D");
+                        if (camera != null)
+                        {
+                            Vector2I center = MuseumLayout.Instance.GetRoomGlobalCenter(room.Id);
+                            camera.MoveToRoomCenter(center);
+                        }
+                    }
+                    
                     museum?.OpenDisplayCaseUI(room, placed);
                 }
             };
@@ -437,8 +456,8 @@ public partial class GlobalRoomViewUI : Node2D
                         // === Рисуем экспонаты внутри витрины ===
             if (placed.Items != null && placed.Items.Count > 0)
             {
-                // Проверяем, является ли витрина большой (2x1)
-                bool isLargeCase = (placed.Size.X == 2 && placed.Size.Y == 1);
+                // Проверяем, является ли витрина большой
+                bool isLargeCase = (placed.Size.X == 2 && placed.Size.Y == 2);
 
                 for (int i = 0; i < placed.Items.Count; i++)
                 {
@@ -495,6 +514,31 @@ public partial class GlobalRoomViewUI : Node2D
                 }
             }
         }
+        if (placed.Furniture is CollectionExhibit)
+        {
+            sprite.MouseFilter = Control.MouseFilterEnum.Stop;
+            sprite.GuiInput += (@event) =>
+            {
+                if (@event is InputEventMouseButton mouseEvent && 
+                    mouseEvent.Pressed && mouseEvent.ButtonIndex == MouseButton.Left)
+                {
+                    if (room.Id != MuseumLayout.Instance.ActiveRoomId)
+                    {
+                        MuseumLayout.Instance.ActiveRoomId = room.Id;
+                        UpdateRoomVisibility();
+                        
+                        // Перемещаем камеру к центру новой комнаты
+                        var camera = museum?.GetNodeOrNull<CameraController>("Camera2D");
+                        if (camera != null)
+                        {
+                            Vector2I center = MuseumLayout.Instance.GetRoomGlobalCenter(room.Id);
+                            camera.MoveToRoomCenter(center);
+                        }
+                    }
+                    museum?.OpenCollectionExhibitUI(room, placed);
+                }
+            };
+        }
 
         AddChild(sprite);
     }
@@ -502,7 +546,7 @@ public partial class GlobalRoomViewUI : Node2D
     private string GetFurnitureTexturePath(string typeId)
     {
         if (typeId == "display_case_1x1") return "res://assets/museum/furniture/display_case_small.png";
-        if (typeId == "display_case_2x1") return "res://assets/museum/furniture/display_case_large.png";
+        if (typeId == "display_case_2x2") return "res://assets/museum/furniture/display_case_large.png";
         return $"res://assets/museum/furniture/{typeId}.png";
     }
 }
