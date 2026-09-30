@@ -1,4 +1,5 @@
 using Godot;
+using System;
 using System.Collections.Generic;
 
 public partial class GlobalRoomViewUI : Node2D
@@ -452,11 +453,10 @@ public partial class GlobalRoomViewUI : Node2D
                 }
             };
 
-            // Рисуем экспонат внутри витрины
+            
                         // === Рисуем экспонаты внутри витрины ===
             if (placed.Items != null && placed.Items.Count > 0)
             {
-                // Проверяем, является ли витрина большой
                 bool isLargeCase = (placed.Size.X == 2 && placed.Size.Y == 2);
 
                 for (int i = 0; i < placed.Items.Count; i++)
@@ -465,10 +465,31 @@ public partial class GlobalRoomViewUI : Node2D
                     var res = GameData.GetResource(exhibit.ResourceId);
                     if (res != null)
                     {
-                        // Все спрайты экспонатов лежат в папке common
-                        string exhibitPath = $"res://assets/museum/items/common/{exhibit.ResourceId}.png";
+                        // === НОВОЕ: Определяем путь к иконке экспоната ===
+                        string exhibitPath = null;
                         
-                        if (ResourceLoader.Exists(exhibitPath))
+                        // Проверяем, есть ли у ресурса варианты
+                        if (res is FossilDefinition fossil && fossil.VariantCount > 1)
+                        {
+                            // Пробуем загрузить первый вариант из папки
+                            string variantPath = $"res://assets/museum/items/common/{exhibit.ResourceId}/1.png";
+                            if (ResourceLoader.Exists(variantPath))
+                            {
+                                exhibitPath = variantPath;
+                            }
+                        }
+                        
+                        // Fallback на обычный путь
+                        if (exhibitPath == null)
+                        {
+                            string commonPath = $"res://assets/museum/items/common/{exhibit.ResourceId}.png";
+                            if (ResourceLoader.Exists(commonPath))
+                            {
+                                exhibitPath = commonPath;
+                            }
+                        }
+                        
+                        if (exhibitPath != null)
                         {
                             var exhibitTexture = GD.Load<Texture2D>(exhibitPath);
                             var exhibitSprite = new TextureRect();
@@ -477,38 +498,52 @@ public partial class GlobalRoomViewUI : Node2D
                             exhibitSprite.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
                             exhibitSprite.MouseFilter = Control.MouseFilterEnum.Ignore;
                             
-                            // Ваш настроенный масштаб
-                            float exhibitScale = 0.9f;
-                            exhibitSprite.Size = new Vector2(exhibitTexture.GetWidth() * exhibitScale, exhibitTexture.GetHeight() * exhibitScale);
+                            // === НОВОЕ: Автоматическое масштабирование ===
+                            // Большие спрайты (256x256) масштабируем до размера витрины
+                            float targetSize = 24f; // Целевой размер для маленьких витрин
+                            float scale = 0.9f; // Базовый масштаб
                             
-                            // Базовая позиция: центр витрины со смещением вверх на 22px (как вы настроили)
+                            if (exhibitTexture.GetWidth() > 64 || exhibitTexture.GetHeight() > 64)
+                            {
+                                // Для больших спрайтов вычисляем масштаб автоматически
+                                float scaleX = targetSize / exhibitTexture.GetWidth();
+                                float scaleY = targetSize / exhibitTexture.GetHeight();
+                                scale = Math.Min(scaleX, scaleY) * 0.9f;
+                            }
+                            
+                            exhibitSprite.Size = new Vector2(
+                                exhibitTexture.GetWidth() * scale, 
+                                exhibitTexture.GetHeight() * scale
+                            );
+                            
+                            // Базовая позиция: центр витрины со смещением вверх на 22px
                             float basePosX = sprite.Position.X + (realWidth - exhibitSprite.Size.X) / 2f;
                             float basePosY = sprite.Position.Y + (realHeight - exhibitSprite.Size.Y) / 2f - 22f;
 
-                            // Если витрина большая и в ней 2 предмета, применяем смещения
+                            // Смещения для больших витрин с несколькими экспонатами
                             if (isLargeCase && placed.Items.Count > 1)
                             {
                                 if (i == 0)
                                 {
-                                    // Первый экспонат: выше и левее
                                     basePosX -= 18f; 
                                     basePosY -= 12f; 
                                 }
                                 else if (i == 1)
                                 {
-                                    // Второй экспонат: ниже и правее
                                     basePosX += 18f; 
                                     basePosY += 12f; 
                                 }
                             }
 
                             exhibitSprite.Position = new Vector2(basePosX, basePosY);
-                            
-                            // Z-индекс: чуть выше витрины. +i гарантирует, что второй предмет будет рисоваться поверх первого при пересечении
                             exhibitSprite.ZIndex = sprite.ZIndex + 1 + i; 
-                            exhibitSprite.Modulate = sprite.Modulate; // Наследует затемнение комнаты
+                            exhibitSprite.Modulate = sprite.Modulate;
                             
                             AddChild(exhibitSprite);
+                        }
+                        else
+                        {
+                            GD.PrintErr($"[GlobalRoomView] Иконка экспоната не найдена: {exhibit.ResourceId}");
                         }
                     }
                 }

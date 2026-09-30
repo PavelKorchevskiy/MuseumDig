@@ -6,14 +6,6 @@
 [node name="Museum" type="Node2D" unique_id=15775509]
 script = ExtResource("1_4rxuf")
 
-[node name="Background" type="ColorRect" parent="." unique_id=1966710609]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0.101960786, 0.101960786, 0.14901961, 1)
-
 [node name="Camera2D" type="Camera2D" parent="." unique_id=2142463971]
 position = Vector2(0, 2)
 script = ExtResource("2_malhh")

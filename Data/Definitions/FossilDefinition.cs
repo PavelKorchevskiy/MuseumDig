@@ -16,5 +16,7 @@ public partial class FossilDefinition : ResourceDefinition
 	// Можно ли выставлять в музее отдельно (зубы — да, части скелета — нет)
 	[Export] public bool CanExhibitAlone = false;
 	
-	[Export] public bool IsCollection = false; 
+	[Export] public bool IsCollection = false;
+
+	public int VariantCount { get; set; } = 1;
 }

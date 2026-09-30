@@ -18,8 +18,9 @@ public partial class SaveSystem : Node
         Instance = this;
         
         // === ИНИЦИАЛИЗИРУЕМ СИНГЛТОНЫ ДО ЗАГРУЗКИ ===
-        var _ = ProgressSystem.Instance; // Принудительно создаём экземпляр
-        var __ = SkillSystem.Instance;   // Принудительно создаём экземпляр
+        var _ = ProgressSystem.Instance; 
+        var __ = SkillSystem.Instance;   
+        var ___ = LocationSystem.Instance; 
         
         CallDeferred(nameof(LoadGame));
     }
@@ -59,15 +60,10 @@ public partial class SaveSystem : Node
         var data = new SaveData();
         
         if (Wallet.Instance != null) data.Coins = Wallet.Instance.GetCoins();
-        if (UpgradeSystem.Instance != null)
-        {
-            data.PickaxeLevel = UpgradeSystem.Instance.GetPickaxeLevel();
-            data.ShovelLevel = UpgradeSystem.Instance.GetShovelLevel();
-        }
+       
         if (FossilInventory.Instance != null) data.FossilPieces = FossilInventory.Instance.GetSaveData();
         if (MuseumSystem.Instance != null) data.MuseumData = MuseumSystem.Instance.GetSaveData();
         if (InventorySystem.Instance != null) data.Inventory = InventorySystem.Instance.GetSaveData();
-        if (ToolSystem.Instance != null) data.CurrentTool = ToolSystem.Instance.GetSaveData();
         if (LocationSystem.Instance != null) data.LocationData = LocationSystem.Instance.GetSaveData();
         
         // === НОВОЕ: Сохранение открытых предметов и навыков ===
@@ -77,6 +73,11 @@ public partial class SaveSystem : Node
                     data.ProgressData = ProgressSystem.Instance.GetSaveData();
         data.SkillLevels = SkillSystem.Instance.GetSaveData();
         data.AvailableSkillPoints = SkillSystem.Instance.GetAvailablePoints();
+        }
+
+        if (DiggingManager.Instance != null)
+        {
+            data.DiggingProgressByLocation = DiggingManager.Instance.GetAllSaveData();
         }
 
         if (isAutoSave)
@@ -141,11 +142,9 @@ public partial class SaveSystem : Node
             }
             
             if (Wallet.Instance != null) Wallet.Instance.SetCoins(data.Coins);
-            if (UpgradeSystem.Instance != null) UpgradeSystem.Instance.LoadFromSaveData(data);
             if (FossilInventory.Instance != null) FossilInventory.Instance.LoadFromSaveData(data.FossilPieces);
             if (data.MuseumData != null) MuseumSystem.Instance.LoadFromSaveData(data.MuseumData);
             if (InventorySystem.Instance != null) InventorySystem.Instance.LoadFromSaveData(data.Inventory);
-            if (ToolSystem.Instance != null) ToolSystem.Instance.LoadFromSaveData(data.CurrentTool);
             if (LocationSystem.Instance != null) LocationSystem.Instance.LoadFromSaveData(data.LocationData);
             
            
@@ -168,10 +167,10 @@ public partial class SaveSystem : Node
             
             _lastSessionTimestamp = data.LastSaveTimestamp;
             GD.Print($"Loaded last session timestamp: {_lastSessionTimestamp}");
-            
-            if (_lastSessionTimestamp > 0 && OfflineRewardSystem.Instance != null)
+
+       if (DiggingManager.Instance != null && data.DiggingProgressByLocation != null)
             {
-                OfflineRewardSystem.Instance.CalculateOfflineReward(_lastSessionTimestamp);
+                DiggingManager.Instance.LoadAllSaveData(data.DiggingProgressByLocation);
             }
             
             GD.Print("=== LOAD GAME END ===");

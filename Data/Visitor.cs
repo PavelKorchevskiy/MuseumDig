@@ -416,6 +416,7 @@ public partial class Visitor : Control
     
     private void FinishLooking()
     {
+        TryDropTicket();
         _state = VisitorState.Wandering;
         _currentState = "idle";
         _currentFrame = 0;
@@ -499,6 +500,42 @@ public partial class Visitor : Control
                 _sprite.FlipH = false;
             }
         }
+    }
+
+        private void TryDropTicket()
+    {
+        if (VisitorManager.Instance == null) return;
+        
+        bool shouldDrop = VisitorManager.Instance.CheckAndResetTicketDrop();
+        if (!shouldDrop) return;
+
+        // Вся логика выбора локации теперь в LocationSystem
+        string dropLocationId = LocationSystem.Instance.SelectRandomTicketLocation();
+        
+        if (!string.IsNullOrEmpty(dropLocationId))
+        {
+            SpawnDroppedTicketInWorld(dropLocationId);
+        }
+    }
+
+        private void SpawnDroppedTicketInWorld(string locationId)
+    {
+        var ticket = new DroppedTicket();
+        
+        // 1. СНАЧАЛА добавляем в сцену. Именно здесь сработает _Ready() 
+        // и создадутся экземпляры _sprite и _collision.
+        GetTree().CurrentScene.AddChild(ticket);
+        
+        // 2. ТОЛЬКО ПОТОМ вызываем Setup, когда узел уже полностью инициализирован
+        ticket.Setup($"ticket_{locationId}", Position);
+        
+        GD.Print($"[Visitor] 🎫 Выронил билет: ticket_{locationId}");
+    }
+
+    public void AddToSceneTree()
+    {
+        var currentScene = Engine.GetMainLoop() as SceneTree;
+        currentScene?.CurrentScene?.AddChild(this);
     }
 
         private void DetermineDirection(Vector2I target)

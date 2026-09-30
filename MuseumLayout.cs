@@ -5,7 +5,20 @@ public enum TileType { Empty, Floor, Wall, Door }
 
 public class MuseumLayout
 {
-    public static MuseumLayout Instance { get; private set; }
+    private static MuseumLayout _instance;
+    
+    public static MuseumLayout Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = new MuseumLayout();
+                _instance.Initialize();
+            }
+            return _instance;
+        }
+    }
 
     public const int GridWidth = 44;
     public const int GridHeight = 33;
@@ -16,13 +29,16 @@ public class MuseumLayout
 
     private string _activeRoomId = "main_hall";
 
-    public MuseumLayout()
+    // Приватный конструктор
+    public MuseumLayout() { }
+
+    private void Initialize()
     {
-        Instance = this;
         Grid = new TileType[GridWidth, GridHeight];
         RoomIndex = new int[GridWidth, GridHeight];
         Rooms = new List<Room>();
         BuildLayout();
+        GD.Print("[MuseumLayout] ✅ Инициализирован как ленивый синглтон.");
     }
 
     private void BuildLayout()
