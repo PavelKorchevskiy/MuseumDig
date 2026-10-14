@@ -296,7 +296,7 @@ public static class GameData
             {
                 CreateLoot("triceratops_skull", 0.3f), CreateLoot("triceratops_body", 0.3f), CreateLoot("triceratops_tail", 0.3f),
                 CreateLoot("dilophosaurus_skull", 0.3f), CreateLoot("dilophosaurus_body", 0.3f), CreateLoot("dilophosaurus_tail", 0.3f),
-                CreateLoot("dino_tooth", 0.08f), CreateLoot("gold_nugget", 0.12f), CreateLoot("precious_gem", 0.04f),
+                 CreateLoot("gold_nugget", 0.12f), CreateLoot("precious_gem", 0.04f),
                 // Конкреции
             CreateLoot("common_concretion", 0.15f),
             CreateLoot("rare_concretion", 0.05f),
@@ -333,7 +333,7 @@ public static class GameData
             {
                 CreateLoot("ichthyosaurus_skull", 0.025f), CreateLoot("ichthyosaurus_body", 0.025f), CreateLoot("ichthyosaurus_tail", 0.025f),
                 CreateLoot("plesiosaurus_skull", 0.02f), CreateLoot("plesiosaurus_body", 0.02f), CreateLoot("plesiosaurus_tail", 0.02f),
-                CreateLoot("ammonite", 0.08f), CreateLoot("gold_nugget", 0.12f), CreateLoot("precious_gem", 0.05f),
+                CreateLoot("gold_nugget", 0.12f), CreateLoot("precious_gem", 0.05f),
                 // Конкреции
             CreateLoot("common_concretion", 0.15f),
             CreateLoot("rare_concretion", 0.05f),
@@ -383,7 +383,7 @@ public static class GameData
     RequiredPlayerLevel = 8, 
     GridWidth = 5, 
     GridHeight = 5, 
-    BaseTileHp = 12, 
+    BaseTileHp = 4, 
     TileHpGrowthPerRow = 1.50f,
     LootTable = new List<LootEntry>()
     {
@@ -397,7 +397,7 @@ public static class GameData
         CreateLoot("allosaurus_body", 0.025f), 
         CreateLoot("allosaurus_tail", 0.025f),
         
-        CreateLoot("ammonite", 0.12f), 
+        
         
         // Premium resources
         CreateLoot("gold_nugget", 0.15f), 

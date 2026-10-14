@@ -7,34 +7,61 @@ public partial class GlobalRoomViewUI : Node2D
     private float GridOffsetX => MuseumConstants.GridOffsetX;
     private float GridOffsetY => MuseumConstants.GridOffsetY;
 
+       // Путь к спрайту арки (128x128)
+    private const string EntranceArchPath = "res://assets/museum/doors/main.png";
+    private const string MainHallRoomId = "main_hall";
+    
+        // === Низкая стена для передних граней (юг и восток) ===
+    private const string LowWallPath = "res://assets/museum/wall/cuted.png";
+    private const float LowWallAdjustY = 42f;  // Базовое смещение как у высоких стен
+    
+    // Ручная настройка положения (X: влево/вправо, Y: вверх/вниз)
+    private static readonly Vector2 LowWallOffset = new Vector2(0f, 0f);
+    
+    // Настройка отражения (поменяйте, если грань отрисована зеркально)
+    private const bool FlipSouthLowWall = false;  // грань y = oy + Height
+    private const bool FlipEastLowWall = true;    // грань x = ox + Width
+
+    private static readonly Vector2 EntranceOffset = new Vector2(0f, -32f);
+
+    private bool _isInitialized = false;
+
     private Dictionary<string, Node2D> _roomContainers = new Dictionary<string, Node2D>();
+
 
     public override void _Ready()
     {
+         if (_isInitialized)
+        {
+            GD.Print("[GlobalRoomView] ⚠️ _Ready() вызван повторно, пропускаем инициализацию");
+            return;
+        }
+        
+        _isInitialized = true;
         // MuseumLayout теперь синглтон, он уже создан в MuseumSystem или создастся при первом обращении
         RenderAllRooms();
     }
 
     public void RenderAllRooms()
     {
-        // 1. Удаляем старые спрайты мебели и экспонатов (прямые дети GlobalRoomViewUI)
-        var toRemove = new List<Node>();
-        foreach (var child in GetChildren())
-        {
-            // Пропускаем контейнеры комнат, чтобы не удалить их
-            if (child is Node2D container && _roomContainers.ContainsValue(container))
-                continue;
+        // // 1. Удаляем старые спрайты мебели и экспонатов (прямые дети GlobalRoomViewUI)
+        // var toRemove = new List<Node>();
+        // foreach (var child in GetChildren())
+        // {
+        //     // Пропускаем контейнеры комнат, чтобы не удалить их
+        //     if (child is Node2D container && _roomContainers.ContainsValue(container))
+        //         continue;
             
-            // Помечаем на удаление все TextureRect (это старая мебель и экспонаты)
-            if (child is TextureRect)
-            {
-                toRemove.Add(child);
-            }
-        }
-        foreach (var node in toRemove)
-        {
-            node.QueueFree();
-        }
+        //     // Помечаем на удаление все TextureRect (это старая мебель и экспонаты)
+        //     if (child is TextureRect)
+        //     {
+        //         toRemove.Add(child);
+        //     }
+        // }
+        // foreach (var node in toRemove)
+        // {
+        //     node.QueueFree();
+        // }
 
         // 2. Очищаем контейнеры комнат
         foreach (var container in _roomContainers.Values)
@@ -50,10 +77,6 @@ public partial class GlobalRoomViewUI : Node2D
             AddChild(container);
             _roomContainers[room.Id] = container;
 
-            // Применяем затемнение вместо прозрачности
-            float darkness = GetRoomDarkness(room.Id);
-            container.Modulate = new Color(darkness, darkness, darkness, 1.0f);
-
             // RenderRoom сам отрисует пол, стены и двери внутри этого контейнера
             RenderRoom(room, container);
         }
@@ -66,9 +89,24 @@ public partial class GlobalRoomViewUI : Node2D
     {
         RenderFloor(room, container);
         RenderWalls(room, container);
-        
-        // Вызываем метод с 2 аргументами (комната и её контейнер)
+        RenderLowWalls(room, container);
         RenderDoorFloors(room, container); 
+    }
+
+        /// <summary>
+    /// ЛЁГКОЕ обновление: только меняет затемнение существующих контейнеров.
+    /// НЕ пересоздаёт спрайты. Вызывается при смене активной комнаты.
+    /// </summary>
+    public void UpdateRoomDarknessOnly()
+    {
+        foreach (var room in MuseumLayout.Instance.Rooms)
+        {
+            if (_roomContainers.TryGetValue(room.Id, out var container))
+            {
+                float darkness = GetRoomDarkness(room.Id);
+                container.Modulate = new Color(darkness, darkness, darkness, 1.0f);
+            }
+        }
     }
 
 
@@ -168,55 +206,138 @@ public partial class GlobalRoomViewUI : Node2D
         }
     }
 
-     private void RenderDoorFloors(Room room, Node2D container)
+       private void RenderDoorFloors(Room room, Node2D container)
     {
         int ox = room.GlobalOffset.X;
         int oy = room.GlobalOffset.Y;
 
-        // Проверяем верхнюю и нижнюю границы комнаты
-        for (int x = ox - 1; x <= ox + room.Width; x++)
+        // === НОВОЕ: Для main_hall рисуем арку один раз ===
+        if (room.Id == MainHallRoomId)
         {
-            CheckAndDrawDoorFloor(x, oy - 1, container);          // Верх
-            CheckAndDrawDoorFloor(x, oy + room.Height, container); // Низ
+            DrawMainEntrance(room, container);
         }
 
-        // Проверяем левую и правую границы комнаты
+        // Обычная отрисовка полов для всех дверей
+        for (int x = ox - 1; x <= ox + room.Width; x++)
+        {
+            CheckAndDrawDoorFloor(x, oy - 1, container);
+            CheckAndDrawDoorFloor(x, oy + room.Height, container);
+        }
         for (int y = oy - 1; y <= oy + room.Height; y++)
         {
-            CheckAndDrawDoorFloor(ox - 1, y, container);          // Лево
-            CheckAndDrawDoorFloor(ox + room.Width, y, container); // Право
+            CheckAndDrawDoorFloor(ox - 1, y, container);
+            CheckAndDrawDoorFloor(ox + room.Width, y, container);
         }
     }
 
- private void CheckAndDrawDoorFloor(int x, int y, Node2D container)
+     private void CheckAndDrawDoorFloor(int x, int y, Node2D container)
     {
-        // Проверяем, что координаты в пределах глобальной сетки
-        if (x >= 0 && x < MuseumLayout.GridWidth && y >= 0 && y < MuseumLayout.GridHeight)
-        {
-            // Если в этой клетке находится проход (дверь)
-            if (MuseumLayout.Instance.Grid[x, y] == TileType.Door)
-            {
-                var isoPos = IsoUtils.GridToIso(x, y);
-                string texturePath = ((x + y) % 2 == 0)
-                    ? "res://assets/museum/floor/1.png"
-                    : "res://assets/museum/floor/2.png";
+        if (x < 0 || x >= MuseumLayout.GridWidth || y < 0 || y >= MuseumLayout.GridHeight)
+            return;
+            
+        if (MuseumLayout.Instance.Grid[x, y] != TileType.Door)
+            return;
 
-                if (ResourceLoader.Exists(texturePath))
-                {
-                    var floorTexture = GD.Load<Texture2D>(texturePath);
-                    var tileRect = new TextureRect();
-                    tileRect.Position = new Vector2(GridOffsetX + isoPos.X, GridOffsetY + isoPos.Y);
-                    tileRect.Size = new Vector2(IsoUtils.TileWidth, IsoUtils.TileHeight);
-                    tileRect.Texture = floorTexture;
-                    tileRect.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
-                    tileRect.MouseFilter = Control.MouseFilterEnum.Ignore;
-                    tileRect.ZIndex = IsoUtils.GetZOrder(x, y);
-                    
-                    // ВАЖНО: Добавляем тайл в container комнаты, чтобы он наследовал затемнение (Modulate)!
-                    container.AddChild(tileRect);
-                }
-            }
+        // Обычный пол для всех дверей (арка рисуется отдельно)
+        var isoPos = IsoUtils.GridToIso(x, y);
+        string texturePath = ((x + y) % 2 == 0)
+            ? "res://assets/museum/floor/1.png"
+            : "res://assets/museum/floor/2.png";
+
+        if (ResourceLoader.Exists(texturePath))
+        {
+            var floorTexture = GD.Load<Texture2D>(texturePath);
+            var tileRect = new TextureRect();
+            tileRect.Position = new Vector2(GridOffsetX + isoPos.X, GridOffsetY + isoPos.Y);
+            tileRect.Size = new Vector2(IsoUtils.TileWidth, IsoUtils.TileHeight);
+            tileRect.Texture = floorTexture;
+            tileRect.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
+            tileRect.MouseFilter = Control.MouseFilterEnum.Ignore;
+            tileRect.ZIndex = IsoUtils.GetZOrder(x, y);
+            
+            container.AddChild(tileRect);
         }
+    }
+        /// <summary>
+    /// Отрисовывает арку главного входа (один спрайт 128x128).
+    /// </summary>
+    private void DrawMainEntrance(Room room, Node2D container)
+    {
+        if (!ResourceLoader.Exists(EntranceArchPath))
+        {
+            GD.PrintErr($"[GlobalRoomView] Арка не найдена: {EntranceArchPath}");
+            return;
+        }
+
+        int ox = room.GlobalOffset.X;
+        int oy = room.GlobalOffset.Y;
+
+        // Находим все двери main_hall
+        var doorTiles = new List<Vector2I>();
+        
+        for (int x = ox - 1; x <= ox + room.Width; x++)
+        {
+            if (IsDoorAt(x, oy - 1)) doorTiles.Add(new Vector2I(x, oy - 1));
+            if (IsDoorAt(x, oy + room.Height)) doorTiles.Add(new Vector2I(x, oy + room.Height));
+        }
+        for (int y = oy - 1; y <= oy + room.Height; y++)
+        {
+            if (IsDoorAt(ox - 1, y)) doorTiles.Add(new Vector2I(ox - 1, y));
+            if (IsDoorAt(ox + room.Width, y)) doorTiles.Add(new Vector2I(ox + room.Width, y));
+        }
+
+        if (doorTiles.Count == 0)
+        {
+            GD.PrintErr("[GlobalRoomView] У main_hall нет дверей!");
+            return;
+        }
+
+        // Находим центр всех дверей (средняя точка)
+        float sumX = 0, sumY = 0;
+        foreach (var tile in doorTiles)
+        {
+            sumX += tile.X;
+            sumY += tile.Y;
+        }
+        float centerX = sumX / doorTiles.Count;
+        float centerY = sumY / doorTiles.Count;
+
+        // Конвертируем в изометрические координаты
+        var isoPos = IsoUtils.GridToIso((int)centerX, (int)centerY);
+
+        // Загружаем текстуру арки
+        var archTexture = GD.Load<Texture2D>(EntranceArchPath);
+        
+        // Создаём спрайт арки
+        float archSize = 256f;
+        var archRect = new TextureRect();
+        archRect.Texture = archTexture;
+        archRect.Size = new Vector2(archSize, archSize); // Фиксированный размер
+        archRect.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
+        archRect.MouseFilter = Control.MouseFilterEnum.Ignore;
+        
+        // Позиционируем: центр арки в центре входа + смещение
+        archRect.Position = new Vector2(
+            GridOffsetX + isoPos.X + EntranceOffset.X - 280,
+            GridOffsetY + isoPos.Y + EntranceOffset.Y - 45 
+        );
+        
+        // Z-индекс: поверх пола, но под стенами
+        archRect.ZIndex = IsoUtils.GetZOrder((int)centerX, (int)centerY) + 10;
+        
+        container.AddChild(archRect);
+        
+        GD.Print($"[GlobalRoomView] Арка входа размещена в центре ({centerX:F1},{centerY:F1}) с offset={EntranceOffset}");
+    }
+
+    /// <summary>
+    /// Проверяет, является ли клетка дверью (проходом).
+    /// </summary>
+    private bool IsDoorAt(int x, int y)
+    {
+        if (x < 0 || x >= MuseumLayout.GridWidth || y < 0 || y >= MuseumLayout.GridHeight)
+            return false;
+        return MuseumLayout.Instance.Grid[x, y] == TileType.Door;
     }
 
         /// <summary>
@@ -337,19 +458,24 @@ public partial class GlobalRoomViewUI : Node2D
         }
     }
 
-    private void RenderAllFurniture()
+       private void RenderAllFurniture()
     {
         foreach (var room in MuseumLayout.Instance.Rooms)
         {
             if (!room.IsUnlocked) continue;
+            
+            // Получаем контейнер этой комнаты
+            if (!_roomContainers.TryGetValue(room.Id, out var container)) continue;
+            
             foreach (var placed in room.PlacedFurnitureList)
             {
-                RenderFurnitureItem(room, placed);
+                // === ИЗМЕНЕНО: передаём container ===
+                RenderFurnitureItem(room, placed, container);
             }
         }
     }
 
-       private void RenderFurnitureItem(Room room, PlacedFurniture placed)
+    private void RenderFurnitureItem(Room room, PlacedFurniture placed, Node2D container)
     {
         
         int globalX = room.GlobalOffset.X + placed.Position.X;
@@ -422,8 +548,7 @@ public partial class GlobalRoomViewUI : Node2D
         int zAnchorY = globalY + placed.Size.Y / 2;
         sprite.ZIndex = IsoUtils.GetZOrder(zAnchorX, zAnchorY) + (placed.Size.X + placed.Size.Y) / 2;
         
-        float darkness = GetRoomDarkness(room.Id);
-        sprite.Modulate = new Color(darkness, darkness, darkness, 1.0f);
+    
         var museum = GetTree().CurrentScene as Museum;
 
         // Делаем витрину кликабельной
@@ -539,7 +664,7 @@ public partial class GlobalRoomViewUI : Node2D
                             exhibitSprite.ZIndex = sprite.ZIndex + 1 + i; 
                             exhibitSprite.Modulate = sprite.Modulate;
                             
-                            AddChild(exhibitSprite);
+                            container.AddChild(exhibitSprite);
                         }
                         else
                         {
@@ -574,8 +699,8 @@ public partial class GlobalRoomViewUI : Node2D
                 }
             };
         }
-
-        AddChild(sprite);
+GD.Print($"[RenderFurnitureItem] Добавляем {placed.FurnitureTypeId} в комнату {room.Id}, container={container?.Name ?? "NULL"}");
+        container.AddChild(sprite);
     }
 
     private string GetFurnitureTexturePath(string typeId)
@@ -583,5 +708,97 @@ public partial class GlobalRoomViewUI : Node2D
         if (typeId == "display_case_1x1") return "res://assets/museum/furniture/display_case_small.png";
         if (typeId == "display_case_2x2") return "res://assets/museum/furniture/display_case_large.png";
         return $"res://assets/museum/furniture/{typeId}.png";
+    }
+
+     /// <summary>
+    /// Рисует низкие стены вдоль южной и восточной граней комнаты —
+    /// там, где пол заканчивается и нет стен.
+    /// </summary>
+    private void RenderLowWalls(Room room, Node2D container)
+    {
+        if (!ResourceLoader.Exists(LowWallPath))
+        {
+            GD.PrintErr($"[GlobalRoomView] Низкая стена не найдена: {LowWallPath}");
+            return;
+        }
+
+        var lowWallTexture = GD.Load<Texture2D>(LowWallPath);
+        float wallWidth = lowWallTexture.GetWidth();
+        float wallHeight = lowWallTexture.GetHeight();
+
+        int ox = room.GlobalOffset.X;
+        int oy = room.GlobalOffset.Y;
+
+        // === ЮЖНАЯ грань (y = oy + Height) ===
+        int southY = oy + room.Height;
+        if (southY >= 0 && southY < MuseumLayout.GridHeight)
+        {
+            for (int x = ox - 1; x <= ox + room.Width; x++)
+            {
+                if (x < 0 || x >= MuseumLayout.GridWidth) continue;
+                
+                // Не рисуем в проходах (дверях)
+                if (MuseumLayout.Instance.Grid[x, southY] == TileType.Door) continue;
+                
+                // Не рисуем, если соседняя открытая комната рисует здесь высокую стену
+                if (IsTallWallDrawnByNeighbor(x, southY)) continue;
+
+                AddLowWallTile(x, southY, FlipSouthLowWall, lowWallTexture, wallWidth, wallHeight, container);
+            }
+        }
+
+        // === ВОСТОЧНАЯ грань (x = ox + Width) ===
+        int eastX = ox + room.Width;
+        if (eastX >= 0 && eastX < MuseumLayout.GridWidth)
+        {
+            for (int y = oy - 1; y <= oy + room.Height; y++)
+            {
+                if (y < 0 || y >= MuseumLayout.GridHeight) continue;
+                
+                if (MuseumLayout.Instance.Grid[eastX, y] == TileType.Door) continue;
+                if (IsTallWallDrawnByNeighbor(eastX, y)) continue;
+
+                AddLowWallTile(eastX, y, FlipEastLowWall, lowWallTexture, wallWidth, wallHeight, container);
+            }
+        }
+    }
+
+    private void AddLowWallTile(int x, int y, bool flipH, Texture2D texture, float w, float h, Node2D container)
+    {
+        var isoPos = IsoUtils.GridToIso(x, y);
+        var wallRect = new TextureRect();
+        wallRect.Position = new Vector2(
+            GridOffsetX + isoPos.X + LowWallOffset.X,
+            GridOffsetY + isoPos.Y - h + LowWallAdjustY + LowWallOffset.Y
+        );
+        wallRect.Size = new Vector2(w, h);
+        wallRect.Texture = texture;
+        wallRect.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
+        wallRect.MouseFilter = Control.MouseFilterEnum.Ignore;
+        wallRect.FlipH = flipH;
+        wallRect.ZIndex = IsoUtils.GetZOrder(x, y) + 5;
+        container.AddChild(wallRect);
+    }
+
+    /// <summary>
+    /// Проверяет, рисует ли соседняя ОТКРЫТАЯ комнату высокую стену в этой клетке.
+    /// Если да — низкая стена здесь не нужна (иначе они наложатся друг на друга).
+    /// </summary>
+    private bool IsTallWallDrawnByNeighbor(int cx, int cy)
+    {
+        foreach (var other in MuseumLayout.Instance.Rooms)
+        {
+            if (!other.IsUnlocked) continue;
+
+            int oox = other.GlobalOffset.X;
+            int ooy = other.GlobalOffset.Y;
+
+            // Сосед рисует ВЕРХНЮЮ стену вдоль ряда ooy - 1
+            if (cy == ooy - 1 && cx >= oox - 1 && cx <= oox + other.Width) return true;
+
+            // Сосед рисует ЛЕВУЮ стену вдоль колонки oox - 1
+            if (cx == oox - 1 && cy >= ooy - 1 && cy <= ooy + other.Height) return true;
+        }
+        return false;
     }
 }

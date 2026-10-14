@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d2tl88136gk5p"
-path="res://.godot/imported/dirt_intact.png-c47471a0a675ca401afedb79150ffdfb.ctex"
+uid="uid://c0d6gvkudv8aa"
+path="res://.godot/imported/skull.png-97e7d21fc767f365883b93bf71c7f2d5.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/tiles/dirt_intact.png"
-dest_files=["res://.godot/imported/dirt_intact.png-c47471a0a675ca401afedb79150ffdfb.ctex"]
+source_file="res://assets/museum/items/dilophosaurus/dig/skull.png"
+dest_files=["res://.godot/imported/skull.png-97e7d21fc767f365883b93bf71c7f2d5.ctex"]
 
 [params]
 

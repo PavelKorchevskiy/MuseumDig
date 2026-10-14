@@ -1,4 +1,7 @@
 keys,en,ru
+ui.digging.digger,Digger,Копатель
+ui.digging.extractor,Extractor,Извлекатель
+ui.digging.excavator,Excavator,Бульдозер
 ui.inventory.skeletons,Skeletons,Скелеты
 ui.inventory.assembling,Assembling,Сборка
 ui.inventory.findings,Findings,Находки

@@ -61,11 +61,9 @@ public partial class Museum : Node2D
         {
             _initialDisplayUpdated = true;
             UpdateDisplay();
-            
+            RefreshRoomView();
         }
-        RefreshRoomView();
-                VisitorManager.Instance?.ProcessDelta((float)delta);
-
+            VisitorManager.Instance?.ProcessDelta((float)delta);
     }
 
     private void CreateButtonPanel(CanvasLayer uiLayer)
@@ -144,7 +142,7 @@ public partial class Museum : Node2D
         if (_globalRoomView != null)
         {
             MuseumLayout.Instance.ActiveRoomId = roomId;
-            _globalRoomView.UpdateRoomVisibility();
+             _globalRoomView.UpdateRoomVisibility();
         }
     }
 

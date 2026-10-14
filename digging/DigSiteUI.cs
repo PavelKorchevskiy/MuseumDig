@@ -4,10 +4,12 @@ public partial class DigSiteUI : CanvasLayer
 {
     private Label _coinsLabel;
     private Label _locationLabel;
-
+    private HBoxContainer _mainHBox; // === НОВОЕ: Ссылка на основной контейнер ===
+    private Control _spacer; // === НОВОЕ: Ссылка на распорку ===
+private int _lastCoins = -1;
     public override void _Ready()
     {
-        this.Layer = 50; // Поверх игры, но под инвентарем
+        this.Layer = 50;
         CreateTopBar();
     }
 
@@ -15,13 +17,19 @@ public partial class DigSiteUI : CanvasLayer
     {
         if (Wallet.Instance != null && _coinsLabel != null)
         {
-            _coinsLabel.Text = $"{Wallet.Instance.GetCoins()} 🪙";
+            int currentCoins = Wallet.Instance.GetCoins();
+            
+            // Обновляем текст ТОЛЬКО при изменении
+            if (currentCoins != _lastCoins)
+            {
+                _lastCoins = currentCoins;
+                _coinsLabel.Text = $"{currentCoins} 🪙";
+            }
         }
     }
 
-        private void CreateTopBar()
+    private void CreateTopBar()
     {
-        // Верхняя панель
         var topPanel = new PanelContainer();
         topPanel.AnchorLeft = 0;
         topPanel.AnchorRight = 1;
@@ -37,26 +45,31 @@ public partial class DigSiteUI : CanvasLayer
         topPanel.AddThemeStyleboxOverride("panel", style);
         AddChild(topPanel);
 
-        var hbox = new HBoxContainer();
-        topPanel.AddChild(hbox);
+        _mainHBox = new HBoxContainer(); // === Сохраняем ссылку ===
+        topPanel.AddChild(_mainHBox);
 
-        // === Левая часть: Название локации ===
+        // Левая часть: Название локации
         var location = LocationSystem.Instance.GetActiveLocation();
         _locationLabel = new Label();
         _locationLabel.Text = location != null ? $"📍 {location.DisplayName}" : "Раскопки";
         _locationLabel.AddThemeFontSizeOverride("font_size", 18);
         _locationLabel.AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.5f));
-        hbox.AddChild(_locationLabel);
+        _mainHBox.AddChild(_locationLabel);
 
-        // === РАСПОРКА: занимает всё свободное пространство между левой и правой частями ===
-        var spacer = new Control();
-        spacer.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        hbox.AddChild(spacer);
+        // === НОВОЕ: Маленькая распорка после локации ===
+        var spacerAfterLocation = new Control();
+        spacerAfterLocation.CustomMinimumSize = new Vector2(20, 0);
+        _mainHBox.AddChild(spacerAfterLocation);
 
-        // === Правая часть: Монеты и кнопка возврата ===
+        // Основная распорка (сохраняем ссылку)
+        _spacer = new Control();
+        _spacer.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        _mainHBox.AddChild(_spacer);
+
+        // Правая часть: Монеты и кнопка
         var rightBox = new HBoxContainer();
         rightBox.AddThemeConstantOverride("separation", 30);
-        hbox.AddChild(rightBox);
+        _mainHBox.AddChild(rightBox);
 
         _coinsLabel = new Label();
         _coinsLabel.Text = "0 🪙";
@@ -69,6 +82,21 @@ public partial class DigSiteUI : CanvasLayer
         returnButton.CustomMinimumSize = new Vector2(180, 40);
         returnButton.Pressed += OnReturnPressed;
         rightBox.AddChild(returnButton);
+    }
+
+    /// <summary>
+    /// Вставляет панель находок справа от названия локации.
+    /// </summary>
+    public void AddLootSummaryBar(LootSummaryBar lootBar)
+    {
+        if (_mainHBox == null || _spacer == null) return;
+
+        // Вставляем lootBar перед spacer (то есть справа от локации)
+        int spacerIndex = _spacer.GetIndex();
+        _mainHBox.AddChild(lootBar);
+        _mainHBox.MoveChild(lootBar, spacerIndex); // Перемещаем перед spacer
+        
+        GD.Print("[DigSiteUI] LootSummaryBar вставлен справа от локации");
     }
 
     private void OnReturnPressed()

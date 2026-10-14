@@ -36,7 +36,7 @@ public partial class DigInputController : Node2D
         }
     }
 
-    public override void _UnhandledInput(InputEvent @event)
+     public override void _UnhandledInput(InputEvent @event)
     {
         if (@event is InputEventMouseButton mouseEvent 
             && mouseEvent.Pressed 
@@ -44,18 +44,22 @@ public partial class DigInputController : Node2D
         {
             var mousePos = GetGlobalMousePosition();
             Tile clickedTile = _digSite?.GetTileAtPosition(mousePos);
+            GD.Print($"[DigInput] Клик в позиции {mousePos}, тайл: {(clickedTile != null ? "найден" : "НЕ НАЙДЕН")}");
 
             if (clickedTile != null)
             {
-                if (clickedTile.IsFindingExtractable 
-                    && (clickedTile.Stage == TileStage.HasFinding_Dug1 || clickedTile.Stage == TileStage.HasFinding_Dug2))
+                if (clickedTile.HasCollectableFinding)
                 {
                     clickedTile.CollectFinding();
+                    
+                    // === НОВОЕ: Обновляем панель находок ===
+                    var digSite = GetParent() as DigSite;
+                    digSite?.RefreshLootSummary();
+                    
                     GetViewport().SetInputAsHandled();
                     return;
                 }
 
-                // Если выбран инструмент, применяем его
                 if (DiggingUI.Instance?.SelectedTool != null)
                 {
                     clickedTile.ApplySelectedTool();

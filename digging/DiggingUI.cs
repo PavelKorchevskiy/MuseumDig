@@ -10,6 +10,11 @@ public partial class DiggingUI : Control
     private Button _diggerButton;
     private Button _extractorButton;
     private Button _excavatorButton;
+    
+    // === НОВОЕ: Ссылки на Labels внутри кнопок для обновления текста ===
+    private Label _diggerLabel;
+    private Label _extractorLabel;
+    private Label _excavatorLabel;
 
     private StyleBoxFlat _normalStyle;
     private StyleBoxFlat _selectedStyle;
@@ -19,10 +24,8 @@ public partial class DiggingUI : Control
     {
         Instance = this;
         
-        // Делаем панель некликабельной (чтобы не блокировать плитки)
         MouseFilter = MouseFilterEnum.Ignore;
         
-        // Создаём стили для кнопок
         _normalStyle = new StyleBoxFlat();
         _normalStyle.BgColor = new Color(0.2f, 0.2f, 0.25f);
         _normalStyle.CornerRadiusTopLeft = 8;
@@ -48,7 +51,6 @@ public partial class DiggingUI : Control
 
     private void CreatePanel()
     {
-        // Панель инструментов внизу экрана
         var panelContainer = new PanelContainer();
         panelContainer.AnchorLeft = 0;
         panelContainer.AnchorRight = 1;
@@ -70,60 +72,152 @@ public partial class DiggingUI : Control
         panelContainer.AddChild(hbox);
 
         // === Кнопка Копателя ===
-        _diggerButton = new Button();
-        _diggerButton.CustomMinimumSize = new Vector2(140, 60);
-        _diggerButton.AddThemeStyleboxOverride("normal", _normalStyle);
-        _diggerButton.AddThemeStyleboxOverride("hover", _normalStyle);
-        _diggerButton.AddThemeStyleboxOverride("pressed", _normalStyle);
+         // === Кнопка Копателя ===
+        CreateToolButton(
+            iconPath: "res://assets/dig/buttons/shovel.png",
+            textKey: "ui.digging.digger",
+            price: null,
+            out _diggerButton,
+            out _diggerLabel
+        );
         _diggerButton.Pressed += () => SelectTool(WorkerType.Digger);
         hbox.AddChild(_diggerButton);
 
         // === Кнопка Извлекателя ===
-        _extractorButton = new Button();
-        _extractorButton.CustomMinimumSize = new Vector2(140, 60);
-        _extractorButton.AddThemeStyleboxOverride("normal", _normalStyle);
-        _extractorButton.AddThemeStyleboxOverride("hover", _normalStyle);
-        _extractorButton.AddThemeStyleboxOverride("pressed", _normalStyle);
+        CreateToolButton(
+            iconPath: "res://assets/dig/buttons/pickaxe.png",
+            textKey: "ui.digging.extractor",
+            price: null,
+            out _extractorButton,
+            out _extractorLabel
+        );
         _extractorButton.Pressed += () => SelectTool(WorkerType.Extractor);
         hbox.AddChild(_extractorButton);
 
         // === Кнопка Экскаватора ===
-        _excavatorButton = new Button();
-        _excavatorButton.CustomMinimumSize = new Vector2(140, 60);
-        _excavatorButton.AddThemeStyleboxOverride("normal", _normalStyle);
-        _excavatorButton.AddThemeStyleboxOverride("hover", _normalStyle);
-        _excavatorButton.AddThemeStyleboxOverride("pressed", _normalStyle);
+        CreateToolButton(
+            iconPath: "res://assets/dig/buttons/bulldozer.png",
+            textKey: "ui.digging.excavator",
+            price: 100,
+            out _excavatorButton,
+            out _excavatorLabel
+        );
         _excavatorButton.Pressed += () => SelectTool(WorkerType.Excavator);
         hbox.AddChild(_excavatorButton);
 
         UpdateButtons();
     }
 
+    /// <summary>
+    /// Создаёт кнопку инструмента с центрированным изображением и текстом.
+    /// </summary>
+    private void CreateToolButton(
+        string iconPath, 
+        string textKey,
+        int? price,
+        out Button button,
+        out Label label)
+    {
+        button = new Button();
+        button.CustomMinimumSize = new Vector2(140, 70);
+        
+        // === ВАЖНО: Контейнер растягивается на ВСЮ кнопку ===
+        var vbox = new VBoxContainer();
+        vbox.Alignment = BoxContainer.AlignmentMode.Center;  // Контент по центру вертикально
+        vbox.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill; // Заполняет всю ширину
+        vbox.SizeFlagsVertical = Control.SizeFlags.ExpandFill;   // Заполняет всю высоту
+        vbox.AddThemeConstantOverride("separation", 2);
+        vbox.MouseFilter = MouseFilterEnum.Ignore; // Пропускаем клики к кнопке
+        
+        // === Иконка ===
+        var icon = new TextureRect();
+        icon.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+        icon.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize; // Фиксированный размер
+        icon.CustomMinimumSize = new Vector2(40, 32);
+        icon.Size = new Vector2(40, 32);
+        icon.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter; // Центрируем по горизонтали
+        icon.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        icon.MouseFilter = MouseFilterEnum.Ignore;
+        
+        if (ResourceLoader.Exists(iconPath))
+        {
+            icon.Texture = GD.Load<Texture2D>(iconPath);
+        }
+        vbox.AddChild(icon);
+        
+        // === Текст ===
+        label = new Label();
+        label.HorizontalAlignment = HorizontalAlignment.Center;
+        label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill; // Заполняет ширину
+        label.AddThemeFontSizeOverride("font_size", 12);
+        label.MouseFilter = MouseFilterEnum.Ignore;
+        
+        string baseText = LocalizationManager.Tr(textKey);
+        label.Text = price.HasValue ? $"{baseText}\n🪙{price.Value}" : baseText;
+        
+        vbox.AddChild(label);
+        
+        button.AddChild(vbox);
+        
+        // === ВАЖНО: очищаем встроенный текст и убираем content margin ===
+        button.Text = "";
+        
+        // Делаем все стили с одинаковыми симметричными отступами
+        UpdateButtonMargins(_normalStyle);
+        UpdateButtonMargins(_selectedStyle);
+        UpdateButtonMargins(_disabledStyle);
+        
+        button.AddThemeStyleboxOverride("normal", _normalStyle);
+        button.AddThemeStyleboxOverride("hover", _normalStyle);
+        button.AddThemeStyleboxOverride("pressed", _normalStyle);
+        button.AddThemeStyleboxOverride("focus", _normalStyle);
+    }
+
+    /// <summary>
+    /// Устанавливает симметричные отступы для стиля кнопки,
+    /// чтобы содержимое было идеально по центру.
+    /// </summary>
+    private void UpdateButtonMargins(StyleBoxFlat style)
+    {
+        style.ContentMarginLeft = 8;
+        style.ContentMarginRight = 8;
+        style.ContentMarginTop = 6;
+        style.ContentMarginBottom = 6;
+    }
+
     public override void _Process(double delta)
     {
-        // Обновляем состояние кнопок (лимиты, разблокировки)
         UpdateButtons();
     }
 
     private void UpdateButtons()
     {
-        if (_diggerButton == null) return;
+        if (_diggerButton == null || _extractorButton == null || _excavatorButton == null) return;
 
+        // === Копатель ===
         int activeDiggers = DiggingManager.Instance.GetActiveDiggersCount();
         int maxDiggers = DiggingManager.Instance.GetMaxDiggers();
-        _diggerButton.Text = $"⛏️ Копатель ({activeDiggers}/{maxDiggers})";
+        _diggerLabel.Text = $"{LocalizationManager.Tr("ui.digging.digger")}\n({activeDiggers}/{maxDiggers})";
         _diggerButton.Disabled = (activeDiggers >= maxDiggers) && SelectedTool != WorkerType.Digger;
 
+        // === Извлекатель ===
         int activeExtractors = DiggingManager.Instance.GetActiveExtractorsCount();
         int maxExtractors = DiggingManager.Instance.GetMaxExtractors();
-        _extractorButton.Text = $"🔨 Извлекатель ({activeExtractors}/{maxExtractors})";
+        _extractorLabel.Text = $"{LocalizationManager.Tr("ui.digging.extractor")}\n({activeExtractors}/{maxExtractors})";
         _extractorButton.Disabled = (activeExtractors >= maxExtractors) && SelectedTool != WorkerType.Extractor;
 
+        // === Экскаватор ===
         bool excavatorUnlocked = DiggingManager.Instance.IsExcavatorUnlocked();
-        _excavatorButton.Text = excavatorUnlocked ? "🚜 Экскаватор (100 🪙)" : "🚜 🔒 Экскаватор";
+        if (excavatorUnlocked)
+        {
+            _excavatorLabel.Text = $"{LocalizationManager.Tr("ui.digging.excavator")}\n🪙100";
+        }
+        else
+        {
+            _excavatorLabel.Text = $"🔒 {LocalizationManager.Tr("ui.digging.excavator")}";
+        }
         _excavatorButton.Disabled = !excavatorUnlocked;
 
-        // Обновляем стили (выбран/не выбран)
         UpdateButtonStyle(_diggerButton, SelectedTool == WorkerType.Digger);
         UpdateButtonStyle(_extractorButton, SelectedTool == WorkerType.Extractor);
         UpdateButtonStyle(_excavatorButton, SelectedTool == WorkerType.Excavator);

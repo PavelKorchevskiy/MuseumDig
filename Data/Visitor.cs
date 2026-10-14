@@ -135,9 +135,32 @@ public partial class Visitor : Control
     {
         if (_layout == null || _sprite == null) return;
         
-        float alpha = _layout.GetRoomAlpha(_currentRoomId);
-        _sprite.Modulate = new Color(1, 1, 1, alpha);
+        // Получаем коэффициент затемнения (0.35 = темный, 1.0 = яркий)
+        float darkness = GetRoomDarkness(_currentRoomId);
+        
+        // Применяем затемнение к RGB, альфа всегда 1.0 (непрозрачный)
+        _sprite.Modulate = new Color(darkness, darkness, darkness, 1.0f);
     }
+
+     /// <summary>
+    /// Возвращает коэффициент затемнения для комнаты (аналог GetRoomDarkness в GlobalRoomViewUI)
+    /// </summary>
+    private float GetRoomDarkness(string roomId)
+    {
+        if (string.IsNullOrEmpty(roomId)) return 1.0f;
+        
+        if (roomId == MuseumLayout.Instance.ActiveRoomId) 
+            return 1.0f; // Активная комната — полная яркость
+        
+        var activeRoom = MuseumLayout.Instance.GetRoom(MuseumLayout.Instance.ActiveRoomId);
+        if (activeRoom != null && activeRoom.AdjacentRoomIds.Contains(roomId))
+        {
+            return 0.6f; // Соседняя комната — 60% яркости
+        }
+
+        return 0.35f; // Далекая комната — 35% яркости
+    }
+    
     private void UpdateCurrentRoom()
     {
         int roomIdx = _layout.RoomIndex[_globalCell.X, _globalCell.Y];

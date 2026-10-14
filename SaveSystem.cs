@@ -43,8 +43,9 @@ public partial class SaveSystem : Node
     {
         if (what == NotificationWMCloseRequest)
         {
-            GD.Print("Window closing, forcing save...");
-            ForceSaveAndQuit();
+            GD.Print("[SaveSystem] ⚠️ Закрытие окна, экстренное сохранение...");
+            SaveGame();
+            GetTree().Quit();
         }
     }
     
@@ -66,7 +67,7 @@ public partial class SaveSystem : Node
         if (InventorySystem.Instance != null) data.Inventory = InventorySystem.Instance.GetSaveData();
         if (LocationSystem.Instance != null) data.LocationData = LocationSystem.Instance.GetSaveData();
         
-        // === НОВОЕ: Сохранение открытых предметов и навыков ===
+        // Сохранение открытых предметов и навыков ===
     
         if (SkillSystem.Instance != null)
         {

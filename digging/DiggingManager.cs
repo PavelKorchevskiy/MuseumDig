@@ -25,10 +25,16 @@ public class DiggingManager
 
     // ===== РАБОТА С АКТИВНЫМИ ПЛИТКАМИ =====
 
+ public int GetActiveTilesCount()
+    {
+        return _activeTiles.Count;
+    }
     public void RegisterTile(Tile tile)
     {
         string key = $"{tile.GridPosition.X},{tile.GridPosition.Y}";
         _activeTiles[key] = tile;
+                GD.Print($"[DiggingManager] ✅ Зарегистрирован тайл {key}. Всего активных: {_activeTiles.Count}");
+
     }
 
     public void UnregisterTile(Tile tile)
@@ -37,9 +43,16 @@ public class DiggingManager
         _activeTiles.Remove(key);
     }
 
-    public void ProcessDelta(float delta)
+        public void ProcessDelta(float delta)
     {
         if (!LocationSystem.Instance.HasActiveDiggingSession()) return;
+
+        // === ДИАГНОСТИКА ===
+        if (_activeTiles.Count == 0)
+        {
+            GD.PrintErr("[DiggingManager] ⚠️ Нет активных тайлов!");
+            return;
+        }
 
         float diggerSpeedMod = 1f + (SkillSystem.Instance.GetModifier("digger_speed") / 100f);
         float extractorSpeedMod = 1f + (SkillSystem.Instance.GetModifier("extractor_speed") / 100f);
@@ -129,6 +142,7 @@ public class DiggingManager
     /// </summary>
     public Dictionary<string, Dictionary<string, DiggingTileData>> GetAllSaveData()
     {
+        SyncCurrentDigSite();
         return _savedProgressByLocation;
     }
 
@@ -148,6 +162,27 @@ public class DiggingManager
 
         GD.Print($"[DiggingManager] 📂 Загружены данные раскопок для {_savedProgressByLocation.Count} локаций");
     }
+
+        /// <summary>
+    /// Синхронизирует данные текущей сцены раскопок с хранилищем.
+    /// Вызывается автоматически перед сохранением.
+    /// </summary>
+    private void SyncCurrentDigSite()
+    {
+        var sceneTree = Engine.GetMainLoop() as SceneTree;
+        var digSite = sceneTree?.CurrentScene as DigSite;
+        
+        if (digSite != null)
+        {
+            var location = LocationSystem.Instance?.GetActiveLocation();
+            if (location != null)
+            {
+                var data = digSite.CollectTileData();
+                SetSaveDataForLocation(location.Id, data);
+            }
+        }
+    }
+
 
     /// <summary>
     /// Сбрасывает прогресс конкретной локации (при использовании нового билета).
