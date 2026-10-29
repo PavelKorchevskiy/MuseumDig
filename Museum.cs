@@ -12,10 +12,14 @@ public partial class Museum : Node2D
     private DisplayCaseUI _displayCaseUI;
     private CollectionExhibitUI _collectionExhibitUI;
     private ProgressUI _progressUI;
+    private MuseumBackground _background;
 
 
     public override void _Ready()
     {
+         _background = new MuseumBackground { Name = "MuseumBackground" };
+        AddChild(_background);
+        _background.Setup(this);
         // 1. Создаем или получаем UI-слой с высоким приоритетом
         var uiLayer = GetNodeOrNull<CanvasLayer>("UI");
         if (uiLayer == null)

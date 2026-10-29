@@ -45,6 +45,8 @@ public partial class Visitor : Control
     private bool _isFlipped = false;
     private string _visitorFolder = "1";
 
+    private Vector2I _spawnPosition;
+
         public override void _Ready()
     {
         CustomMinimumSize = new Vector2(64, 64);
@@ -75,6 +77,7 @@ public partial class Visitor : Control
         
         _path.Clear();
         _pathIndex = 0;
+         _spawnPosition = startGlobalCell;
 
         ApplyFrameToSprite();
         
@@ -161,8 +164,15 @@ public partial class Visitor : Control
         return 0.35f; // Далекая комната — 35% яркости
     }
     
-    private void UpdateCurrentRoom()
+     private void UpdateCurrentRoom()
     {
+        if (_globalCell.X < 0 || _globalCell.X >= MuseumLayout.GridWidth ||
+            _globalCell.Y < 0 || _globalCell.Y >= MuseumLayout.GridHeight)
+        {
+            // Посетитель на дорожке, вне музея — комната не меняется
+            return;
+        }
+
         int roomIdx = _layout.RoomIndex[_globalCell.X, _globalCell.Y];
         if (roomIdx >= 0 && roomIdx < _layout.Rooms.Count)
         {
@@ -265,30 +275,38 @@ public partial class Visitor : Control
         }
     }
     
-    public void FindNewWanderTarget()
+       public void FindNewWanderTarget()
     {
         if (_layout == null) return;
         List<Vector2I> walkableCells = new List<Vector2I>();
         
-        for (int x = 0; x < MuseumLayout.GridWidth; x++)
+        // === НОВОЕ: Расширяем область поиска, чтобы включить дорожку ===
+        int searchMinX = -30;
+        int searchMaxX = MuseumLayout.GridWidth + 30;
+        int searchMinY = -30;
+        int searchMaxY = MuseumLayout.GridHeight + 30;
+
+        for (int x = searchMinX; x < searchMaxX; x++)
         {
-            for (int y = 0; y < MuseumLayout.GridHeight; y++)
+            for (int y = searchMinY; y < searchMaxY; y++)
             {
-                var tile = _layout.Grid[x, y];
-                if (tile == TileType.Floor || tile == TileType.Door)
+                var cell = new Vector2I(x, y);
+                
+                // Проверяем проходимость (пол музея ИЛИ дорожка)
+                if (!IsWalkable(cell)) continue;
+
+                // Пропускаем закрытые комнаты
+                if (x >= 0 && x < MuseumLayout.GridWidth && 
+                    y >= 0 && y < MuseumLayout.GridHeight)
                 {
-                    // === ПРОВЕРКА: Пропускаем закрытые комнаты ===
                     int roomIdx = _layout.RoomIndex[x, y];
                     if (roomIdx >= 0 && roomIdx < _layout.Rooms.Count)
                     {
                         if (!_layout.Rooms[roomIdx].IsUnlocked) continue;
                     }
-
-                    if (x > 0 && x < MuseumLayout.GridWidth - 1 && y > 0 && y < MuseumLayout.GridHeight - 1)
-                    {
-                        walkableCells.Add(new Vector2I(x, y));
-                    }
                 }
+
+                walkableCells.Add(cell);
             }
         }
 
@@ -307,7 +325,7 @@ public partial class Visitor : Control
         _pathIndex = 0;
     }
     
-        private List<Vector2I> FindPath(Vector2I start, Vector2I goal)
+     private List<Vector2I> FindPath(Vector2I start, Vector2I goal)
     {
         var queue = new Queue<Vector2I>();
         var cameFrom = new Dictionary<Vector2I, Vector2I>();
@@ -330,17 +348,12 @@ public partial class Visitor : Control
             {
                 var next = new Vector2I(current.X + dir.X, current.Y + dir.Y);
                 
-                if (next.X < 0 || next.X >= MuseumLayout.GridWidth ||
-                    next.Y < 0 || next.Y >= MuseumLayout.GridHeight)
-                    continue;
-
-                var tile = _layout.Grid[next.X, next.Y];
-                if (tile != TileType.Floor && tile != TileType.Door)
-                    continue;
+                // === НОВОЕ: Проверяем проходимость с учётом дорожки ===
+                if (!IsWalkable(next)) continue;
 
                 if (_layout.IsGlobalCellOccupiedByFurniture(next))
                 {
-                    continue; // Пропускаем эту клетку, она занята мебелью в любой комнате
+                    continue;
                 }
 
                 if (!cameFrom.ContainsKey(next))
@@ -362,6 +375,24 @@ public partial class Visitor : Control
         }
         path.Reverse();
         return path;
+    }
+
+    /// <summary>
+    /// Проверяет, является ли клетка проходимой (пол музея ИЛИ дорожка).
+    /// </summary>
+    private bool IsWalkable(Vector2I cell)
+    {
+        // Сначала проверяем дорожку (она может быть за пределами сетки музея)
+        if (MuseumBackground.IsWayTile(cell.X, cell.Y))
+            return true;
+
+        // Затем проверяем сетку музея
+        if (cell.X < 0 || cell.X >= MuseumLayout.GridWidth ||
+            cell.Y < 0 || cell.Y >= MuseumLayout.GridHeight)
+            return false;
+
+        var tile = _layout.Grid[cell.X, cell.Y];
+        return tile == TileType.Floor || tile == TileType.Door;
     }
 
     // === ИСПРАВЛЕННЫЙ МЕТОД ПРОВЕРКИ МЕБЕЛИ ===
@@ -461,22 +492,20 @@ public partial class Visitor : Control
         }
     }
 
-       private void StartExiting()
+     private void StartExiting()
     {
         _state = VisitorState.Exiting;
         _path.Clear();
         _pathIndex = 0;
 
-        // Получаем координаты выхода на улицу из Layout
-        Vector2I targetGlobal = MuseumLayout.Instance.GetStreetExitPosition();
+        // === НОВОЕ: Идём туда же, где заспавнились ===
+        Vector2I targetGlobal = _spawnPosition;
 
-        GD.Print($"[Visitor] Начинаю выход из музея. Цель: {targetGlobal}");
+        GD.Print($"[Visitor] Начинаю выход из музея. Цель: ({targetGlobal.X},{targetGlobal.Y})");
 
-        // Строим путь к выходу
         _path = FindPath(_globalCell, targetGlobal);
         _pathIndex = 0;
 
-        // Если путь не найден (например, выход заблокирован мебелью), просто удаляем посетителя
         if (_path.Count == 0)
         {
             GD.PrintErr("[Visitor] Путь к выходу не найден! Удаляю посетителя.");

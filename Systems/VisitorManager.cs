@@ -1,4 +1,5 @@
 using Godot;
+using System;
 using System.Collections.Generic;
 
 public class VisitorManager
@@ -67,24 +68,31 @@ public class VisitorManager
         }
     }
 
-    private void SpawnNewVisitor()
+     private void SpawnNewVisitor()
     {
         if (_layout == null) return;
 
         var mainHall = _layout.GetRoom("main_hall");
         if (mainHall == null) return;
 
-        var visitor = new Visitor();
-        Vector2I startPos = new Vector2I(21, 31);
+        // Получаем концы дорожки
+        var (leftEnd, rightEnd) = MuseumBackground.GetWayEndPoints();
+        
+        // Случайно выбираем один из концов
+        Vector2I spawnPos = (GD.Randf() < 0.5f) ? leftEnd : rightEnd;
 
-        if (_layout.Grid[startPos.X, startPos.Y] != TileType.Floor && _layout.Grid[startPos.X, startPos.Y] != TileType.Door)
+        // Проверяем, что позиция проходимая
+        if (spawnPos.X < 0 || spawnPos.X >= MuseumLayout.GridWidth ||
+            spawnPos.Y < 0 || spawnPos.Y >= MuseumLayout.GridHeight ||
+            (_layout.Grid[spawnPos.X, spawnPos.Y] != TileType.Floor && 
+             _layout.Grid[spawnPos.X, spawnPos.Y] != TileType.Door))
         {
-            startPos = FindNearestWalkable(startPos);
+            spawnPos = FindNearestWalkable(spawnPos);
         }
 
-        visitor.Initialize(_layout, startPos, mainHall.Id);
+        var visitor = new Visitor();
+        visitor.Initialize(_layout, spawnPos, mainHall.Id);
         
-        // Добавляем посетителя в корень текущей сцены
         visitor.AddToSceneTree();
         _visitors.Add(visitor);
 
@@ -92,7 +100,8 @@ public class VisitorManager
         CheckAndResetTicketDrop();
         
         int max = MuseumSystem.Instance?.CalculateMaxVisitors() ?? 0;
-        GD.Print($"[VisitorManager] 🚶 Новый посетитель! Всего в музее: {_visitors.Count} / {max}");    }
+        GD.Print($"[VisitorManager] 🚶 Новый посетитель на ({spawnPos.X},{spawnPos.Y})! Всего: {_visitors.Count}/{max}");
+    }
 
     private Vector2I FindNearestWalkable(Vector2I from)
     {
