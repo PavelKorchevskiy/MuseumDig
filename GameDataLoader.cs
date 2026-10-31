@@ -7,6 +7,8 @@ public partial class GameDataLoader : Node
 	public override void _Ready()
 	{
 		Instance = this;
+		// Инициализируем DevMode первым
+    	var _ = DevMode.Instance;
 		
 		GD.Print("=== GameDataLoader: Initializing game data... ===");
 		GameData.Initialize();

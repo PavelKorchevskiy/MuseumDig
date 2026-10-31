@@ -1,3 +1,48 @@
+keys,en,ru
+ui.digging.digger,Digger,Копатель
+ui.digging.extractor,Extractor,Извлекатель
+ui.digging.excavator,Excavator,Бульдозер
+ui.inventory.skeletons,Skeletons,Скелеты
+ui.inventory.assembling,Assembling,Сборка
+ui.inventory.findings,Findings,Находки
+ui.inventory.bones,Bones,Кости
+ui.inventory.tickets,Tickets,Билеты
+ui.inventory.total_value,Total value: {0} coins,Общая стоимость: {0} монет
+ui.inventory.sell,Sell,Продать
+ui.inventory.place,📍 Place,📍 Разместить
+ui.inventory.assemble,Assemble,Собрать
+ui.inventory.cancel,Cancel,Отмена
+ui.inventory.amount,Amount: {0},Количество: {0}
+ui.inventory.sell_for,Sell {0} for {1} coins,Продать {0} за {1} монет
+ui.inventory.no_items,No items,Нет предметов
+ui.inventory.assemble_success,Successfully assembled {0}!,Коллекция '{0}' успешно собрана!
+ui.inventory.assemble_failed,Cannot assemble - missing fragments,Не удалось собрать - не хватает фрагментов
+ui.inventory.empty_tickets,Tickets coming soon!,Билеты скоро появятся!
+ui.inventory.assembling_hint,Assemble complete collections for exhibition,Соберите полные коллекции для выставки
+ui.inventory.sell_dialog_title,Sell Item,Продать предмет
+ui.inventory.tickets_info,Use a ticket to start digging,Используйте билет для начала раскопок
+ui.inventory.no_tickets,No tickets available,Нет доступных билетов
+ui.inventory.use_ticket,Use,Использовать
+ui.main.progress,Progress,Прогресс
+ui.progress.title,Progress,Прогресс
+ui.progress.tab_skills,Skill Tree,Дерево навыков
+ui.progress.tab_skeletons,Unlocked Skeletons,Открытые скелеты
+ui.progress.tab_findings,Unlocked Findings,Открытые находки
+ui.progress.available_points,Available Points: {0},Свободные очки: {0}
+ui.progress.reset_skills,Reset (1000 coins),Сбросить (1000 монет)
+ui.progress.skeletons_title,Unlocked Skeletons,Открытые скелеты
+ui.progress.no_skeletons,No skeletons discovered yet,Пока не открыто ни одного скелета
+ui.progress.findings_title,Unlocked Findings,Открытые находки
+ui.progress.no_findings,No findings discovered yet,Пока не открыто ни одной находки
+ui.inventory.concretions,Concretions,Конкреции
+ui.inventory.concretions_hint,Click 'Open' to break a concretion,Нажмите 'Раскрыть', чтобы открыть конкрецию
+ui.inventory.open,Open,Раскрыть
+ui.inventory.title,Inventory,Инвентарь
+rarity.common,Common,Обычный
+rarity.uncommon,Uncommon,Необычный
+rarity.rare,Rare,Редкий
+rarity.epic,Epic,Эпический
+rarity.legendary,Legendary,Легендарный
 ui.skills.upgrade,Upgrade,Улучшить
 ui.skills.max_level,Max Level ({0}),Максимальный уровень ({0})
 ui.skills.current_level,Level: {0} / {1},Уровень: {0} / {1}
@@ -5,7 +50,6 @@ ui.skills.upgrade_cost,Upgrade ({0} pts),Улучшить ({0} очк.)
 ui.skills.maxed,Maxed,Максимум
 ui.skills.branch_museum,Museum Branch,Ветка Музея
 ui.skills.branch_digging,Digging Branch,Ветка Раскопок
-
 skill.museum.ticket_price.name,Ticket Price,Цена билета
 skill.museum.ticket_price.desc,Increases coins earned per visitor.,Увеличивает монеты за каждого посетителя.
 skill.museum.visitors_common.name,Common Appeal,Привлекательность (Обычные)
@@ -20,7 +64,6 @@ skill.museum.new_room.name,New Room,Новая комната
 skill.museum.new_room.desc,Unlocks a new exhibition hall.,Открывает новый выставочный зал.
 skill.museum.large_display.name,Large Display,Большая витрина
 skill.museum.large_display.desc,Allows purchasing large display cases.,Позволяет покупать большие витрины.
-
 skill.digging.diggers_count.name,More Diggers,Больше землекопов
 skill.digging.diggers_count.desc,Increases the number of active diggers.,Увеличивает количество активных землекопов.
 skill.digging.extractors_count.name,More Extractors,Больше извлекателей
@@ -31,13 +74,3 @@ skill.digging.extractors_speed.name,Extractor Speed,Скорость извле�
 skill.digging.extractors_speed.desc,Extractors work faster.,Извлекатели работают быстрее.
 skill.digging.excavator.name,Excavator,Экскаватор
 skill.digging.excavator.desc,Unlocks the excavator for digging.,Открывает экскаватор для раскопок.
-
-ui.progress.skeletons_title,Unlocked Skeletons,Открытые скелеты
-ui.progress.no_skeletons,No skeletons discovered yet,Пока не открыто ни одного скелета
-ui.progress.findings_title,Unlocked Findings,Открытые находки
-ui.progress.no_findings,No findings discovered yet,Пока не открыто ни одной находки
-rarity.common,Common,Обычный
-rarity.uncommon,Uncommon,Необычный
-rarity.rare,Rare,Редкий
-rarity.epic,Epic,Эпический
-rarity.legendary,Legendary,Легендарный

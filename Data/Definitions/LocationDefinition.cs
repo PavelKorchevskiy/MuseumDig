@@ -26,4 +26,6 @@ public partial class LocationDefinition : Resource
 	
 	// Уникальная находка локации (опционально)
 	[Export] public FossilDefinition UniqueFossil;
+
+	[Export] public Rarity Rarity = Rarity.Common;
 }

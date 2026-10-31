@@ -5,19 +5,21 @@ public partial class Museum : Node2D
 {
     private GlobalRoomViewUI _globalRoomView;
     
-    private CanvasLayer _offlineReward;
     private MuseumShopUI _shopUI;
     private VBoxContainer _buttonPanel;
     
     private bool _initialDisplayUpdated = false;
-    private bool _offlineRewardChecked = false;
     private DisplayCaseUI _displayCaseUI;
     private CollectionExhibitUI _collectionExhibitUI;
     private ProgressUI _progressUI;
+    private MuseumBackground _background;
 
 
     public override void _Ready()
     {
+         _background = new MuseumBackground { Name = "MuseumBackground" };
+        AddChild(_background);
+        _background.Setup(this);
         // 1. Создаем или получаем UI-слой с высоким приоритетом
         var uiLayer = GetNodeOrNull<CanvasLayer>("UI");
         if (uiLayer == null)
@@ -25,10 +27,6 @@ public partial class Museum : Node2D
             uiLayer = new CanvasLayer { Name = "UI", Layer = 100 };
             AddChild(uiLayer);
         }
-
-        // 2. Офлайн-награда
-        _offlineReward = GetNodeOrNull<CanvasLayer>("UI/OfflineReward");
-        if (_offlineReward != null) _offlineReward.Visible = false;
 
         // 3. Магазин
         _shopUI = new MuseumShopUI { Name = "MuseumShop" };
@@ -59,8 +57,6 @@ public partial class Museum : Node2D
 
          _progressUI = new ProgressUI { Name = "ProgressUI" };
         uiLayer.AddChild(_progressUI);
-    GD.Print(LocalizationManager.Tr("ui.inventory.skeletons")); // Должно вывести "Скелеты"
-    GD.Print(LocalizationManager.TrFormat("ui.inventory.total_value", 1500)); // "Общая стоимость: 1500 монет"
     }
 
     public override void _Process(double delta)
@@ -69,17 +65,9 @@ public partial class Museum : Node2D
         {
             _initialDisplayUpdated = true;
             UpdateDisplay();
-            
-            if (SaveSystem.Instance != null && SaveSystem.Instance.GetLastSaveTimestamp() > 0)
-            {
-                if (!_offlineRewardChecked)
-                {
-                    _offlineRewardChecked = true;
-                    CheckOfflineReward();
-                }
-            }
+            RefreshRoomView();
         }
-        RefreshRoomView();
+            VisitorManager.Instance?.ProcessDelta((float)delta);
     }
 
     private void CreateButtonPanel(CanvasLayer uiLayer)
@@ -113,8 +101,25 @@ public partial class Museum : Node2D
     };
     _buttonPanel.AddChild(progressBtn);
     
-    var digBtn = new Button { Text = "⛏️ Раскопки", CustomMinimumSize = new Vector2(150, 40) };
-    digBtn.Pressed += () => GetTree().ChangeSceneToFile("res://DigSite.tscn");
+        var digBtn = new Button { Text = "⛏️ Раскопки", CustomMinimumSize = new Vector2(150, 40) };
+    digBtn.Pressed += () => 
+    {
+        if (LocationSystem.Instance.HasActiveDiggingSession())
+        {
+            // Если есть активная локация, идем копать
+            GetTree().ChangeSceneToFile("res://DigSite.tscn");
+        }
+        else
+        {
+            // Если нет, открываем инвентарь на вкладке билетов
+            var invUI = InventoryUI.Instance;
+            if (invUI != null && GodotObject.IsInstanceValid(invUI))
+            {
+                invUI.SwitchToTicketsTab();
+                invUI.Visible = true;
+            }
+        }
+    };
     _buttonPanel.AddChild(digBtn);
     
     var saveBtn = new Button { Text = "💾 Сохранить и выйти", CustomMinimumSize = new Vector2(150, 40) };
@@ -132,46 +137,6 @@ public partial class Museum : Node2D
         }
     }
     
-        private void CheckOfflineReward()
-    {
-        if (OfflineRewardSystem.Instance == null || SaveSystem.Instance == null || _offlineReward == null) 
-            return;
-        
-        // 1. Рассчитываем награду
-        OfflineRewardSystem.Instance.CalculateOfflineReward(SaveSystem.Instance.GetLastSaveTimestamp());
-        
-        // 2. Если есть награда, показываем окно
-        if (OfflineRewardSystem.Instance.HasReward())
-        {
-            var label = _offlineReward.GetNodeOrNull<Label>("RewardPanel/Content/RewardsTitleLabel");
-            var btn = _offlineReward.GetNodeOrNull<Button>("RewardPanel/Content/CollectButton");
-            
-            if (label != null)
-            {
-                int coins = OfflineRewardSystem.Instance.GetOfflineCoins();
-                string timeStr = OfflineRewardSystem.Instance.GetFormattedTime();
-                
-                // Используем локализацию с подстановкой параметров: {0} = время, {1} = монеты
-                label.Text = LocalizationManager.TrFormat("ui.offline.welcome_back", timeStr, coins);
-            }
-            
-            if (btn != null)
-            {
-                // Очищаем старые подключения сигнала, чтобы метод не срабатывал несколько раз при повторном открытии
-                foreach (var conn in btn.GetSignalConnectionList("pressed")) 
-                {
-                    btn.Disconnect("pressed", (Callable)conn["callable"]);
-                }
-                
-                btn.Pressed += () => { 
-                    OfflineRewardSystem.Instance.CollectReward(); 
-                    _offlineReward.Visible = false; 
-                };
-            }
-            
-            _offlineReward.Visible = true;
-        }
-    }
 
     /// <summary>
     /// Вызывается для обновления затемнения комнат
@@ -181,7 +146,7 @@ public partial class Museum : Node2D
         if (_globalRoomView != null)
         {
             MuseumLayout.Instance.ActiveRoomId = roomId;
-            _globalRoomView.UpdateRoomVisibility();
+             _globalRoomView.UpdateRoomVisibility();
         }
     }
 

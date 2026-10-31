@@ -6,10 +6,10 @@ uid="uid://drqbedfxbhv76"
 
 [deps]
 
-files=["res://localization/translations_en.Upgrade.translation", "res://localization/translations_en.Улучшить.translation"]
+files=["res://localization/translations_en.en.translation", "res://localization/translations_en.ru.translation"]
 
 source_file="res://localization/translations_en.csv"
-dest_files=["res://localization/translations_en.Upgrade.translation", "res://localization/translations_en.Улучшить.translation"]
+dest_files=["res://localization/translations_en.en.translation", "res://localization/translations_en.ru.translation"]
 
 [params]
 

@@ -24,11 +24,23 @@ public partial class CameraController : Camera2D
 
     public override void _Ready()
     {
-        // Применяем наши границы к встроенным свойствам Godot
-        LimitLeft = (int)BoundaryLeft;
-        LimitRight = (int)BoundaryRight;
-        LimitTop = (int)BoundaryTop;
-        LimitBottom = (int)BoundaryBottom;
+        // === ИЗМЕНЕНО: Отключаем границы, если FreeCamera включён ===
+        if (DevMode.Instance.FreeCamera)
+        {
+            // Фактически "отключаем" границы — устанавливаем очень большие значения
+            LimitLeft = -100000;
+            LimitRight = 100000;
+            LimitTop = -100000;
+            LimitBottom = 100000;
+            GD.Print("[Camera] 🎮 DevMode: границы камеры ОТКЛЮЧЕНЫ");
+        }
+        else
+        {
+            LimitLeft = (int)BoundaryLeft;
+            LimitRight = (int)BoundaryRight;
+            LimitTop = (int)BoundaryTop;
+            LimitBottom = (int)BoundaryBottom;
+        }
         
         Zoom = new Vector2(1, 1);
     }
@@ -74,17 +86,20 @@ public partial class CameraController : Camera2D
             }
         }
         
-        // === ДВИЖЕНИЕ МЫШИ ПРИ ПЕРЕТАСКИВАНИИ ===
+                // === ДВИЖЕНИЕ МЫШИ ПРИ ПЕРЕТАСКИВАНИИ ===
         if (@event is InputEventMouseMotion mouseMotion && _isDragging)
         {
             Vector2 dragDelta = mouseMotion.Position - _dragStartPos;
             GlobalPosition = _cameraStartPos - dragDelta * DragSpeed;
             
-            // Ограничиваем позицию камеры
-            GlobalPosition = new Vector2(
-                Mathf.Clamp(GlobalPosition.X, LimitLeft, LimitRight),
-                Mathf.Clamp(GlobalPosition.Y, LimitTop, LimitBottom)
-            );
+            // === НОВОЕ: Ограничиваем только если DevMode выключен ===
+            if (!DevMode.Instance.FreeCamera)
+            {
+                GlobalPosition = new Vector2(
+                    Mathf.Clamp(GlobalPosition.X, LimitLeft, LimitRight),
+                    Mathf.Clamp(GlobalPosition.Y, LimitTop, LimitBottom)
+                );
+            }
         }
     }
 
@@ -121,7 +136,7 @@ public partial class CameraController : Camera2D
     /// <summary>
     /// Плавное перемещение камеры к центру комнаты (вызывается при клике)
     /// </summary>
-    public void MoveToRoomCenter(Vector2I globalTileCenter)
+     public void MoveToRoomCenter(Vector2I globalTileCenter)
     {
         if (_currentTween != null && _currentTween.IsRunning())
         {
@@ -135,11 +150,14 @@ public partial class CameraController : Camera2D
             GridOffsetY + isoPos.Y
         );
 
-        // Ограничиваем позицию
-        targetPosition = new Vector2(
-            Mathf.Clamp(targetPosition.X, BoundaryLeft, BoundaryRight),
-            Mathf.Clamp(targetPosition.Y, BoundaryTop, BoundaryBottom)
-        );
+        // === НОВОЕ: Ограничиваем только если DevMode выключен ===
+        if (!DevMode.Instance.FreeCamera)
+        {
+            targetPosition = new Vector2(
+                Mathf.Clamp(targetPosition.X, BoundaryLeft, BoundaryRight),
+                Mathf.Clamp(targetPosition.Y, BoundaryTop, BoundaryBottom)
+            );
+        }
 
         GD.Print($"[Camera] Двигаемся к центру комнаты. Цель: {targetPosition}");
 
@@ -148,7 +166,6 @@ public partial class CameraController : Camera2D
                        .SetTrans(Tween.TransitionType.Cubic)
                        .SetEase(Tween.EaseType.InOut);
         
-        // После завершения анимации обновляем активную комнату
         _currentTween.TweenCallback(Callable.From(() =>
         {
             UpdateActiveRoom();
