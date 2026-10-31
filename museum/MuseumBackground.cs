@@ -21,14 +21,57 @@ public partial class MuseumBackground : Node2D
 
      private static HashSet<Vector2I> _wayTiles = new HashSet<Vector2I>();
 
-    public void Setup(Museum museum)
+        public void Setup(Museum museum)
     {
         ZIndex = -100;
 
         Vector2I entrance = FindEntrancePosition();
         GenerateWay(entrance);
         GenerateGrass();
+        
+        // === НОВОЕ: Деревья поверх травы и дорожки ===
+        AddTrees();
     }
+
+        // === Структура для размещения дерева ===
+    private struct TreePlacement
+    {
+        public int GridX;       // X координата основания (в клетках сетки)
+        public int GridY;       // Y координата основания (в клетках сетки)
+        public Vector2 Offset;  // Дополнительное смещение в пикселях (для точной настройки)
+        public int Variant;     // Вариант дерева: 1, 2 или 3 (0 = случайный)
+    }
+
+    // === МАССИВ ДЕРЕВЬЕВ — РЕДАКТИРУЙТЕ ЗДЕСЬ ===
+    // Количество = длина массива. Чтобы добавить дерево — добавьте новую строку.
+    // Чтобы убрать — удалите строку.
+    private static readonly TreePlacement[] TreePlacements = new TreePlacement[]
+    {
+        // Левая сторона (западнее музея)
+        new TreePlacement { GridX = -10, GridY = 20, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = -8,  GridY = 25, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = -5,  GridY = 32, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = -12, GridY = 38, Offset = Vector2.Zero, Variant = 0 },
+        
+        // Правая сторона (восточнее музея)
+        new TreePlacement { GridX = 40,  GridY = 22, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 42,  GridY = 30, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 45,  GridY = 36, Offset = Vector2.Zero, Variant = 0 },
+        
+        // Нижняя часть (южнее развилки)
+        new TreePlacement { GridX = 10,  GridY = 45, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 25,  GridY = 44, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 20,  GridY = 50, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 33,  GridY = 48, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 45,  GridY = 47, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 60,  GridY = 43, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 53,  GridY = 51, Offset = Vector2.Zero, Variant = 0 },
+
+    };
+
+    // Путь к папке с деревьями
+    private const string TreePath = "res://assets/museum/background/decor/tree";
+    private const int TreeVariantCount = 3;
 
     private Vector2I FindEntrancePosition()
     {
@@ -188,6 +231,7 @@ public partial class MuseumBackground : Node2D
         );
         sprite.Size = new Vector2(IsoUtils.TileWidth, IsoUtils.TileHeight);
         sprite.ZIndex = -100 + (gx + gy);
+        AddCoordinateLabel(gx, gy, sprite.Position);
 
         AddChild(sprite);
     }
@@ -235,5 +279,132 @@ public partial class MuseumBackground : Node2D
     public static bool IsWayTile(int x, int y)
     {
         return _wayTiles.Contains(new Vector2I(x, y));
+    }
+
+        /// <summary>
+    /// Отрисовывает все деревья из массива TreePlacements.
+    /// </summary>
+    private void AddTrees()
+    {
+        for (int i = 0; i < TreePlacements.Length; i++)
+        {
+            var placement = TreePlacements[i];
+            
+            if (!IsValidTreePosition(placement.GridX, placement.GridY))
+            {
+                GD.PrintErr($"[MuseumBackground] ⚠️ Дерево #{i} на ({placement.GridX},{placement.GridY}) в запретной зоне (на дорожке, в комнате или между дорожкой и музеем)");
+                continue;
+            }
+
+            AddTree(placement, i);
+        }
+        
+        GD.Print($"[MuseumBackground] Создано деревьев: {TreePlacements.Length}");
+    }
+
+    /// <summary>
+    /// Проверяет, можно ли разместить дерево в этой позиции.
+    /// Запрещено: на дорожке, внутри комнаты, между дорожкой и музеем.
+    /// </summary>
+    private bool IsValidTreePosition(int x, int y)
+    {
+        // 1. На дорожке — нельзя
+        if (IsWayTile(x, y)) return false;
+
+        // 2. Внутри комнаты — нельзя
+        if (IsInsideAnyRoom(x, y)) return false;
+
+        // 3. Между дорожкой и музеем — нельзя
+        // Это зона южнее южной стены музея, но севернее горизонтальной развилки
+        var mainHall = MuseumLayout.Instance.GetRoom("main_hall");
+        if (mainHall != null)
+        {
+            int museumSouth = mainHall.GlobalOffset.Y + mainHall.Height;
+            int branchY = museumSouth + WayLengthFromEntrance;
+
+            if (y > museumSouth && y < branchY)
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Отрисовывает одно дерево.
+    /// </summary>
+    private void AddTree(TreePlacement placement, int index)
+    {
+                GD.Print($"[Tree #{index}] Base: ({placement.GridX},{placement.GridY}), IsoPos: {IsoUtils.GridToIso(placement.GridX, placement.GridY)}");
+
+        // Выбираем вариант: указанный или случайный (детерминированный)
+        int variant = placement.Variant;
+        if (variant <= 0 || variant > TreeVariantCount)
+        {
+            variant = (HashCoordinates(placement.GridX, placement.GridY, 300 + index) % TreeVariantCount) + 1;
+        }
+
+        string path = $"{TreePath}{variant}.png";
+        if (!ResourceLoader.Exists(path))
+        {
+            GD.PrintErr($"[MuseumBackground] Дерево не найдено: {path}");
+            return;
+        }
+
+        var texture = GD.Load<Texture2D>(path);
+        var sprite = new TextureRect();
+        sprite.Texture = texture;
+        sprite.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
+        sprite.MouseFilter = Control.MouseFilterEnum.Ignore;
+
+        // Размер = реальный размер текстуры
+        float treeWidth = texture.GetWidth();
+        float treeHeight = texture.GetHeight();
+        sprite.Size = new Vector2(treeWidth, treeHeight);
+
+        // === ПОЗИЦИОНИРОВАНИЕ ===
+        // Основание дерева = центр клетки (isoPos)
+        // Сам спрайт центрируется по горизонтали, нижний край совпадает с основанием
+        var isoPos = IsoUtils.GridToIso(placement.GridX, placement.GridY);
+
+        sprite.Position = new Vector2(
+            GridOffsetX + isoPos.X + IsoUtils.TileWidth / 2f - treeWidth / 2f + placement.Offset.X,
+            GridOffsetY + isoPos.Y + IsoUtils.TileHeight - treeHeight + placement.Offset.Y
+        );
+
+        // Z-индекс: по основанию дерева + смещение, чтобы ствол был виден
+        sprite.ZIndex = IsoUtils.GetZOrder(placement.GridX, placement.GridY) + 10;
+
+        AddChild(sprite);
+    }
+
+        /// <summary>
+    /// Создаёт Label с координатами над тайлом (только в DevMode).
+    /// </summary>
+    private void AddCoordinateLabel(int gx, int gy, Vector2 tilePosition)
+    {
+        if (!DevMode.Instance.ShowGridCoords) return;
+
+        var label = new Label();
+        label.Text = $"{gx},{gy}";
+        label.AddThemeFontSizeOverride("font_size", 10);
+        label.HorizontalAlignment = HorizontalAlignment.Center;
+        label.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
+        
+        // Чёрный контур для читаемости на любом фоне
+        label.AddThemeColorOverride("font_color", Colors.White);
+        label.AddThemeColorOverride("font_outline_color", Colors.Black);
+        label.AddThemeConstantOverride("outline_size", 2);
+
+        // Позиция: над центром тайла
+        label.Position = new Vector2(
+            tilePosition.X + IsoUtils.TileWidth / 2f - 20f, // -20 = половина ширины Label
+            tilePosition.Y - 5f
+        );
+        label.CustomMinimumSize = new Vector2(40, 15);
+        
+        // Z-индекс выше тайлов фона
+        label.ZIndex = IsoUtils.GetZOrder(gx, gy) + 20;
+
+        AddChild(label);
     }
 }

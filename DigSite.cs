@@ -93,10 +93,13 @@ public partial class DigSite : Node2D
             _camera.Position += moveDirection * CameraSpeed * dt;
             
             // Ограничиваем позицию камеры
-            _camera.Position = new Vector2(
-                Mathf.Clamp(_camera.Position.X, _minCameraX, _maxCameraX),
-                Mathf.Clamp(_camera.Position.Y, _minCameraY, _maxCameraY)
-            );
+            if (!DevMode.Instance.FreeCamera)
+            {
+                _camera.Position = new Vector2(
+                    Mathf.Clamp(_camera.Position.X, _minCameraX, _maxCameraX),
+                    Mathf.Clamp(_camera.Position.Y, _minCameraY, _maxCameraY)
+                );
+            }
         }
         
         // Обработка активных тайлов
@@ -133,10 +136,13 @@ public partial class DigSite : Node2D
             _camera.Position -= delta;
             
             // Ограничиваем позицию камеры
-            _camera.Position = new Vector2(
-                Mathf.Clamp(_camera.Position.X, _minCameraX, _maxCameraX),
-                Mathf.Clamp(_camera.Position.Y, _minCameraY, _maxCameraY)
-            );
+            if (!DevMode.Instance.FreeCamera)
+            {
+                _camera.Position = new Vector2(
+                    Mathf.Clamp(_camera.Position.X, _minCameraX, _maxCameraX),
+                    Mathf.Clamp(_camera.Position.Y, _minCameraY, _maxCameraY)
+                );
+            }
             
             _lastMousePos = currentMousePos;
         }
