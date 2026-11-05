@@ -5,14 +5,14 @@ public partial class Museum : Node2D
 {
     private GlobalRoomViewUI _globalRoomView;
     
-    private MuseumShopUI _shopUI;
-    private VBoxContainer _buttonPanel;
-    
+    private MuseumShopUI _shopUI;    
     private bool _initialDisplayUpdated = false;
     private DisplayCaseUI _displayCaseUI;
     private CollectionExhibitUI _collectionExhibitUI;
     private ProgressUI _progressUI;
     private MuseumBackground _background;
+    private MuseumTopBar _topBar;
+private MuseumBottomBar _bottomBar;
 
 
     public override void _Ready()
@@ -45,8 +45,6 @@ public partial class Museum : Node2D
             camera.SnapToRoomCenter(mainHallCenter);
         }
         
-        // 6. Панель кнопок
-        CreateButtonPanel(uiLayer);
 
         _displayCaseUI = new DisplayCaseUI { Name = "DisplayCaseUI" };
         uiLayer.AddChild(_displayCaseUI);
@@ -57,6 +55,12 @@ public partial class Museum : Node2D
 
          _progressUI = new ProgressUI { Name = "ProgressUI" };
         uiLayer.AddChild(_progressUI);
+
+         _bottomBar = new MuseumBottomBar();
+        uiLayer.AddChild(_bottomBar);
+
+        _topBar = new MuseumTopBar();
+        uiLayer.AddChild(_topBar);
     }
 
     public override void _Process(double delta)
@@ -69,63 +73,6 @@ public partial class Museum : Node2D
         }
             VisitorManager.Instance?.ProcessDelta((float)delta);
     }
-
-    private void CreateButtonPanel(CanvasLayer uiLayer)
-{
-    _buttonPanel = new VBoxContainer();
-    _buttonPanel.Position = new Vector2(20, 60);
-    _buttonPanel.AddThemeConstantOverride("separation", 10);
-    uiLayer.AddChild(_buttonPanel);
-    
-    var shopBtn = new Button { Text = "🏪 Магазин", CustomMinimumSize = new Vector2(150, 40) };
-    shopBtn.Pressed += () => _shopUI.Visible = true;
-    _buttonPanel.AddChild(shopBtn);
-    
-    var invBtn = new Button { Text = "🎒 Инвентарь", CustomMinimumSize = new Vector2(150, 40) };
-    invBtn.Pressed += () => {
-        var invUI = InventoryUI.Instance;
-        if (invUI != null && GodotObject.IsInstanceValid(invUI))
-        {
-            invUI.Visible = true;
-        }
-    };
-    _buttonPanel.AddChild(invBtn);
-
-    var progressBtn = new Button { Text = LocalizationManager.Tr("ui.main.progress"), CustomMinimumSize = new Vector2(150, 40) };
-    progressBtn.Pressed += () => {
-        var progressUI = ProgressUI.Instance;
-        if (progressUI != null && GodotObject.IsInstanceValid(progressUI))
-        {
-            progressUI.Open();
-        }
-    };
-    _buttonPanel.AddChild(progressBtn);
-    
-        var digBtn = new Button { Text = "⛏️ Раскопки", CustomMinimumSize = new Vector2(150, 40) };
-    digBtn.Pressed += () => 
-    {
-        if (LocationSystem.Instance.HasActiveDiggingSession())
-        {
-            // Если есть активная локация, идем копать
-            GetTree().ChangeSceneToFile("res://DigSite.tscn");
-        }
-        else
-        {
-            // Если нет, открываем инвентарь на вкладке билетов
-            var invUI = InventoryUI.Instance;
-            if (invUI != null && GodotObject.IsInstanceValid(invUI))
-            {
-                invUI.SwitchToTicketsTab();
-                invUI.Visible = true;
-            }
-        }
-    };
-    _buttonPanel.AddChild(digBtn);
-    
-    var saveBtn = new Button { Text = "💾 Сохранить и выйти", CustomMinimumSize = new Vector2(150, 40) };
-    saveBtn.Pressed += () => SaveSystem.Instance?.ForceSaveAndQuit();
-    _buttonPanel.AddChild(saveBtn);
-}
 
     private void UpdateDisplay()
     {

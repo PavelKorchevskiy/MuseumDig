@@ -372,4 +372,11 @@ public class FurnitureTemplate
     public Vector2I Size;
     public int BuyPrice;
     public Func<Furniture> CreateFunc;
+
+    public static string GetTexturePathForType(string typeId)
+{
+    if (typeId == "display_case_1x1") return "res://assets/museum/furniture/display_case_small.png";
+    if (typeId == "display_case_2x2") return "res://assets/museum/furniture/display_case_large.png";
+    return $"res://assets/museum/furniture/{typeId}.png";
+}
 }

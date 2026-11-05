@@ -3,113 +3,265 @@ using System.Collections.Generic;
 
 public partial class MuseumShopUI : CanvasLayer
 {
-    private VBoxContainer _container;
-    private Button _closeButton;
+    private PanelContainer _panel;
     private VBoxContainer _furnitureSection;
+    private Button _closeButton;
     
+    // === Кэш кнопок для быстрого обновления ===
+    private Dictionary<string, Button> _buyButtons = new();
+    private Dictionary<string, int> _buyPrices = new();
+    
+    // === Размеры кнопки закрытия (как в инвентаре) ===
+    private const float CloseButtonSize = 100f;
+
     public override void _Ready()
     {
-        Layer = 100;
+        Layer = 150;
         
-        // Создаём контейнер программно
-        _container = new VBoxContainer();
-        _container.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-        _container.OffsetLeft = 50;
-        _container.OffsetTop = 50;
-        _container.OffsetRight = -50;
-        _container.OffsetBottom = -50;
-        _container.AddThemeConstantOverride("separation", 20);
+        // Затемнённый фон
+        var background = new ColorRect();
+        background.Color = new Color(0, 0, 0, 0.6f);
+        background.AnchorRight = 1;
+        background.AnchorBottom = 1;
+        background.MouseFilter = Control.MouseFilterEnum.Stop;
+        AddChild(background);
+
+        // === Панель магазина (как в инвентаре) ===
+        _panel = new PanelContainer();
+        _panel.AnchorLeft = 0.05f;
+        _panel.AnchorRight = 0.95f;
+        _panel.AnchorTop = 0.07f;
+        _panel.AnchorBottom = 0.99f;
         
-        // Оборачиваем в ScrollContainer
-        var scroll = new ScrollContainer();
-        scroll.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-        AddChild(scroll);
-        scroll.AddChild(_container);
-        
-        _container.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
-        _container.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        
-        // Заголовок
-        var title = new Label();
-        title.Text = "🏛️ МЕБЕЛЬ ДЛЯ МУЗЕЯ";
-        title.AddThemeFontSizeOverride("font_size", 22);
-        title.AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.5f));
-        title.HorizontalAlignment = HorizontalAlignment.Center;
-        _container.AddChild(title);
-        
-        // Секция мебели
+        var panelStyle = new StyleBoxFlat();
+        panelStyle.BgColor = new Color(0.12f, 0.12f, 0.18f, 1.0f);  // Непрозрачный
+        panelStyle.CornerRadiusTopLeft = 20;
+        panelStyle.CornerRadiusTopRight = 20;
+        panelStyle.CornerRadiusBottomLeft = 20;
+        panelStyle.CornerRadiusBottomRight = 20;
+        panelStyle.ContentMarginLeft = 20;
+        panelStyle.ContentMarginRight = 20;
+        panelStyle.ContentMarginTop = 20;
+        panelStyle.ContentMarginBottom = 20;
+        _panel.AddThemeStyleboxOverride("panel", panelStyle);
+        AddChild(_panel);
+
+        var contentContainer = new VBoxContainer();
+        contentContainer.AddThemeConstantOverride("separation", 15);
+        _panel.AddChild(contentContainer);
+
+        // === Заголовок ===
+        var titleLabel = new Label();
+        string titleText = LocalizationManager.Tr("ui.shop.title");
+        if (titleText == "ui.shop.title") titleText = "🏛️ Мебель для музея";
+        titleLabel.Text = titleText;
+        titleLabel.AddThemeFontSizeOverride("font_size", 24);
+        titleLabel.AddThemeColorOverride("font_color", Colors.Gold);
+        titleLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        contentContainer.AddChild(titleLabel);
+
+        // === Подсказка ===
+        var hintLabel = new Label();
+        string hintText = LocalizationManager.Tr("ui.shop.hint");
+        if (hintText == "ui.shop.hint") hintText = "Купите мебель и разместите её в музее";
+        hintLabel.Text = hintText;
+        hintLabel.AddThemeFontSizeOverride("font_size", 14);
+        hintLabel.AddThemeColorOverride("font_color", new Color(0.7f, 0.7f, 0.8f));
+        hintLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        hintLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        contentContainer.AddChild(hintLabel);
+
+        // === ScrollContainer со списком мебели ===
+        var scrollContainer = new ScrollContainer();
+        scrollContainer.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        scrollContainer.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        contentContainer.AddChild(scrollContainer);
+
         _furnitureSection = new VBoxContainer();
+        _furnitureSection.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         _furnitureSection.AddThemeConstantOverride("separation", 10);
-        _container.AddChild(_furnitureSection);
-        
+        scrollContainer.AddChild(_furnitureSection);
+
         // Заполняем списком мебели
-        if (MuseumSystem.Instance != null)
-        {
-            var templates = MuseumSystem.Instance.GetAvailableFurnitureTemplates();
-            foreach (var template in templates)
-            {
-                var row = new HBoxContainer();
-                row.AddThemeConstantOverride("separation", 15);
-                
-                var infoLabel = new Label();
-                infoLabel.Text = $"{template.DisplayName} ({template.Size.X}x{template.Size.Y})\nЦена: {template.BuyPrice} монет";
-                infoLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-                row.AddChild(infoLabel);
-                
-                var buyBtn = new Button();
-                buyBtn.Text = "Купить";
-                buyBtn.CustomMinimumSize = new Vector2(80, 0);
-                
-                string typeId = template.TypeId;
-                buyBtn.Pressed += () => OnBuyFurniturePressed(typeId);
-                
-                row.AddChild(buyBtn);
-                _furnitureSection.AddChild(row);
-            }
-        }
-        
-        // Кнопка закрытия
+        PopulateFurnitureList();
+
+        // === Красная кнопка закрытия с крестиком (в самом низу) ===
+        var closeRow = new HBoxContainer();
+        closeRow.Alignment = BoxContainer.AlignmentMode.Center;
+        contentContainer.AddChild(closeRow);
+
         _closeButton = new Button();
-        _closeButton.Text = "Закрыть";
-        _closeButton.CustomMinimumSize = new Vector2(0, 40);
+        _closeButton.CustomMinimumSize = new Vector2(CloseButtonSize, CloseButtonSize);
+        _closeButton.PivotOffset = new Vector2(CloseButtonSize / 2f, CloseButtonSize / 2f);
+        
+        var closeStyle = new StyleBoxFlat();
+        closeStyle.BgColor = new Color(0.8f, 0.25f, 0.25f, 1.0f);  // Бледно-красный
+        closeStyle.CornerRadiusTopLeft = 20;
+        closeStyle.CornerRadiusTopRight = 20;
+        closeStyle.CornerRadiusBottomLeft = 20;
+        closeStyle.CornerRadiusBottomRight = 20;
+        
+        _closeButton.AddThemeStyleboxOverride("normal", closeStyle);
+        _closeButton.AddThemeStyleboxOverride("hover", closeStyle);
+        _closeButton.AddThemeStyleboxOverride("pressed", closeStyle);
+        _closeButton.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+        
+        _closeButton.Text = "";
+        _closeButton.AddThemeFontOverride("font", new FontVariation());
+        _closeButton.AddThemeColorOverride("font_color", Colors.Transparent);
+
+        var closeCenter = new CenterContainer();
+        closeCenter.MouseFilter = Control.MouseFilterEnum.Ignore;
+        closeCenter.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+
+        var closeIcon = new Label();
+        closeIcon.Text = "✕";
+        closeIcon.AddThemeFontSizeOverride("font_size", 48);
+        closeIcon.AddThemeColorOverride("font_color", Colors.White);
+        closeCenter.AddChild(closeIcon);
+        _closeButton.AddChild(closeCenter);
+
         _closeButton.Pressed += OnClosePressed;
-        _container.AddChild(_closeButton);
+        closeRow.AddChild(_closeButton);
         
         Visible = false;
     }
-    
+
+    /// <summary>
+    /// Заполняет список мебели.
+    /// </summary>
+    private void PopulateFurnitureList()
+    {
+        _buyButtons.Clear();
+        _buyPrices.Clear();
+        
+        if (MuseumSystem.Instance == null) return;
+        
+        var templates = MuseumSystem.Instance.GetAvailableFurnitureTemplates();
+        
+        foreach (var template in templates)
+        {
+            var row = CreateFurnitureRow(template);
+            _furnitureSection.AddChild(row);
+        }
+    }
+
+    /// <summary>
+    /// Создаёт строку мебели в стиле инвентаря.
+    /// </summary>
+    private Control CreateFurnitureRow(FurnitureTemplate template)
+    {
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 10);
+
+        // Иконка мебели (если есть)
+        var iconRect = new TextureRect();
+        iconRect.Name = "IconRect";
+        iconRect.CustomMinimumSize = new Vector2(48, 48);
+        iconRect.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
+        iconRect.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        iconRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+        iconRect.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
+        
+        string iconPath = FurnitureTemplate.GetTexturePathForType(template.TypeId);;
+        if (ResourceLoader.Exists(iconPath))
+        {
+            iconRect.Texture = GD.Load<Texture2D>(iconPath);
+        }
+        else
+        {
+            // Fallback на иконку по умолчанию
+            string fallbackPath = "res://assets/ui/icons/tab_skeletons.png";
+            if (ResourceLoader.Exists(fallbackPath))
+            {
+                iconRect.Texture = GD.Load<Texture2D>(fallbackPath);
+            }
+        }
+        row.AddChild(iconRect);
+
+        // Название и размер (растягивается)
+        var nameLabel = new Label();
+        nameLabel.Name = "NameLabel";
+        nameLabel.Text = $"{template.DisplayName} ({template.Size.X}×{template.Size.Y})";
+        nameLabel.AddThemeFontSizeOverride("font_size", 14);
+        nameLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        nameLabel.ClipText = true;
+        nameLabel.TextOverrunBehavior = TextServer.OverrunBehavior.TrimChar;
+        row.AddChild(nameLabel);
+
+        // Цена с иконкой монеты
+        var priceContainer = new HBoxContainer();
+        priceContainer.Name = "PriceContainer";
+        priceContainer.AddThemeConstantOverride("separation", 4);
+        priceContainer.SizeFlagsHorizontal = Control.SizeFlags.ShrinkEnd;
+        row.AddChild(priceContainer);
+
+        var coinIcon = new TextureRect();
+        coinIcon.Name = "CoinIcon";
+        coinIcon.CustomMinimumSize = new Vector2(20, 20);
+        coinIcon.Size = new Vector2(20, 20);
+        coinIcon.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+        coinIcon.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
+        coinIcon.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        
+        string coinPath = "res://assets/ui/icons/coin.png";
+        if (ResourceLoader.Exists(coinPath))
+        {
+            coinIcon.Texture = GD.Load<Texture2D>(coinPath);
+        }
+        priceContainer.AddChild(coinIcon);
+
+        var priceLabel = new Label();
+        priceLabel.Name = "PriceLabel";
+        priceLabel.Text = template.BuyPrice.ToString("N0");
+        priceLabel.AddThemeFontSizeOverride("font_size", 12);
+        priceLabel.AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.5f));
+        priceLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        priceContainer.AddChild(priceLabel);
+
+        // Кнопка "Купить"
+        var buyBtn = new Button();
+        buyBtn.Name = "BuyButton";
+        string buyText = LocalizationManager.Tr("ui.shop.buy");
+        if (buyText == "ui.shop.buy") buyText = "Купить";
+        buyBtn.Text = buyText;
+        buyBtn.CustomMinimumSize = new Vector2(90, 0);
+        buyBtn.SizeFlagsHorizontal = Control.SizeFlags.ShrinkEnd;
+        buyBtn.AddThemeColorOverride("font_color", new Color(0.3f, 0.9f, 0.3f));
+        
+        string typeId = template.TypeId;
+        buyBtn.Pressed += () => OnBuyFurniturePressed(typeId);
+        
+        row.AddChild(buyBtn);
+        
+        // Кэшируем для быстрого обновления
+        _buyButtons[typeId] = buyBtn;
+        _buyPrices[typeId] = template.BuyPrice;
+
+        return row;
+    }
+
     public override void _Process(double delta)
     {
         if (Visible) UpdateButtons();
     }
-    
+
     private void UpdateButtons()
     {
-        int coins = Wallet.Instance.GetCoins();
+        int coins = Wallet.Instance?.GetCoins() ?? 0;
         
-        if (_furnitureSection != null && MuseumSystem.Instance != null)
+        foreach (var kvp in _buyButtons)
         {
-            int i = 0;
-            var templates = MuseumSystem.Instance.GetAvailableFurnitureTemplates();
-            foreach (var template in templates)
+            string typeId = kvp.Key;
+            Button btn = kvp.Value;
+            
+            if (_buyPrices.TryGetValue(typeId, out int price))
             {
-                if (i < _furnitureSection.GetChildCount())
-                {
-                    var row = _furnitureSection.GetChild(i) as HBoxContainer;
-                    if (row != null && row.GetChildCount() > 1)
-                    {
-                        var btn = row.GetChild(1) as Button;
-                        if (btn != null)
-                        {
-                            btn.Disabled = coins < template.BuyPrice;
-                        }
-                    }
-                }
-                i++;
+                btn.Disabled = coins < price;
             }
         }
     }
-    
+
     private void OnBuyFurniturePressed(string typeId)
     {
         if (MuseumSystem.Instance.TryBuyFurniture(typeId))
@@ -138,7 +290,6 @@ public partial class MuseumShopUI : CanvasLayer
                     GD.Print("[MuseumShop] ✅ PlacementModeUI уже существует");
                 }
                 
-                // Получаем текущую комнату из MuseumSystem
                 var currentRoom = MuseumSystem.Instance.GetCurrentRoom();
                 if (currentRoom != null)
                 {
@@ -151,6 +302,6 @@ public partial class MuseumShopUI : CanvasLayer
             }
         }
     }
-    
+
     private void OnClosePressed() => Visible = false;
 }

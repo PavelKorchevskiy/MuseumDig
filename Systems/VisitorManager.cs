@@ -68,6 +68,15 @@ public class VisitorManager
         }
     }
 
+        /// <summary>
+    /// Возвращает количество активных (живых) посетителей.
+    /// </summary>
+    public int GetActiveVisitorsCount()
+    {
+        _visitors.RemoveAll(v => !GodotObject.IsInstanceValid(v));
+        return _visitors.Count;
+    }
+
      private void SpawnNewVisitor()
     {
         if (_layout == null) return;

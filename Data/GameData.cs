@@ -495,7 +495,7 @@ public static class GameData
         _resources[colId] = new FossilDefinition 
         { 
             Id = colId, 
-            DisplayName = $"{displayName} (Собранная)", 
+            DisplayName = $"{displayName}", 
             Description = $"Полный скелет {displayName}, готовый к установке в зале.", 
             Type = ResourceType.Bone, 
             Rarity = rarity, 

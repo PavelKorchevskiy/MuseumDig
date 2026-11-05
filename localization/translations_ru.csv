@@ -9,7 +9,7 @@ ui.inventory.bones,Bones,Кости
 ui.inventory.tickets,Tickets,Билеты
 ui.inventory.total_value,Total value: {0} coins,Общая стоимость: {0} монет
 ui.inventory.sell,Sell,Продать
-ui.inventory.place,📍 Place,📍 Разместить
+ui.inventory.place, Place, Разместить
 ui.inventory.assemble,Assemble,Собрать
 ui.inventory.cancel,Cancel,Отмена
 ui.inventory.amount,Amount: {0},Количество: {0}
@@ -74,3 +74,12 @@ skill.digging.extractors_speed.name,Extractor Speed,Скорость извле�
 skill.digging.extractors_speed.desc,Extractors work faster.,Извлекатели работают быстрее.
 skill.digging.excavator.name,Excavator,Экскаватор
 skill.digging.excavator.desc,Unlocks the excavator for digging.,Открывает экскаватор для раскопок.
+ui.concretion.hit_button,🔨 Hit with hammer!,🔨 Ударить молотком!
+ui.concretion.next_button,Next concretion →,Следующая конкреция →
+ui.concretion.next_button_with_count,Next concretion → (remaining: {0}),Следующая конкреция → (осталось: {0})
+ui.concretion.hits_format,Hits: {0} / {1},Ударов: {0} / {1}
+ui.concretion.revealed,✨ Concretion revealed! ✨,✨ Конкреция раскрыта! ✨
+ui.concretion.found_item,You found: {0}!,Вы нашли: {0}!
+ui.shop.title, Museum Furniture, Мебель для музея
+ui.shop.hint,Buy furniture and place it in the museum,Купите мебель и разместите её в музее
+ui.shop.buy,Buy,Купить
