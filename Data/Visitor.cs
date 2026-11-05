@@ -73,7 +73,7 @@ public partial class Visitor : Control
         int randomVariant = (int)(GD.Randi() % 3) + 1; 
         _visitorFolder = randomVariant.ToString();
         
-        GD.Print($"[Visitor] Спавн посетителя. Внешность: папка {_visitorFolder}");
+        // GD.Print($"[Visitor] Спавн посетителя. Внешность: папка {_visitorFolder}");
         
         _path.Clear();
         _pathIndex = 0;
@@ -581,7 +581,7 @@ public partial class Visitor : Control
         // 2. ТОЛЬКО ПОТОМ вызываем Setup, когда узел уже полностью инициализирован
         ticket.Setup($"ticket_{locationId}", Position);
         
-        GD.Print($"[Visitor] 🎫 Выронил билет: ticket_{locationId}");
+        // GD.Print($"[Visitor] 🎫 Выронил билет: ticket_{locationId}");
     }
 
     public void AddToSceneTree()

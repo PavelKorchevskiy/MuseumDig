@@ -492,8 +492,7 @@ public partial class GlobalRoomViewUI : Node2D
         }
         else
         {
-            // Для обычных витрин и другой мебели
-            texturePath = GetFurnitureTexturePath(placed.FurnitureTypeId);
+            texturePath =  FurnitureTemplate.GetTexturePathForType(placed.FurnitureTypeId);
         }
 
         if (!ResourceLoader.Exists(texturePath))
@@ -701,13 +700,6 @@ public partial class GlobalRoomViewUI : Node2D
         }
 GD.Print($"[RenderFurnitureItem] Добавляем {placed.FurnitureTypeId} в комнату {room.Id}, container={container?.Name ?? "NULL"}");
         container.AddChild(sprite);
-    }
-
-    private string GetFurnitureTexturePath(string typeId)
-    {
-        if (typeId == "display_case_1x1") return "res://assets/museum/furniture/display_case_small.png";
-        if (typeId == "display_case_2x2") return "res://assets/museum/furniture/display_case_large.png";
-        return $"res://assets/museum/furniture/{typeId}.png";
     }
 
      /// <summary>

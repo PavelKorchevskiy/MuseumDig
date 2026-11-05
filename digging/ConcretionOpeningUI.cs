@@ -14,6 +14,10 @@ public partial class ConcretionOpeningUI : CanvasLayer
     private ProgressBar _progressBar;
     private Button _hitButton;
     private Button _closeButton;
+    private Button _nextButton;  // === НОВОЕ: Кнопка "Следующая" ===
+
+    // === Размеры кнопки закрытия (как в инвентаре) ===
+    private const float CloseButtonSize = 100f;
 
     public void Setup(string concretionId)
     {
@@ -35,10 +39,10 @@ public partial class ConcretionOpeningUI : CanvasLayer
 
     public override void _Ready()
     {
-        Layer = 200; // Поверх инвентаря
+        Layer = 200;
     }
 
-        private void CreateUI()
+    private void CreateUI()
     {
         // Затемнённый фон
         var background = new ColorRect();
@@ -47,23 +51,19 @@ public partial class ConcretionOpeningUI : CanvasLayer
         background.AnchorBottom = 1;
         AddChild(background);
 
-        // Панель
+        // Панель с anchor-подходом
         _panel = new PanelContainer();
-        _panel.AnchorLeft = 0.5f;
-        _panel.AnchorRight = 0.5f;
-        _panel.AnchorTop = 0.5f;
-        _panel.AnchorBottom = 0.5f;
-        _panel.OffsetLeft = -250;
-        _panel.OffsetRight = 250;
-        _panel.OffsetTop = -300;
-        _panel.OffsetBottom = 300;
+        _panel.AnchorLeft = 0.05f;
+        _panel.AnchorRight = 0.95f;
+        _panel.AnchorTop = 0.05f;
+        _panel.AnchorBottom = 0.99f;
         
         var panelStyle = new StyleBoxFlat();
-        panelStyle.BgColor = new Color(0.15f, 0.15f, 0.2f);
-        panelStyle.CornerRadiusTopLeft = 12;
-        panelStyle.CornerRadiusTopRight = 12;
-        panelStyle.CornerRadiusBottomLeft = 12;
-        panelStyle.CornerRadiusBottomRight = 12;
+        panelStyle.BgColor = new Color(0.12f, 0.12f, 0.18f, 1.0f);
+        panelStyle.CornerRadiusTopLeft = 20;
+        panelStyle.CornerRadiusTopRight = 20;
+        panelStyle.CornerRadiusBottomLeft = 20;
+        panelStyle.CornerRadiusBottomRight = 20;
         panelStyle.ContentMarginLeft = 20;
         panelStyle.ContentMarginRight = 20;
         panelStyle.ContentMarginTop = 20;
@@ -83,17 +83,20 @@ public partial class ConcretionOpeningUI : CanvasLayer
         _titleLabel.AddThemeColorOverride("font_color", Colors.Gold);
         vbox.AddChild(_titleLabel);
 
-        // === НОВОЕ: AnimatedSprite2D для анимации разрушения ===
-        var spriteContainer = new Control();
-        spriteContainer.CustomMinimumSize = new Vector2(256, 256);
+        // CenterContainer для центрирования изображения
+        var spriteContainer = new CenterContainer();
+        spriteContainer.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        spriteContainer.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         vbox.AddChild(spriteContainer);
 
         _concretionSprite = new TextureRect();
         _concretionSprite.CustomMinimumSize = new Vector2(256, 256);
+        _concretionSprite.Size = new Vector2(256, 256);
         _concretionSprite.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
-        _concretionSprite.Position = new Vector2(0, 0);
+        _concretionSprite.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
+        _concretionSprite.PivotOffset = new Vector2(128, 128);
         
-                // === Загружаем первый кадр конкреции ===
+        // Загружаем первый кадр конкреции
         string shortName = _concretionId.Replace("_concretion", "");
         string firstFramePath = $"res://assets/museum/items/common/concretion/{shortName}_1.png";
         
@@ -103,7 +106,6 @@ public partial class ConcretionOpeningUI : CanvasLayer
         }
         else
         {
-            // Fallback на обычную иконку
             string fallbackPath = $"res://assets/museum/items/common/{_concretionId}.png";
             if (ResourceLoader.Exists(fallbackPath))
             {
@@ -117,9 +119,9 @@ public partial class ConcretionOpeningUI : CanvasLayer
         
         spriteContainer.AddChild(_concretionSprite);
 
-        // Прогресс
+        // === Прогресс с локализацией ===
         _progressLabel = new Label();
-        _progressLabel.Text = $"Ударов: {_currentHits} / {_requiredHits}";
+        UpdateProgressLabel();  // Вызываем метод для установки текста
         _progressLabel.HorizontalAlignment = HorizontalAlignment.Center;
         _progressLabel.AddThemeFontSizeOverride("font_size", 18);
         vbox.AddChild(_progressLabel);
@@ -130,61 +132,112 @@ public partial class ConcretionOpeningUI : CanvasLayer
         _progressBar.CustomMinimumSize = new Vector2(0, 20);
         vbox.AddChild(_progressBar);
 
-        // Кнопка "Ударить молотком"
+        // Кнопка "Ударить молотком" с локализацией
         _hitButton = new Button();
-        _hitButton.Text = "🔨 Ударить молотком!";
-        _hitButton.CustomMinimumSize = new Vector2(0, 50);
-        _hitButton.AddThemeFontSizeOverride("font_size", 18);
+        string hitButtonText = LocalizationManager.Tr("ui.concretion.hit_button");
+        if (hitButtonText == "ui.concretion.hit_button") hitButtonText = "🔨 Ударить молотком!";
+        _hitButton.Text = hitButtonText;
+        _hitButton.CustomMinimumSize = new Vector2(0, 100);
+        _hitButton.AddThemeFontSizeOverride("font_size", 20);
         _hitButton.Pressed += OnHitButtonPressed;
         vbox.AddChild(_hitButton);
 
-        // Кнопка закрытия
+        // === НОВОЕ: Кнопка "Следующая" ПЕРЕД кнопкой закрытия (изначально скрыта) ===
+        _nextButton = new Button();
+        string nextButtonText = LocalizationManager.Tr("ui.concretion.next_button");
+        if (nextButtonText == "ui.concretion.next_button") nextButtonText = "Следующая конкреция →";
+        _nextButton.Text = nextButtonText;
+        _nextButton.CustomMinimumSize = new Vector2(0, 120);
+        _nextButton.AddThemeFontSizeOverride("font_size", 18);
+        _nextButton.AddThemeColorOverride("font_color", new Color(0.3f, 0.9f, 0.3f));
+        _nextButton.Pressed += OnNextButtonPressed;
+        _nextButton.Visible = false;
+        vbox.AddChild(_nextButton);
+
+        // Красная кнопка закрытия с крестиком (в самом низу)
+        var closeRow = new HBoxContainer();
+        closeRow.Alignment = BoxContainer.AlignmentMode.Center;
+        vbox.AddChild(closeRow);
+
         _closeButton = new Button();
-        _closeButton.Text = "Закрыть";
-        _closeButton.CustomMinimumSize = new Vector2(0, 35);
+        _closeButton.CustomMinimumSize = new Vector2(CloseButtonSize, CloseButtonSize);
+        _closeButton.PivotOffset = new Vector2(CloseButtonSize / 2f, CloseButtonSize / 2f);
+        
+        var closeStyle = new StyleBoxFlat();
+        closeStyle.BgColor = new Color(0.8f, 0.25f, 0.25f, 1.0f);
+        closeStyle.CornerRadiusTopLeft = 20;
+        closeStyle.CornerRadiusTopRight = 20;
+        closeStyle.CornerRadiusBottomLeft = 20;
+        closeStyle.CornerRadiusBottomRight = 20;
+        
+        _closeButton.AddThemeStyleboxOverride("normal", closeStyle);
+        _closeButton.AddThemeStyleboxOverride("hover", closeStyle);
+        _closeButton.AddThemeStyleboxOverride("pressed", closeStyle);
+        _closeButton.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+        
+        _closeButton.Text = "";
+        _closeButton.AddThemeFontOverride("font", new FontVariation());
+        _closeButton.AddThemeColorOverride("font_color", Colors.Transparent);
+
+        var closeCenter = new CenterContainer();
+        closeCenter.MouseFilter = Control.MouseFilterEnum.Ignore;
+        closeCenter.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+
+        var closeIcon = new Label();
+        closeIcon.Text = "✕";
+        closeIcon.AddThemeFontSizeOverride("font_size", 48);
+        closeIcon.AddThemeColorOverride("font_color", Colors.White);
+        closeCenter.AddChild(closeIcon);
+        _closeButton.AddChild(closeCenter);
+
         _closeButton.Pressed += CloseUI;
-        vbox.AddChild(_closeButton);
+        closeRow.AddChild(_closeButton);
+    }
+
+    /// <summary>
+    /// Обновляет текст прогресса с учётом локализации.
+    /// </summary>
+    private void UpdateProgressLabel()
+    {
+        string format = LocalizationManager.Tr("ui.concretion.hits_format");
+        if (format == "ui.concretion.hits_format")
+        {
+            format = "Ударов: {0} / {1}";
+        }
+        _progressLabel.Text = string.Format(format, _currentHits, _requiredHits);
     }
 
     private void OnHitButtonPressed()
     {
         _currentHits++;
         
-        // === НОВОЕ: Анимация удара ===
         AnimateHit();
-        
-        // === НОВОЕ: Переключаем кадр разрушения ===
         UpdateConcretionFrame();
 
-        _progressLabel.Text = $"Ударов: {_currentHits} / {_requiredHits}";
+         UpdateProgressLabel();
         _progressBar.Value = _currentHits;
 
         if (_currentHits >= _requiredHits)
         {
-            // Небольшая задержка перед раскрытием
             GetTree().CreateTimer(0.5).Timeout += () => OpenConcretion();
         }
     }
 
     private void AnimateHit()
     {
-        // Тряска + вспышка
         var tween = CreateTween();
         tween.SetParallel();
         
-        // Тряска
         tween.TweenProperty(_concretionSprite, "rotation", 0.15f, 0.05f);
         tween.TweenProperty(_concretionSprite, "rotation", -0.15f, 0.05f).SetDelay(0.05f);
         tween.TweenProperty(_concretionSprite, "rotation", 0.0f, 0.05f).SetDelay(0.1f);
         
-        // Вспышка белым
         tween.TweenProperty(_concretionSprite, "modulate", Colors.White * 1.5f, 0.05f);
         tween.TweenProperty(_concretionSprite, "modulate", Colors.White, 0.1f).SetDelay(0.05f);
     }
 
-        private void UpdateConcretionFrame()
+    private void UpdateConcretionFrame()
     {
-        // Вычисляем, какой кадр показать (1-5)
         int frameIndex = Mathf.Min(_currentHits, 5);
         
         string shortName = _concretionId.Replace("_concretion", "");
@@ -195,6 +248,7 @@ public partial class ConcretionOpeningUI : CanvasLayer
             _concretionSprite.Texture = GD.Load<Texture2D>(framePath);
         }
     }
+
     private void OpenConcretion()
     {
         GD.Print($"[ConcretionOpeningUI] Конкреция раскрыта: {_concretionId}");
@@ -208,50 +262,146 @@ public partial class ConcretionOpeningUI : CanvasLayer
             return;
         }
 
-        // Удаляем конкрецию из инвентаря
         InventorySystem.Instance.RemoveItem(_concretionId, 1);
-
-        // Добавляем внутренний предмет
         InventorySystem.Instance.AddItem(innerItemId, 1);
 
-        // === НОВОЕ: Анимация появления экспоната ===
         AnimateReveal(innerItemId);
     }
 
         private void AnimateReveal(string innerItemId)
     {
         var innerResource = GameData.GetResource(innerItemId);
-        string resultText = $"Вы нашли: {innerResource?.DisplayName ?? innerItemId}!";
         
-        _titleLabel.Text = "✨ Конкреция раскрыта! ✨";
+        // === Используем локализацию для заголовка ===
+        string revealedText = LocalizationManager.Tr("ui.concretion.revealed");
+        if (revealedText == "ui.concretion.revealed")
+        {
+            revealedText = "✨ Конкреция раскрыта! ✨";
+        }
+        _titleLabel.Text = revealedText;
+        
+        // === Используем локализацию для текста находки ===
+        string foundFormat = LocalizationManager.Tr("ui.concretion.found_item");
+        if (foundFormat == "ui.concretion.found_item")
+        {
+            foundFormat = "Вы нашли: {0}!";
+        }
+        string resultText = string.Format(foundFormat, innerResource?.DisplayName ?? innerItemId);
         _progressLabel.Text = resultText;
         _progressLabel.AddThemeColorOverride("font_color", Colors.LimeGreen);
-        _hitButton.Visible = false;
-
-        // === НОВОЕ: Загружаем случайный вариант экспоната ===
-        string innerIconPath = GetRandomVariantIconPath(innerItemId);
         
+        // Скрываем ненужные элементы
+        _hitButton.Visible = false;
+        _progressBar.Visible = false;
+
+        string innerIconPath = GetRandomVariantIconPath(innerItemId);
         var newTexture = GD.Load<Texture2D>(innerIconPath);
 
-        // Анимация: конкреция исчезает, экспонат появляется
+        // Сбрасываем трансформации перед анимацией
+        _concretionSprite.Scale = Vector2.One;
+        _concretionSprite.Position = Vector2.Zero;
+
         var tween = CreateTween();
         
-        tween.TweenProperty(_concretionSprite, "position:y", -50f, 0.3f);
-        tween.Parallel().TweenProperty(_concretionSprite, "modulate:a", 0f, 0.3f);
+        // 1. Fade out конкреции + лёгкое уменьшение
+        tween.TweenProperty(_concretionSprite, "modulate:a", 0f, 0.25f);
+        tween.Parallel().TweenProperty(_concretionSprite, "scale", new Vector2(0.8f, 0.8f), 0.25f)
+               .SetTrans(Tween.TransitionType.Quad)
+               .SetEase(Tween.EaseType.In);
         
+        // 2. Меняем текстуру (невидимо для пользователя)
         tween.TweenCallback(Callable.From(() => {
             _concretionSprite.Texture = newTexture;
-            _concretionSprite.Position = new Vector2(0, 50);
             _concretionSprite.Modulate = new Color(1, 1, 1, 0);
+            _concretionSprite.Scale = new Vector2(0.8f, 0.8f);
         }));
         
-        tween.TweenProperty(_concretionSprite, "position:y", 0f, 0.3f);
-        tween.Parallel().TweenProperty(_concretionSprite, "modulate:a", 1f, 0.3f);
+        // 3. Fade in + появление с эффектом "pop"
+        tween.TweenProperty(_concretionSprite, "modulate:a", 1f, 0.25f);
+        tween.Parallel().TweenProperty(_concretionSprite, "scale", new Vector2(1.15f, 1.15f), 0.2f)
+               .SetTrans(Tween.TransitionType.Back)
+               .SetEase(Tween.EaseType.Out);
         
-        tween.TweenProperty(_concretionSprite, "scale", new Vector2(1.2f, 1.2f), 0.1f);
-        tween.TweenProperty(_concretionSprite, "scale", Vector2.One, 0.1f);
+        // 4. Плавное возвращение к нормальному размеру
+        tween.TweenProperty(_concretionSprite, "scale", Vector2.One, 0.15f)
+               .SetTrans(Tween.TransitionType.Quad)
+               .SetEase(Tween.EaseType.Out);
+
+        // 5. Показываем кнопку "Следующая", если есть ещё конкреции
+        tween.TweenCallback(Callable.From(() => {
+            UpdateNextButtonState();
+        }));
 
         GD.Print($"[ConcretionOpeningUI] Получен предмет: {innerItemId}");
+    }
+
+    // === НОВОЕ: Проверяем наличие других конкреций такого же типа ===
+    private bool HasMoreConcretions()
+    {
+        if (InventorySystem.Instance == null) return false;
+        
+        var item = InventorySystem.Instance.GetItem(_concretionId);
+        return item != null && item.Amount > 0;
+    }
+
+    // === НОВОЕ: Обновляем видимость кнопки "Следующая" ===
+       private void UpdateNextButtonState()
+    {
+        bool hasMore = HasMoreConcretions();
+        _nextButton.Visible = hasMore;
+        
+        if (hasMore)
+        {
+            var item = InventorySystem.Instance.GetItem(_concretionId);
+            string format = LocalizationManager.Tr("ui.concretion.next_button_with_count");
+            if (format == "ui.concretion.next_button_with_count")
+            {
+                format = "Следующая конкреция → (осталось: {0})";
+            }
+            _nextButton.Text = string.Format(format, item.Amount);
+        }
+    }
+
+    // === НОВОЕ: Обработчик кнопки "Следующая" ===
+    private void OnNextButtonPressed()
+    {
+        if (!HasMoreConcretions())
+        {
+            GD.PrintErr("[ConcretionOpeningUI] Нет больше конкреций!");
+            return;
+        }
+
+        // Сбрасываем состояние
+        _currentHits = 0;
+        _progressBar.Value = 0;
+         UpdateProgressLabel();
+        _progressLabel.AddThemeColorOverride("font_color", Colors.White);
+        
+        // Показываем элементы снова
+        _hitButton.Visible = true;
+        _progressBar.Visible = true;
+        _nextButton.Visible = false;
+        
+        // Обновляем заголовок
+        _titleLabel.Text = _definition.DisplayName;
+        _titleLabel.AddThemeColorOverride("font_color", Colors.Gold);
+
+        // Загружаем первый кадр
+        string shortName = _concretionId.Replace("_concretion", "");
+        string firstFramePath = $"res://assets/museum/items/common/concretion/{shortName}_1.png";
+        
+        if (ResourceLoader.Exists(firstFramePath))
+        {
+            _concretionSprite.Texture = GD.Load<Texture2D>(firstFramePath);
+        }
+
+        // Сбрасываем трансформации
+        _concretionSprite.Position = Vector2.Zero;
+        _concretionSprite.Scale = Vector2.One;
+        _concretionSprite.Modulate = Colors.White;
+        _concretionSprite.Rotation = 0f;
+
+        GD.Print($"[ConcretionOpeningUI] Открытие следующей конкреции");
     }
 
     private string GetRandomVariantIconPath(string resourceId)
@@ -265,7 +415,6 @@ public partial class ConcretionOpeningUI : CanvasLayer
             if (ResourceLoader.Exists(variantPath)) return variantPath;
         }
         
-        // Fallback на обычную иконку
         string commonPath = $"res://assets/museum/items/common/{resourceId}.png";
         if (ResourceLoader.Exists(commonPath)) return commonPath;
         
@@ -287,7 +436,6 @@ public partial class ConcretionOpeningUI : CanvasLayer
             }
         }
 
-        // Если ничего не выпало, возвращаем первый предмет из пула
         return _definition.PossibleContents[0].Resource.Id;
     }
 
