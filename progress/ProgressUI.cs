@@ -35,62 +35,45 @@ public partial class ProgressUI : CanvasLayer
         var panel = new PanelContainer();
         panel.Name = "MainPanel";
         panel.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-        
-        var style = new StyleBoxFlat();
-        style.BgColor = new Color(0.1f, 0.1f, 0.15f, 0.95f);
-        style.CornerRadiusTopLeft = 10;
-        style.CornerRadiusTopRight = 10;
-        style.CornerRadiusBottomLeft = 10;
-        style.CornerRadiusBottomRight = 10;
-        panel.AddThemeStyleboxOverride("panel", style);
+        panel.AddThemeStyleboxOverride("panel", MobileUI.MakeStyle(MobileUI.PanelColor, 20));
 
         var margin = new MarginContainer();
-        margin.AddThemeConstantOverride("margin_left", 20);
-        margin.AddThemeConstantOverride("margin_right", 20);
-        margin.AddThemeConstantOverride("margin_top", 20);
-        margin.AddThemeConstantOverride("margin_bottom", 20);
+        margin.AddThemeConstantOverride("margin_left", 16);
+        margin.AddThemeConstantOverride("margin_right", 16);
+        margin.AddThemeConstantOverride("margin_top", 16);
+        margin.AddThemeConstantOverride("margin_bottom", 16);
         panel.AddChild(margin);
 
         var mainVBox = new VBoxContainer();
-        mainVBox.AddThemeConstantOverride("separation", 15);
+        mainVBox.AddThemeConstantOverride("separation", 12);
         margin.AddChild(mainVBox);
 
-        // Заголовок с очками и кнопкой сброса
-        var headerHBox = new HBoxContainer();
-        headerHBox.AddThemeConstantOverride("separation", 20);
+        // Заголовок + очки
+        var titleRow = new HBoxContainer();
+        titleRow.AddThemeConstantOverride("separation", 10);
 
-        var titleLabel = new Label();
-        titleLabel.Text = LocalizationManager.Tr("ui.progress.title");
-        titleLabel.AddThemeFontSizeOverride("font_size", 24);
-        titleLabel.AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.5f));
-        headerHBox.AddChild(titleLabel);
+        var titleLabel = MobileUI.CreateLabel(
+            LocalizationManager.Tr("ui.progress.title"), MobileUI.TitleFontSize, MobileUI.TitleColor);
+        titleRow.AddChild(titleLabel);
 
         var spacer = new Control();
         spacer.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        headerHBox.AddChild(spacer);
+        titleRow.AddChild(spacer);
 
-        _availablePointsLabel = new Label();
-        _availablePointsLabel.AddThemeFontSizeOverride("font_size", 18);
-        _availablePointsLabel.AddThemeColorOverride("font_color", new Color(0.4f, 1f, 0.4f));
-        headerHBox.AddChild(_availablePointsLabel);
+        _availablePointsLabel = MobileUI.CreateLabel("", MobileUI.BodyFontSize, new Color(0.4f, 1f, 0.4f));
+        titleRow.AddChild(_availablePointsLabel);
 
-        _resetButton = new Button();
-        _resetButton.Text = LocalizationManager.Tr("ui.progress.reset_skills");
-        _resetButton.CustomMinimumSize = new Vector2(150, 0);
+        mainVBox.AddChild(titleRow);
+
+        // Кнопка сброса навыков — отдельной строкой, чтобы не тесниться под палец
+        _resetButton = MobileUI.CreateButton(
+            LocalizationManager.Tr("ui.progress.reset_skills"), MobileUI.WarningColor, MobileUI.RowButtonHeight);
         _resetButton.Pressed += OnResetPressed;
-        headerHBox.AddChild(_resetButton);
-
-        var closeButton = new Button();
-        closeButton.Text = "X";
-        closeButton.CustomMinimumSize = new Vector2(40, 40);
-        closeButton.Pressed += () => Visible = false;
-        headerHBox.AddChild(closeButton);
-
-        mainVBox.AddChild(headerHBox);
+        mainVBox.AddChild(_resetButton);
 
         // Вкладки
         var tabsContainer = new HBoxContainer();
-        tabsContainer.AddThemeConstantOverride("separation", 10);
+        tabsContainer.AddThemeConstantOverride("separation", 8);
         mainVBox.AddChild(tabsContainer);
 
         _tabSkillTreeButton = CreateTabButton("ui.progress.tab_skills", Tab.SkillTree);
@@ -104,6 +87,7 @@ public partial class ProgressUI : CanvasLayer
         // Контент вкладок
         _tabContent = new Control();
         _tabContent.Name = "TabContent";
+        _tabContent.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         _tabContent.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
         mainVBox.AddChild(_tabContent);
 
@@ -116,15 +100,16 @@ public partial class ProgressUI : CanvasLayer
         _tabContent.AddChild(_skeletonsTab);
         _tabContent.AddChild(_findingsTab);
 
+        // Закрытие — крупный крестик снизу, как в остальных мобильных экранах
+        mainVBox.AddChild(MobileUI.CreateCloseRow(() => Visible = false));
+
         AddChild(panel);
     }
 
     private Button CreateTabButton(string localizationKey, Tab tab)
     {
-        var button = new Button();
-        button.Text = LocalizationManager.Tr(localizationKey);
+        var button = MobileUI.CreateButton(LocalizationManager.Tr(localizationKey), MobileUI.PrimaryColor, MobileUI.RowButtonHeight, 0, MobileUI.SmallFontSize);
         button.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        button.CustomMinimumSize = new Vector2(0, 40);
         button.Pressed += () => SwitchTab(tab);
         return button;
     }

@@ -1,9 +1,20 @@
 using Godot;
 using System;
 
-public partial class SkillDetailPanel : VBoxContainer
+/// <summary>
+/// Детали выбранного навыка — нижний лист поверх дерева навыков, того же
+/// вида, что DisplayCaseUI/CollectionExhibitUI (MobileUI.CreateBottomSheet),
+/// а не постоянная боковая колонка: на экране 540px (project.godot) боковой
+/// панели рядом с деревом просто негде стоять. Открывается тапом по узлу,
+/// закрывается крестиком снизу.
+/// </summary>
+public partial class SkillDetailPanel : CanvasLayer
 {
     public event Action OnSkillUpgraded;
+
+    // Контент короткий (иконка, название, описание, кнопка) — нижней
+    // половины экрана достаточно, верх дерева остаётся виден под листом.
+    private const float SheetTop = 0.45f;
 
     private TextureRect _iconRect;
     private Label _nameLabel;
@@ -13,61 +24,38 @@ public partial class SkillDetailPanel : VBoxContainer
 
     private string _currentSkillId;
 
-        public override void _Ready()
+    public override void _Ready()
     {
-        CustomMinimumSize = new Vector2(280, 0);
-        SizeFlagsVertical = SizeFlags.ExpandFill;   // ← Растягиваем по вертикали
-        SizeFlagsHorizontal = SizeFlags.Fill;        // ← Заполняем по горизонтали
-        AddThemeConstantOverride("separation", 12);
-
-        // Иконка
-        _iconRect = new TextureRect();
-        _iconRect.CustomMinimumSize = new Vector2(64, 64);
-        _iconRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
-        _iconRect.MouseFilter = MouseFilterEnum.Ignore;
-        AddChild(_iconRect);
-
-        // Название
-        _nameLabel = new Label();
-        _nameLabel.AddThemeFontSizeOverride("font_size", 18);
-        _nameLabel.AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.5f));
-        _nameLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        AddChild(_nameLabel);
-
-        // Разделитель
-        var separator = new HSeparator();
-        AddChild(separator);
-
-        // Описание
-        _descLabel = new Label();
-        _descLabel.AddThemeFontSizeOverride("font_size", 14);
-        _descLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        _descLabel.CustomMinimumSize = new Vector2(250, 60); // ← Минимальная высота для текста
-        AddChild(_descLabel);
-
-        // Уровень
-        _levelLabel = new Label();
-        _levelLabel.AddThemeFontSizeOverride("font_size", 14);
-        _levelLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.8f));
-        _levelLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        AddChild(_levelLabel);
-
-        // Фиксированный отступ вместо Spacer (30 пикселей)
-        var spacer = new Control();
-        spacer.CustomMinimumSize = new Vector2(0, 30); // ← Фиксированная высота!
-        AddChild(spacer);
-
-        // Кнопка улучшения
-        _upgradeBtn = new Button();
-        _upgradeBtn.Text = LocalizationManager.Tr("ui.skills.upgrade");
-        _upgradeBtn.CustomMinimumSize = new Vector2(250, 45); // ← Большая и заметная
-        _upgradeBtn.SizeFlagsHorizontal = SizeFlags.ShrinkCenter; // ← Центрируем
-        _upgradeBtn.Pressed += OnUpgradePressed;
-        AddChild(_upgradeBtn);
-
+        Layer = 103; // выше панели прогресса (102), чтобы лист рисовался над деревом
         Visible = false;
-        
-        GD.Print($"[SkillDetailPanel] ✅ Готов. Кнопка: '{_upgradeBtn.Text}', размер: {_upgradeBtn.CustomMinimumSize}");
+
+        MobileUI.CreateBottomSheet(this, SheetTop, out var content);
+
+        _iconRect = new TextureRect
+        {
+            CustomMinimumSize = new Vector2(72, 72),
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+            MouseFilter = Control.MouseFilterEnum.Ignore
+        };
+        content.AddChild(_iconRect);
+
+        _nameLabel = MobileUI.CreateLabel("", MobileUI.TitleFontSize, MobileUI.TitleColor, center: true);
+        content.AddChild(_nameLabel);
+
+        content.AddChild(new HSeparator());
+
+        _descLabel = MobileUI.CreateLabel("", MobileUI.BodyFontSize, Colors.White, center: true, wrap: true);
+        content.AddChild(_descLabel);
+
+        _levelLabel = MobileUI.CreateLabel("", MobileUI.BodyFontSize, MobileUI.MutedColor, center: true);
+        content.AddChild(_levelLabel);
+
+        _upgradeBtn = MobileUI.CreateButton("", MobileUI.PrimaryColor);
+        _upgradeBtn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        _upgradeBtn.Pressed += OnUpgradePressed;
+        content.AddChild(_upgradeBtn);
+
+        content.AddChild(MobileUI.CreateCloseRow(Hide));
     }
 
     public void ShowSkill(string skillId)
@@ -78,15 +66,19 @@ public partial class SkillDetailPanel : VBoxContainer
 
         Visible = true;
 
-        if (ResourceLoader.Exists(skill.IconPath))
-            _iconRect.Texture = GD.Load<Texture2D>(skill.IconPath);
-        else
-            _iconRect.Texture = GD.Load<Texture2D>("res://icon.svg");
+        _iconRect.Texture = ResourceLoader.Exists(skill.IconPath)
+            ? GD.Load<Texture2D>(skill.IconPath)
+            : GD.Load<Texture2D>("res://icon.svg");
 
         _nameLabel.Text = LocalizationManager.Tr(skill.NameKey);
         _descLabel.Text = LocalizationManager.Tr(skill.DescriptionKey);
 
         UpdateButtonState();
+    }
+
+    public void Hide()
+    {
+        Visible = false;
     }
 
     public void Refresh()

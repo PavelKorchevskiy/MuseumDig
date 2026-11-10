@@ -6,74 +6,83 @@ public partial class SkillTreeTab : Control
     private ScrollContainer _scroll;
     private Control _canvas;
     private SkillDetailPanel _detailPanel;
-    
+
     private Dictionary<string, SkillNodeUI> _nodes = new();
-    private const float CellSize = 64f; // Уменьшили с 80 до 64
-    private const float Spacing = 30f;  // Уменьшили с 40 до 30
-    private const float BranchOffset = 400f; // Расстояние между ветками
+
+    // === Раскладка под экран 540px (project.godot: viewport 540x960) ===
+    // 2 колонки на ветку, 4 колонки всего — обе ветки видно целиком по
+    // ширине, скроллить нужно только вертикально (см. SkillData.cs —
+    // позиции навыков пересчитаны под 2 колонки по глубине зависимостей).
+    private const float CellSize = 64f;
+    private const float ColumnSpacing = 20f;   // между колонками внутри ветки
+    private const float BranchGap = 48f;       // между ветками
+    private const float RowSpacing = 40f;
+    private const float TopOffset = 44f;       // место под заголовок ветки
+    private const float LeftMargin = 16f;
+    private const float BranchWidth = CellSize * 2f + ColumnSpacing; // ширина ветки (2 колонки)
+
+    private const float MuseumX0 = LeftMargin;
+    private const float DiggingX0 = MuseumX0 + BranchWidth + BranchGap;
+    private const float CanvasWidth = DiggingX0 + BranchWidth + LeftMargin;
+    private const float CanvasHeight = TopOffset + CellSize * 4f + RowSpacing * 3f + 40f; // 4 строки (0..3)
 
     public override void _Ready()
     {
-        var mainHBox = new HBoxContainer();
-        mainHBox.SetAnchorsPreset(LayoutPreset.FullRect);
-        mainHBox.AddThemeConstantOverride("separation", 20);
-        AddChild(mainHBox);
+        SetAnchorsPreset(LayoutPreset.FullRect);
 
-        // Левая часть: Дерево
         _scroll = new ScrollContainer();
-        _scroll.SizeFlagsVertical = SizeFlags.ExpandFill;
-        _scroll.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        _scroll.CustomMinimumSize = new Vector2(800, 600);
-        mainHBox.AddChild(_scroll);
+        _scroll.SetAnchorsPreset(LayoutPreset.FullRect);
+        // Ветки целиком вмещаются по ширине — горизонтальный скролл не нужен
+        // и только мешал бы вертикальному свайпу пальцем.
+        _scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
+        AddChild(_scroll);
 
         _canvas = new Control();
-        _canvas.CustomMinimumSize = new Vector2(1200, 800); // Увеличили для двух веток
+        _canvas.CustomMinimumSize = new Vector2(CanvasWidth, CanvasHeight);
         _canvas.Draw += OnCanvasDraw;
         _scroll.AddChild(_canvas);
 
-        // Правая часть: Панель деталей
+        // Детали навыка — нижний лист поверх всего экрана прогресса (как
+        // DisplayCaseUI/CollectionExhibitUI), а не постоянная боковая
+        // колонка: на экране 540px ей просто негде стоять рядом с деревом.
         _detailPanel = new SkillDetailPanel();
         _detailPanel.OnSkillUpgraded += Refresh;
-        mainHBox.AddChild(_detailPanel);
+        AddChild(_detailPanel);
 
         Refresh();
     }
 
     public void Refresh()
     {
-        GD.Print($"[SkillTreeTab] 🔄 Refresh вызван");
-        
         foreach (var node in _nodes.Values)
         {
             node.QueueFree();
         }
         _nodes.Clear();
 
-        // Рисуем заголовки веток
-        DrawBranchTitle("Ветка Музея", 50f, new Color(0.4f, 0.7f, 1.0f));
-        DrawBranchTitle("Ветка Раскопок", BranchOffset + 50f, new Color(0.4f, 1.0f, 0.5f));
+        DrawBranchTitle(LocalizationManager.Tr("ui.skills.branch_museum"), MuseumX0, new Color(0.4f, 0.7f, 1.0f));
+        DrawBranchTitle(LocalizationManager.Tr("ui.skills.branch_digging"), DiggingX0, new Color(0.4f, 1.0f, 0.5f));
 
-        // Создаём узлы для Музея
         var museumSkills = SkillData.GetSkillsByBranch(SkillBranch.Museum);
-        CreateNodesForBranch(museumSkills, 0f);
+        CreateNodesForBranch(museumSkills, MuseumX0);
 
-        // Создаём узлы для Раскопок (со смещением вправо)
         var diggingSkills = SkillData.GetSkillsByBranch(SkillBranch.Digging);
-        CreateNodesForBranch(diggingSkills, BranchOffset);
+        CreateNodesForBranch(diggingSkills, DiggingX0);
 
         _canvas.QueueRedraw();
         _detailPanel.Refresh();
-        
-        GD.Print($"[SkillTreeTab] ✅ Создано {_nodes.Count} узлов");
     }
 
     private void DrawBranchTitle(string text, float xOffset, Color color)
     {
         var label = new Label();
         label.Text = text;
-        label.AddThemeFontSizeOverride("font_size", 20);
+        label.AddThemeFontSizeOverride("font_size", 15);
         label.AddThemeColorOverride("font_color", color);
-        label.Position = new Vector2(xOffset, 10f);
+        label.HorizontalAlignment = HorizontalAlignment.Center;
+        label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        label.CustomMinimumSize = new Vector2(BranchWidth, 0);
+        label.Position = new Vector2(xOffset, 4f);
         _canvas.AddChild(label);
     }
 
@@ -84,14 +93,14 @@ public partial class SkillTreeTab : Control
             var node = new SkillNodeUI();
             int level = SkillSystem.Instance.GetSkillLevel(skill.Id);
             int points = SkillSystem.Instance.GetAvailablePoints();
-            
-             node.Ready += () => node.Setup(skill, level, points);
-            
-            float posX = skill.GridPosition.X * (CellSize + Spacing) + 50f + xOffset;
-            float posY = skill.GridPosition.Y * (CellSize + Spacing) + 50f;
+
+            node.Ready += () => node.Setup(skill, level, points);
+
+            float posX = skill.GridPosition.X * (CellSize + ColumnSpacing) + xOffset;
+            float posY = skill.GridPosition.Y * (CellSize + RowSpacing) + TopOffset;
             node.Position = new Vector2(posX, posY);
             node.Size = new Vector2(CellSize, CellSize);
-            
+
             node.OnNodeClicked += OnNodeClicked;
             _canvas.AddChild(node);
             _nodes[skill.Id] = node;
@@ -100,41 +109,39 @@ public partial class SkillTreeTab : Control
 
     private void OnNodeClicked(string skillId)
     {
-        GD.Print($"[SkillTreeTab] 🖱️ Клик на узел: {skillId}");
         _detailPanel.ShowSkill(skillId);
     }
 
-        private void OnCanvasDraw()
+    private void OnCanvasDraw()
     {
         var goldColor = new Color(1.0f, 0.85f, 0.2f);      // Золотой — активная связь
         var grayColor = new Color(0.4f, 0.4f, 0.4f, 0.6f); // Серый — неактивная связь
 
-        // Рисуем вертикальную разделительную линию между ветками
+        // Разделительная линия между ветками — посередине промежутка между ними
         var separatorColor = new Color(0.5f, 0.5f, 0.5f, 0.3f);
+        float separatorX = MuseumX0 + BranchWidth + BranchGap / 2f;
         _canvas.DrawLine(
-            new Vector2(BranchOffset - 20f, 0f), 
-            new Vector2(BranchOffset - 20f, _canvas.CustomMinimumSize.Y), 
-            separatorColor, 
+            new Vector2(separatorX, 0f),
+            new Vector2(separatorX, CanvasHeight),
+            separatorColor,
             2f
         );
 
-        // === РИСУЕМ ВСЕ СВЯЗИ МЕЖДУ УЗЛАМИ ===
+        // === Рисуем все связи между узлами ===
         foreach (var skill in SkillData.GetAllSkills())
         {
             if (skill.Prerequisites == null) continue;
 
             foreach (var prereqId in skill.Prerequisites)
             {
-                if (_nodes.TryGetValue(prereqId, out var prereqNode) && 
+                if (_nodes.TryGetValue(prereqId, out var prereqNode) &&
                     _nodes.TryGetValue(skill.Id, out var targetNode))
                 {
-                    // Центры узлов
                     Vector2 start = prereqNode.Position + new Vector2(CellSize / 2f, CellSize / 2f);
                     Vector2 end = targetNode.Position + new Vector2(CellSize / 2f, CellSize / 2f);
-                    
-                    // Выбираем цвет: золотой если пререквизит выкуплен, серый если нет
+
                     Color lineColor = SkillSystem.Instance.IsSkillUnlocked(prereqId) ? goldColor : grayColor;
-                    
+
                     _canvas.DrawLine(start, end, lineColor, 3f);
                 }
             }

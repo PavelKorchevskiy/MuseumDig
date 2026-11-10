@@ -12,6 +12,14 @@ public partial class SkillNodeUI : Control
     private string _skillId;
     private SkillDefinition _skill;
 
+    // Тап/свайп: дерево лежит в ScrollContainer, который листается пальцем,
+    // поэтому клик по узлу засчитываем только при отпускании и только если
+    // палец не уехал дальше порога — иначе любой скролл дерева открывал бы
+    // панель навыка под пальцем. Порог как в CameraController.TapThresholdPx.
+    private const float TapThresholdPx = 18f;
+    private Vector2 _pressPos;
+    private bool _dragging;
+
     // Цвета состояний
     private static readonly Color ColorLocked = new Color(0.2f, 0.2f, 0.2f);
     private static readonly Color ColorAvailable = new Color(0.6f, 0.6f, 0.6f);
@@ -33,7 +41,7 @@ public partial class SkillNodeUI : Control
         _panel.Size = new Vector2(64, 64);
         _panel.Position = Vector2.Zero;
         _panel.MouseFilter = MouseFilterEnum.Ignore;
-        
+
         _styleBox = new StyleBoxFlat();
         _styleBox.CornerRadiusTopLeft = 8;
         _styleBox.CornerRadiusTopRight = 8;
@@ -116,9 +124,25 @@ public partial class SkillNodeUI : Control
 
     private void OnGuiInput(InputEvent @event)
     {
-        if (@event is InputEventMouseButton mouseEvent && mouseEvent.Pressed && mouseEvent.ButtonIndex == MouseButton.Left)
+        if (@event is InputEventMouseButton mouseEvent && mouseEvent.ButtonIndex == MouseButton.Left)
         {
-            OnNodeClicked?.Invoke(_skillId);
+            if (mouseEvent.Pressed)
+            {
+                _pressPos = mouseEvent.Position;
+                _dragging = false;
+            }
+            else if (!_dragging && (mouseEvent.Position - _pressPos).Length() <= TapThresholdPx)
+            {
+                OnNodeClicked?.Invoke(_skillId);
+            }
+        }
+        else if (@event is InputEventMouseMotion motionEvent &&
+                 (motionEvent.ButtonMask & MouseButtonMask.Left) != 0)
+        {
+            if ((motionEvent.Position - _pressPos).Length() > TapThresholdPx)
+            {
+                _dragging = true;
+            }
         }
     }
 }
