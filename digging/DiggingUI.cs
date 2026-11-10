@@ -26,24 +26,26 @@ public partial class DiggingUI : Control
         
         MouseFilter = MouseFilterEnum.Ignore;
         
+        // Цвета — из общей мобильной палитры (MobileUI), чтобы выглядело
+        // так же, как остальной интерфейс игры.
         _normalStyle = new StyleBoxFlat();
-        _normalStyle.BgColor = new Color(0.2f, 0.2f, 0.25f);
-        _normalStyle.CornerRadiusTopLeft = 8;
-        _normalStyle.CornerRadiusTopRight = 8;
-        _normalStyle.CornerRadiusBottomLeft = 8;
-        _normalStyle.CornerRadiusBottomRight = 8;
+        _normalStyle.BgColor = MobileUI.NeutralColor;
+        _normalStyle.CornerRadiusTopLeft = 12;
+        _normalStyle.CornerRadiusTopRight = 12;
+        _normalStyle.CornerRadiusBottomLeft = 12;
+        _normalStyle.CornerRadiusBottomRight = 12;
         _normalStyle.BorderWidthLeft = 2;
         _normalStyle.BorderWidthTop = 2;
         _normalStyle.BorderWidthRight = 2;
         _normalStyle.BorderWidthBottom = 2;
-        _normalStyle.BorderColor = new Color(0.4f, 0.4f, 0.4f);
+        _normalStyle.BorderColor = MobileUI.RowBorderColor;
 
         _selectedStyle = _normalStyle.Duplicate() as StyleBoxFlat;
-        _selectedStyle.BgColor = new Color(0.3f, 0.5f, 0.3f);
-        _selectedStyle.BorderColor = new Color(0.5f, 1.0f, 0.5f);
+        _selectedStyle.BgColor = MobileUI.PrimaryColor;
+        _selectedStyle.BorderColor = MobileUI.PrimaryColor.Lightened(0.4f);
 
         _disabledStyle = _normalStyle.Duplicate() as StyleBoxFlat;
-        _disabledStyle.BgColor = new Color(0.15f, 0.15f, 0.15f);
+        _disabledStyle.BgColor = new Color(0.22f, 0.22f, 0.28f);
         _disabledStyle.BorderColor = new Color(0.3f, 0.3f, 0.3f);
 
         CreatePanel();
@@ -56,9 +58,9 @@ public partial class DiggingUI : Control
         panelContainer.AnchorRight = 1;
         panelContainer.AnchorBottom = 1;
         panelContainer.AnchorTop = 1;
-        panelContainer.OffsetTop = -90;
+        panelContainer.OffsetTop = -104; // чуть выше: кнопки стали крупнее под палец
         panelContainer.MouseFilter = MouseFilterEnum.Ignore;
-        
+
         var panelStyle = new StyleBoxFlat();
         panelStyle.BgColor = new Color(0.1f, 0.1f, 0.12f, 0.85f);
         panelStyle.CornerRadiusTopLeft = 12;
@@ -68,7 +70,7 @@ public partial class DiggingUI : Control
 
         var hbox = new HBoxContainer();
         hbox.Alignment = BoxContainer.AlignmentMode.Center;
-        hbox.AddThemeConstantOverride("separation", 20);
+        hbox.AddThemeConstantOverride("separation", 16);
         panelContainer.AddChild(hbox);
 
         // === Кнопка Копателя ===
@@ -112,15 +114,16 @@ public partial class DiggingUI : Control
     /// Создаёт кнопку инструмента с центрированным изображением и текстом.
     /// </summary>
     private void CreateToolButton(
-        string iconPath, 
+        string iconPath,
         string textKey,
         int? price,
         out Button button,
         out Label label)
     {
         button = new Button();
-        button.CustomMinimumSize = new Vector2(140, 70);
-        
+        button.CustomMinimumSize = new Vector2(150, 76);
+        button.FocusMode = Control.FocusModeEnum.None;
+
         // === ВАЖНО: Контейнер растягивается на ВСЮ кнопку ===
         var vbox = new VBoxContainer();
         vbox.Alignment = BoxContainer.AlignmentMode.Center;  // Контент по центру вертикально
@@ -128,49 +131,52 @@ public partial class DiggingUI : Control
         vbox.SizeFlagsVertical = Control.SizeFlags.ExpandFill;   // Заполняет всю высоту
         vbox.AddThemeConstantOverride("separation", 2);
         vbox.MouseFilter = MouseFilterEnum.Ignore; // Пропускаем клики к кнопке
-        
+
         // === Иконка ===
         var icon = new TextureRect();
         icon.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
         icon.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize; // Фиксированный размер
-        icon.CustomMinimumSize = new Vector2(40, 32);
-        icon.Size = new Vector2(40, 32);
+        icon.CustomMinimumSize = new Vector2(44, 36);
+        icon.Size = new Vector2(44, 36);
         icon.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter; // Центрируем по горизонтали
         icon.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
         icon.MouseFilter = MouseFilterEnum.Ignore;
-        
+
         if (ResourceLoader.Exists(iconPath))
         {
             icon.Texture = GD.Load<Texture2D>(iconPath);
         }
         vbox.AddChild(icon);
-        
+
         // === Текст ===
         label = new Label();
         label.HorizontalAlignment = HorizontalAlignment.Center;
         label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill; // Заполняет ширину
-        label.AddThemeFontSizeOverride("font_size", 12);
+        label.AddThemeFontSizeOverride("font_size", 15);
         label.MouseFilter = MouseFilterEnum.Ignore;
-        
+
         string baseText = LocalizationManager.Tr(textKey);
         label.Text = price.HasValue ? $"{baseText}\n🪙{price.Value}" : baseText;
-        
+
         vbox.AddChild(label);
-        
+
         button.AddChild(vbox);
-        
+
         // === ВАЖНО: очищаем встроенный текст и убираем content margin ===
         button.Text = "";
-        
+
         // Делаем все стили с одинаковыми симметричными отступами
         UpdateButtonMargins(_normalStyle);
         UpdateButtonMargins(_selectedStyle);
         UpdateButtonMargins(_disabledStyle);
-        
+
         button.AddThemeStyleboxOverride("normal", _normalStyle);
         button.AddThemeStyleboxOverride("hover", _normalStyle);
         button.AddThemeStyleboxOverride("pressed", _normalStyle);
-        button.AddThemeStyleboxOverride("focus", _normalStyle);
+        button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+
+        // Та же анимация нажатия ("сжатие" кнопки), что у остальных мобильных кнопок игры
+        MobileUI.AttachPressAnimation(button);
     }
 
     /// <summary>
@@ -179,10 +185,10 @@ public partial class DiggingUI : Control
     /// </summary>
     private void UpdateButtonMargins(StyleBoxFlat style)
     {
-        style.ContentMarginLeft = 8;
-        style.ContentMarginRight = 8;
-        style.ContentMarginTop = 6;
-        style.ContentMarginBottom = 6;
+        style.ContentMarginLeft = 10;
+        style.ContentMarginRight = 10;
+        style.ContentMarginTop = 8;
+        style.ContentMarginBottom = 8;
     }
 
     public override void _Process(double delta)

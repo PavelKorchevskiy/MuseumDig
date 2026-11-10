@@ -38,9 +38,13 @@ public partial class DigInputController : Node2D
 
      public override void _UnhandledInput(InputEvent @event)
     {
-        if (@event is InputEventMouseButton mouseEvent 
-            && mouseEvent.Pressed 
-            && mouseEvent.ButtonIndex == MouseButton.Left)
+        // Клик по тайлу засчитываем по отпусканию пальца и только если это
+        // был тап, а не панорама/pinch камеры DigSite (см. DigSite.TapAllowed,
+        // тот же паттерн, что GlobalRoomViewUI + CameraController в музее).
+        if (@event is InputEventMouseButton mouseEvent
+            && !mouseEvent.Pressed
+            && mouseEvent.ButtonIndex == MouseButton.Left
+            && DigSite.TapAllowed)
         {
             var mousePos = GetGlobalMousePosition();
             Tile clickedTile = _digSite?.GetTileAtPosition(mousePos);

@@ -52,15 +52,27 @@ public partial class SaveSystem : Node
         }
     }
     
-    public override void _Notification(int what)
-    {
-        if (what == NotificationWMCloseRequest)
+        public override void _Notification(int what)
         {
-            GD.Print("[SaveSystem] ⚠️ Закрытие окна, экстренное сохранение...");
-            SaveGame();
-            GetTree().Quit();
+            if (what == NotificationWMCloseRequest)
+            {
+                // Закрытие окна (крестик) — актуально только на ПК.
+                GD.Print("[SaveSystem] ⚠️ Закрытие окна, экстренное сохранение...");
+                SaveGame();
+                GetTree().Quit();
+            }
+            else if (what == NotificationApplicationFocusOut || what == NotificationApplicationPaused)
+            {
+                // На Android/iOS таймер автосейва не спасает: когда игрок сворачивает
+                // или закрывает приложение, WMCloseRequest не присылается, а ОС может
+                // прибить процесс в любой момент после сворачивания — без предупреждения.
+                // Поэтому сохраняем принудительно сразу при потере фокуса/уходе в фон.
+                GD.Print("[SaveSystem] 📱 Приложение уходит в фон, принудительное сохранение...");
+                SaveGame();
+                _dirty = false;
+                _saveTimer = 0;
+            }
         }
-    }
     
     public void MarkDirty() => _dirty = true;
 
@@ -131,11 +143,15 @@ public partial class SaveSystem : Node
     {
         GD.Print("=== LOAD GAME START ===");
         
-        if (!FileAccess.FileExists(SavePath))
-        {
-            GD.Print("No save file found, starting new game");
-            return;
-        }
+                if (!FileAccess.FileExists(SavePath))
+                {
+                    GD.Print("No save file found, starting new game");
+
+                    // === Стартовый подарок новому игроку: 3 билета в Канаду ===
+                    InventorySystem.Instance?.AddItem("ticket_canada", 3);
+
+                    return;
+                }
         
         using var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Read);
         if (file == null)
