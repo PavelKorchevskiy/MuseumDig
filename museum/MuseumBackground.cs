@@ -8,7 +8,7 @@ public partial class MuseumBackground : Node2D
     private const string WayPath = "res://assets/museum/background/way/";
     private const int GrassVariantCount = 5;
     private const int WayVariantCount = 8;
-    
+
     private const int BorderThickness = 20;
 
     // === Настройки дорожки ===
@@ -28,7 +28,7 @@ public partial class MuseumBackground : Node2D
         Vector2I entrance = FindEntrancePosition();
         GenerateWay(entrance);
         GenerateGrass();
-        
+
         // === НОВОЕ: Деревья поверх травы и дорожки ===
         AddTrees();
     }
@@ -52,12 +52,12 @@ public partial class MuseumBackground : Node2D
         new TreePlacement { GridX = -8,  GridY = 25, Offset = Vector2.Zero, Variant = 0 },
         new TreePlacement { GridX = -5,  GridY = 32, Offset = Vector2.Zero, Variant = 0 },
         new TreePlacement { GridX = -12, GridY = 38, Offset = Vector2.Zero, Variant = 0 },
-        
+
         // Правая сторона (восточнее музея)
         new TreePlacement { GridX = 40,  GridY = 22, Offset = Vector2.Zero, Variant = 0 },
         new TreePlacement { GridX = 42,  GridY = 30, Offset = Vector2.Zero, Variant = 0 },
         new TreePlacement { GridX = 45,  GridY = 36, Offset = Vector2.Zero, Variant = 0 },
-        
+
         // Нижняя часть (южнее развилки)
         new TreePlacement { GridX = 10,  GridY = 45, Offset = Vector2.Zero, Variant = 0 },
         new TreePlacement { GridX = 25,  GridY = 44, Offset = Vector2.Zero, Variant = 0 },
@@ -169,7 +169,8 @@ public partial class MuseumBackground : Node2D
         int minY = bounds.minY - BorderThickness;
         int maxY = bounds.maxY + BorderThickness;
 
-        // Сначала трава
+        // Сначала собираем список клеток травы (без создания узлов)
+        var grassCells = new List<Vector2I>();
         for (int y = minY; y <= maxY; y++)
         {
             for (int x = minX; x <= maxX; x++)
@@ -177,18 +178,21 @@ public partial class MuseumBackground : Node2D
                 if (IsInsideAnyRoom(x, y)) continue;
                 if (_wayTiles.Contains(new Vector2I(x, y))) continue;
 
-                AddTile(x, y, GrassPath, GrassVariantCount);
+                grassCells.Add(new Vector2I(x, y));
             }
         }
+        RenderGroundLayer(grassCells, GrassPath, GrassVariantCount);
 
         // Потом дорожка
+        var wayCells = new List<Vector2I>();
         foreach (var cell in _wayTiles)
         {
             if (IsInsideAnyRoom(cell.X, cell.Y)) continue;
-            AddTile(cell.X, cell.Y, WayPath, WayVariantCount);
+            wayCells.Add(cell);
         }
+        RenderGroundLayer(wayCells, WayPath, WayVariantCount);
 
-        GD.Print($"[MuseumBackground] Создано тайлов фона: {GetChildCount()}");
+        GD.Print($"[MuseumBackground] Трава: {grassCells.Count} клеток, дорожка: {wayCells.Count} клеток. Узлов фона создано: {GetChildCount()}");
     }
 
     private bool IsInsideAnyRoom(int x, int y)
@@ -207,7 +211,47 @@ public partial class MuseumBackground : Node2D
         return false;
     }
 
-    private void AddTile(int gx, int gy, string basePath, int variantCount)
+    /// <summary>
+    /// Рисует набор клеток. Группировка по текстуре оставлена только чтобы
+    /// не грузить один и тот же файл (GD.Load) по многу раз подряд -
+    /// сам узел по-прежнему создаётся на каждую клетку (см. CreateSpriteTiles),
+    /// но это Sprite2D, а не Control/TextureRect: без раскладки интерфейса,
+    /// обработки ввода и темы - именно это было причиной тормозов, а не
+    /// количество узлов само по себе. Одинаковые соседние Sprite2D с общей
+    /// текстурой и материалом Godot и так объединяет в один draw call
+    /// (2D canvas batching), так что по производительности это всё ещё
+    /// на порядки легче, чем тысячи TextureRect.
+    /// </summary>
+    private void RenderGroundLayer(List<Vector2I> cells, string basePath, int variantCount)
+    {
+        var groups = new Dictionary<string, List<Vector2I>>();
+
+        foreach (var cell in cells)
+        {
+            string path = ResolveVariantPath(cell.X, cell.Y, basePath, variantCount);
+            if (path == null) continue;
+
+            if (!groups.TryGetValue(path, out var list))
+            {
+                list = new List<Vector2I>();
+                groups[path] = list;
+            }
+            list.Add(cell);
+        }
+
+        foreach (var kvp in groups)
+        {
+            CreateSpriteTiles(kvp.Key, kvp.Value);
+        }
+    }
+
+    /// <summary>
+    /// Выбирает файл текстуры для клетки — та же детерминированная логика,
+    /// что была в старом AddTile: один и тот же хеш координат всегда даёт
+    /// один и тот же вариант, поэтому расположение травы не меняется между
+    /// перезапусками и не "мерцает" при перестройке сцены.
+    /// </summary>
+    private string ResolveVariantPath(int gx, int gy, string basePath, int variantCount)
     {
         int variant = (HashCoordinates(gx, gy, 200) % variantCount) + 1;
         string path = $"{basePath}{variant}.png";
@@ -215,25 +259,91 @@ public partial class MuseumBackground : Node2D
         if (!ResourceLoader.Exists(path))
         {
             path = $"{basePath}1.png";
-            if (!ResourceLoader.Exists(path)) return;
+            if (!ResourceLoader.Exists(path)) return null;
+        }
+        return path;
+    }
+
+    /// <summary>
+    /// Создаёт по одному Sprite2D на клетку этой группы (все клетки здесь уже
+    /// используют одну и ту же текстуру-вариант). Из текстуры берётся только
+    /// верхняя ромбовидная "крышка" тайла, которая в натуральную величину равна
+    /// клетке 64×32 - ровно как у плиток пола, поэтому сетки травы, дорожки и
+    /// пола совпадают. Якорь - верхний левый угол клетки (Centered = false).
+    /// От MultiMeshInstance2D/QuadMesh отказался: это 3D-примитив, у его UV
+    /// в 2D-контексте возможен вертикальный флип, который не проверить без
+    /// запуска движка - а Sprite2D ведёт себя предсказуемо и доказанно работает
+    /// (тот же узел уже используется для пола).
+    /// </summary>
+    private void CreateSpriteTiles(string texturePath, List<Vector2I> cells)
+    {
+        if (cells.Count == 0) return;
+
+        var texture = GD.Load<Texture2D>(texturePath);
+
+        // === Берём только "крышку" тайла, без боковых стенок ===
+        // Тайлы нарисованы объёмными: сверху зелёная ромбовидная крышка, под ней
+        // коричневые боковые стенки (земля). Файл при этом квадратный (64×64) и
+        // вокруг рисунка есть прозрачные поля (у травы по 11px сверху и снизу).
+        //
+        // Если рисовать весь рисунок целиком, коричневые стенки лезут в соседние
+        // клетки и выглядят как коричневые зазоры между травой. Поэтому:
+        //   1) находим прямоугольник непрозрачных пикселей (GetUsedRect);
+        //   2) отрезаем от него сверху ровно крышку - изометрический ромб,
+        //      у которого высота вдвое меньше ширины (64×32 для этих текстур).
+        // Соседние тайлы при правильном порядке отрисовки (ZIndex ниже) полностью
+        // накрывают стенки друг друга, поэтому коричневое остаётся только по
+        // внешнему краю газона, где соседей нет.
+        Rect2 region = new Rect2(0, 0, texture.GetWidth(), texture.GetHeight());
+
+        var image = texture.GetImage();
+        if (image != null)
+        {
+            if (image.IsCompressed() && image.Decompress() != Error.Ok)
+            {
+                image = null;
+            }
+
+            if (image != null)
+            {
+                var used = image.GetUsedRect();
+                if (used.Size.X > 0 && used.Size.Y > 0)
+                {
+                    // Высота крышки = половина её ширины (пропорция изометрии 2:1)
+                    float capHeight = Mathf.Min(used.Size.X / 2f, used.Size.Y);
+                    region = new Rect2(used.Position.X, used.Position.Y, used.Size.X, capHeight);
+                }
+            }
         }
 
-        var sprite = new TextureRect();
-        sprite.Texture = GD.Load<Texture2D>(path);
-        sprite.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
-        sprite.MouseFilter = Control.MouseFilterEnum.Ignore;
-
-        var isoPos = IsoUtils.GridToIso(gx, gy);
-
-        sprite.Position = new Vector2(
-            GridOffsetX + isoPos.X,
-            GridOffsetY + isoPos.Y
+        // Крышка по размеру уже равна клетке (64×32), так что масштаб выходит 1:1.
+        // Формула оставлена общей на случай текстур другого разрешения.
+        Vector2 scale = new Vector2(
+            IsoUtils.TileWidth / region.Size.X,
+            IsoUtils.TileHeight / region.Size.Y
         );
-        sprite.Size = new Vector2(IsoUtils.TileWidth, IsoUtils.TileHeight);
-        sprite.ZIndex = -100 + (gx + gy);
-        AddCoordinateLabel(gx, gy, sprite.Position);
 
-        AddChild(sprite);
+        foreach (var cell in cells)
+        {
+            var isoPos = IsoUtils.GridToIso(cell.X, cell.Y);
+            Vector2 topLeft = new Vector2(GridOffsetX + isoPos.X, GridOffsetY + isoPos.Y);
+
+            var sprite = new Sprite2D();
+            sprite.Texture = texture;
+            sprite.RegionEnabled = true;   // рисуем только непрозрачную часть файла
+            sprite.RegionRect = region;
+            sprite.Centered = false;       // Position = верхний левый угол клетки
+            sprite.Position = topLeft;
+            sprite.Scale = scale;
+
+            // Как и раньше у пола (ZIndex = GetZOrder(x,y)), но со сдвигом -100,
+            // чтобы фон гарантированно оставался позади пола/стен/мебели.
+            sprite.ZIndex = -100 + IsoUtils.GetZOrder(cell.X, cell.Y);
+
+            AddChild(sprite);
+
+            AddCoordinateLabel(cell.X, cell.Y, topLeft);
+        }
     }
 
     private static int HashCoordinates(int x, int y, int salt)
@@ -242,7 +352,7 @@ public partial class MuseumBackground : Node2D
         return Mathf.Abs((int)(hash & 0x7FFFFFFF));
     }
 
-    
+
         /// <summary>
     /// Возвращает две точки концов параллельной дорожки (левый и правый).
     /// </summary>
@@ -289,7 +399,7 @@ public partial class MuseumBackground : Node2D
         for (int i = 0; i < TreePlacements.Length; i++)
         {
             var placement = TreePlacements[i];
-            
+
             if (!IsValidTreePosition(placement.GridX, placement.GridY))
             {
                 GD.PrintErr($"[MuseumBackground] ⚠️ Дерево #{i} на ({placement.GridX},{placement.GridY}) в запретной зоне (на дорожке, в комнате или между дорожкой и музеем)");
@@ -298,7 +408,7 @@ public partial class MuseumBackground : Node2D
 
             AddTree(placement, i);
         }
-        
+
         GD.Print($"[MuseumBackground] Создано деревьев: {TreePlacements.Length}");
     }
 
@@ -389,7 +499,7 @@ public partial class MuseumBackground : Node2D
         label.AddThemeFontSizeOverride("font_size", 10);
         label.HorizontalAlignment = HorizontalAlignment.Center;
         label.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
-        
+
         // Чёрный контур для читаемости на любом фоне
         label.AddThemeColorOverride("font_color", Colors.White);
         label.AddThemeColorOverride("font_outline_color", Colors.Black);
@@ -401,7 +511,7 @@ public partial class MuseumBackground : Node2D
             tilePosition.Y - 5f
         );
         label.CustomMinimumSize = new Vector2(40, 15);
-        
+
         // Z-индекс выше тайлов фона
         label.ZIndex = IsoUtils.GetZOrder(gx, gy) + 20;
 

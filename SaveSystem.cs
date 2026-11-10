@@ -13,6 +13,19 @@ public partial class SaveSystem : Node
     private const double AutoSaveInterval = 5.0;
     private long _lastSessionTimestamp = 0;
 
+    /// <summary>
+    /// Монеты, начисленные за офлайн-доход при последней загрузке (уже добавлены в Wallet).
+    /// UI вызывает ConsumePendingOfflineIncome() один раз, чтобы показать попап.
+    /// </summary>
+    public int PendingOfflineIncomeToShow { get; private set; } = 0;
+
+    public int ConsumePendingOfflineIncome()
+    {
+        int value = PendingOfflineIncomeToShow;
+        PendingOfflineIncomeToShow = 0;
+        return value;
+    }
+
         public override void _Ready()
     {
         Instance = this;
@@ -168,6 +181,21 @@ public partial class SaveSystem : Node
             
             _lastSessionTimestamp = data.LastSaveTimestamp;
             GD.Print($"Loaded last session timestamp: {_lastSessionTimestamp}");
+
+            // === Офлайн-доход: начисляем СРАЗУ, попап показывается уже постфактум ===
+            if (_lastSessionTimestamp > 0)
+            {
+                long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                long elapsed = Math.Max(0, now - _lastSessionTimestamp);
+                int offlineIncome = MuseumSystem.Instance?.CalculateOfflineIncome(elapsed) ?? 0;
+
+                if (offlineIncome > 0)
+                {
+                    Wallet.Instance?.AddCoins(offlineIncome);
+                    PendingOfflineIncomeToShow = offlineIncome;
+                    GD.Print($"[SaveSystem] 💰 Офлайн-доход: +{offlineIncome} монет (прошло {elapsed} сек)");
+                }
+            }
 
        if (DiggingManager.Instance != null && data.DiggingProgressByLocation != null)
             {

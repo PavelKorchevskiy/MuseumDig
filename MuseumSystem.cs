@@ -347,19 +347,40 @@ public partial class MuseumSystem : Node
     }
 
      /// <summary>
-    /// Возвращает расчетный доход в секунду при полной загрузке музея.
-    /// Используется для UI и расчета офлайн-наград.
+    /// Расчётный доход в секунду в установившемся режиме (музей заполнен).
+    /// При фиксированном времени визита (Visitor.BaseVisitDuration) и лимите maxVisitors
+    /// места освобождаются со скоростью maxVisitors / BaseVisitDuration в секунду - именно
+    /// с такой скоростью в среднем входят новые посетители. Сверху ограничено скоростью,
+    /// с которой VisitorManager физически успевает спавнить (1 / MinSpawnInterval).
+    /// Используется для UI и расчёта офлайн-дохода.
     /// </summary>
-    public int GetEstimatedIncomePerSecond()
+    public float GetEstimatedIncomePerSecond()
     {
         int maxVisitors = CalculateMaxVisitors();
-        
-        // Формула: (Макс. посетителей / Интервал спавна) * Цена билета
-        // Если интервал спавна 3 сек, а билет 50 монет:
-        const int spawnInterval = 3;
-        const int ticketPrice = 50;
-        
-        return (maxVisitors * ticketPrice) / spawnInterval;
+
+        float ticketPriceModifier = SkillSystem.Instance.GetModifier("visitor_ticket_price");
+        float ticketPrice = ticketPriceModifier > 0 ? ticketPriceModifier : BaseVisitorTicketPrice;
+
+        float entriesPerSecond = Mathf.Min(
+            maxVisitors / Visitor.BaseVisitDuration,
+            1f / VisitorManager.MinSpawnInterval
+        );
+
+        return entriesPerSecond * ticketPrice;
+    }
+
+    /// <summary>
+    /// Доход за время отсутствия игрока: половина от активного дохода в секунду,
+    /// за время не больше 12 часов.
+    /// </summary>
+    public int CalculateOfflineIncome(long elapsedSeconds)
+    {
+        const long maxOfflineSeconds = 12 * 3600;
+        long cappedSeconds = Math.Min(Math.Max(elapsedSeconds, 0), maxOfflineSeconds);
+        if (cappedSeconds <= 0) return 0;
+
+        float offlineIncomePerSecond = GetEstimatedIncomePerSecond() / 2f;
+        return Mathf.RoundToInt(offlineIncomePerSecond * cappedSeconds);
     }
 }
 

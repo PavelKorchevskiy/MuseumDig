@@ -23,6 +23,4 @@ public partial class CollectionDefinition : Resource
     [Export] public Vector2I Size = new Vector2I(2, 2); // Размер занимаемых клеток
     
     [Export] public string TexturePath = ""; // Путь к спрайту целого экспоната с пьедесталом
-    
-    [Export] public int BaseMuseumIncome = 10; // Доход от выставки этой коллекции
 }

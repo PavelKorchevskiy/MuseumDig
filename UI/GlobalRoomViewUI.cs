@@ -137,18 +137,8 @@ public partial class GlobalRoomViewUI : Node2D
                     tileRect.Size = new Vector2(IsoUtils.TileWidth, IsoUtils.TileHeight);
                     tileRect.Texture = floorTexture;
                     tileRect.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
-                    tileRect.MouseFilter = Control.MouseFilterEnum.Stop;
+                    tileRect.MouseFilter = Control.MouseFilterEnum.Ignore;
                     tileRect.ZIndex = IsoUtils.GetZOrder(x, y);
-
-                    tileRect.GuiInput += (@event) =>
-                    {
-                        if (@event is InputEventMouseButton mouseEvent &&
-                            mouseEvent.Pressed &&
-                            mouseEvent.ButtonIndex == MouseButton.Left)
-                        {
-                            OnRoomClicked(room.Id);
-                        }
-                    };
 
                     container.AddChild(tileRect);
                 }
@@ -415,7 +405,63 @@ public partial class GlobalRoomViewUI : Node2D
         
     }
 
-        public void UpdateRoomVisibility()
+        /// <summary>
+    /// Обрабатывает тап по миру, переданный из CameraController. Это центральная точка входа
+    /// для кликов по тайлам музея на мобильных устройствах: тайлы пола больше не перехватывают
+    /// клик сами (MouseFilter = Ignore), поэтому разворот "мировая точка -> клетка -> реакция"
+    /// теперь делается здесь.
+    /// </summary>
+    public void OnWorldTap(Vector2 worldPos)
+    {
+        Vector2I cell = WorldToCell(worldPos);
+
+        if (cell.X < 0 || cell.X >= MuseumLayout.GridWidth ||
+            cell.Y < 0 || cell.Y >= MuseumLayout.GridHeight)
+            return;
+
+        int roomIdx = MuseumLayout.Instance.RoomIndex[cell.X, cell.Y];
+        if (roomIdx < 0 || roomIdx >= MuseumLayout.Instance.Rooms.Count)
+            return;
+
+        var room = MuseumLayout.Instance.Rooms[roomIdx];
+        if (!room.IsUnlocked) return;
+
+        Vector2I localCell = new Vector2I(cell.X - room.GlobalOffset.X, cell.Y - room.GlobalOffset.Y);
+
+        // Сначала проверяем мебель - у неё приоритет над полом
+        foreach (var placed in room.PlacedFurnitureList)
+        {
+            if (localCell.X >= placed.Position.X && localCell.X < placed.Position.X + placed.Size.X &&
+                localCell.Y >= placed.Position.Y && localCell.Y < placed.Position.Y + placed.Size.Y)
+            {
+                var museumNode = GetTree().CurrentScene as Museum;
+
+                if (placed.Furniture is DisplayCase)
+                {
+                    museumNode?.OpenDisplayCaseUI(room, placed);
+                    return;
+                }
+                if (placed.Furniture is CollectionExhibit)
+                {
+                    museumNode?.OpenCollectionExhibitUI(room, placed);
+                    return;
+                }
+            }
+        }
+
+        // Промах по мебели - обычный тап по полу переключает активную комнату (как раньше)
+        OnRoomClicked(room.Id);
+    }
+
+    /// <summary>
+    /// Переводит мировые (экранные) координаты тапа в глобальную клетку сетки музея.
+    /// </summary>
+    private Vector2I WorldToCell(Vector2 worldPos)
+    {
+        return IsoUtils.IsoToGrid(worldPos.X - GridOffsetX, worldPos.Y - GridOffsetY);
+    }
+
+    public void UpdateRoomVisibility()
     {
         foreach (var room in MuseumLayout.Instance.Rooms)
         {
@@ -556,14 +602,14 @@ public partial class GlobalRoomViewUI : Node2D
             sprite.MouseFilter = Control.MouseFilterEnum.Stop;
             sprite.GuiInput += (@event) =>
             {
-                if (@event is InputEventMouseButton mouseEvent && 
-                    mouseEvent.Pressed && mouseEvent.ButtonIndex == MouseButton.Left)
+                if (@event is InputEventMouseButton mouseEvent &&
+                    !mouseEvent.Pressed && mouseEvent.ButtonIndex == MouseButton.Left && CameraController.TapAllowed)
                 {
                     if (room.Id != MuseumLayout.Instance.ActiveRoomId)
                     {
                         MuseumLayout.Instance.ActiveRoomId = room.Id;
                         UpdateRoomVisibility();
-                        
+
                         // Перемещаем камеру к центру новой комнаты
                         var camera = museum?.GetNodeOrNull<CameraController>("Camera2D");
                         if (camera != null)
@@ -572,7 +618,7 @@ public partial class GlobalRoomViewUI : Node2D
                             camera.MoveToRoomCenter(center);
                         }
                     }
-                    
+
                     museum?.OpenDisplayCaseUI(room, placed);
                 }
             };
@@ -678,14 +724,14 @@ public partial class GlobalRoomViewUI : Node2D
             sprite.MouseFilter = Control.MouseFilterEnum.Stop;
             sprite.GuiInput += (@event) =>
             {
-                if (@event is InputEventMouseButton mouseEvent && 
-                    mouseEvent.Pressed && mouseEvent.ButtonIndex == MouseButton.Left)
+                if (@event is InputEventMouseButton mouseEvent &&
+                    !mouseEvent.Pressed && mouseEvent.ButtonIndex == MouseButton.Left && CameraController.TapAllowed)
                 {
                     if (room.Id != MuseumLayout.Instance.ActiveRoomId)
                     {
                         MuseumLayout.Instance.ActiveRoomId = room.Id;
                         UpdateRoomVisibility();
-                        
+
                         // Перемещаем камеру к центру новой комнаты
                         var camera = museum?.GetNodeOrNull<CameraController>("Camera2D");
                         if (camera != null)

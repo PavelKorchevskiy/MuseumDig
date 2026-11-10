@@ -4,98 +4,72 @@ using System.Linq;
 
 public partial class DisplayCaseUI : CanvasLayer
 {
-    private VBoxContainer _mainContainer;
+    // Верхний край панели (доля высоты экрана). Меньше число = выше панель.
+    // 0.075 даст почти полноэкранную панель, как у инвентаря.
+    private const float SheetTop = 0.36f;
+
     private Label _titleLabel;
+    private ScrollContainer _scroll;
     private VBoxContainer _slotsContainer;
     private VBoxContainer _inventoryListContainer;
     private Button _moveBtn;
     private Button _sellBtn;
-    private Button _closeBtn;
-    
-    // Confirmation Popup
-    private ConfirmationDialog _sellConfirmDialog;
+
+    private ConfirmOverlay _sellConfirm;
 
     private Room _currentRoom;
     private PlacedFurniture _currentPlacedFurniture;
 
     public override void _Ready()
     {
-        Layer = 90; // Ниже чем основные меню, но выше игры
+        Layer = 101; // выше нижней панели (100), как у инвентаря
         Visible = false;
 
-        // === Создаем UI программно ===
-        _mainContainer = new VBoxContainer();
-        _mainContainer.SetAnchorsPreset(Control.LayoutPreset.RightWide); // Прижимаем вправо
-        _mainContainer.OffsetLeft = -300; // Ширина панели 300px
-        _mainContainer.OffsetRight = 0;
-        _mainContainer.OffsetTop = 50;
-        _mainContainer.OffsetBottom = -50;
-        _mainContainer.AddThemeConstantOverride("separation", 15);
-        
-        var bg = new ColorRect { Color = new Color(0.1f, 0.1f, 0.15f, 0.95f) };
-        bg.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-        _mainContainer.AddChild(bg);
+        MobileUI.CreateBottomSheet(this, SheetTop, out var content);
 
         // Заголовок
-        _titleLabel = new Label();
-        _titleLabel.AddThemeFontSizeOverride("font_size", 20);
-        _titleLabel.AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.5f));
-        _titleLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        _mainContainer.AddChild(_titleLabel);
+        _titleLabel = MobileUI.CreateLabel("", MobileUI.TitleFontSize, MobileUI.TitleColor, center: true);
+        content.AddChild(_titleLabel);
 
-        var separator1 = new HSeparator();
-        _mainContainer.AddChild(separator1);
+        // Прокручиваемая часть: содержимое витрины + экспонаты из инвентаря
+        _scroll = MobileUI.CreateScroll(out var list);
+        content.AddChild(_scroll);
 
-        // Секция слотов
-        var slotsTitle = new Label { Text = "Содержимое:" };
-        _mainContainer.AddChild(slotsTitle);
-        
-        _slotsContainer = new VBoxContainer();
-        _slotsContainer.AddThemeConstantOverride("separation", 5);
-        _mainContainer.AddChild(_slotsContainer);
+        list.AddChild(MobileUI.CreateLabel(
+            MobileUI.Tr("ui.case.contents", "Содержимое:"), MobileUI.BodyFontSize, MobileUI.MutedColor));
 
-        var separator2 = new HSeparator();
-        _mainContainer.AddChild(separator2);
+        _slotsContainer = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        _slotsContainer.AddThemeConstantOverride("separation", 10);
+        list.AddChild(_slotsContainer);
 
-        // Секция инвентаря
-        var invTitle = new Label { Text = "Доступные экспонаты:" };
-        _mainContainer.AddChild(invTitle);
+        list.AddChild(MobileUI.CreateLabel(
+            MobileUI.Tr("ui.case.available", "Доступные экспонаты:"), MobileUI.BodyFontSize, MobileUI.MutedColor));
 
-        var scroll = new ScrollContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
-        _inventoryListContainer = new VBoxContainer();
-        _inventoryListContainer.AddThemeConstantOverride("separation", 5);
-        scroll.AddChild(_inventoryListContainer);
-        _mainContainer.AddChild(scroll);
-
-        var separator3 = new HSeparator();
-        _mainContainer.AddChild(separator3);
+        _inventoryListContainer = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        _inventoryListContainer.AddThemeConstantOverride("separation", 10);
+        list.AddChild(_inventoryListContainer);
 
         // Кнопки действий
-        var btnContainer = new HBoxContainer();
-        btnContainer.AddThemeConstantOverride("separation", 10);
+        var actions = new HBoxContainer();
+        actions.AddThemeConstantOverride("separation", 12);
+        content.AddChild(actions);
 
-        _moveBtn = new Button { Text = "📦 Переместить", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        _moveBtn = MobileUI.CreateButton(MobileUI.Tr("ui.case.move", "Переместить"), MobileUI.PrimaryColor);
+        _moveBtn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         _moveBtn.Pressed += OnMovePressed;
-        btnContainer.AddChild(_moveBtn);
+        actions.AddChild(_moveBtn);
 
-        _sellBtn = new Button { Text = "💰 Продать", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        _sellBtn = MobileUI.CreateButton(MobileUI.Tr("ui.case.sell", "Продать"), MobileUI.WarningColor);
+        _sellBtn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         _sellBtn.Pressed += OnSellPressed;
-        btnContainer.AddChild(_sellBtn);
+        actions.AddChild(_sellBtn);
 
-        _mainContainer.AddChild(btnContainer);
+        // Красный крестик внизу, как в инвентаре
+        content.AddChild(MobileUI.CreateCloseRow(OnClosePressed));
 
-        _closeBtn = new Button { Text = "Закрыть", CustomMinimumSize = new Vector2(0, 40) };
-        _closeBtn.Pressed += OnClosePressed;
-        _mainContainer.AddChild(_closeBtn);
-
-        AddChild(_mainContainer);
-
-        // Диалог подтверждения продажи
-        _sellConfirmDialog = new ConfirmationDialog();
-        _sellConfirmDialog.Title = "Подтверждение продажи";
-        _sellConfirmDialog.DialogText = "Вы уверены? Витрина будет продана, а все экспонаты вернутся в инвентарь.";
-        _sellConfirmDialog.Confirmed += ConfirmSell;
-        AddChild(_sellConfirmDialog);
+        // Подтверждение продажи (поверх всего, добавляется последним)
+        _sellConfirm = new ConfirmOverlay(this,
+            MobileUI.Tr("ui.case.sell", "Продать"), MobileUI.DangerColor);
     }
 
     public void Open(Room room, PlacedFurniture placed)
@@ -104,64 +78,64 @@ public partial class DisplayCaseUI : CanvasLayer
         _currentPlacedFurniture = placed;
 
         _titleLabel.Text = placed.Furniture.DisplayName;
-        
+
         RenderSlots();
         RenderInventory();
-        
+        _scroll.ScrollVertical = 0;
+
         Visible = true;
 
-        // Зум камеры к витрине
-        var museum = GetTree().CurrentScene as Museum;
-        var camera = museum?.GetNodeOrNull<CameraController>("Camera2D");
-        if (camera != null)
-        {
-            int globalX = room.GlobalOffset.X + placed.Position.X;
-            int globalY = room.GlobalOffset.Y + placed.Position.Y;
-            var isoPos = IsoUtils.GridToIso(globalX, globalY);
-            Vector2 worldPos = new Vector2(
-                MuseumConstants.GridOffsetX + isoPos.X + IsoUtils.TileWidth / 2f,
-                MuseumConstants.GridOffsetY + isoPos.Y + IsoUtils.TileHeight
-            );
-            camera.ZoomToObject(worldPos, 1.8f);
-        }
+        MobileUI.FocusCameraOnFurniture(this, room, placed, SheetTop);
     }
 
     private void RenderSlots()
     {
-        foreach (var child in _slotsContainer.GetChildren()) child.QueueFree();
+        MobileUI.ClearChildren(_slotsContainer);
 
         int capacity = _currentPlacedFurniture.GetMaxCapacity();
         for (int i = 0; i < capacity; i++)
         {
-            var row = new HBoxContainer();
-            row.AddThemeConstantOverride("separation", 10);
+            var row = MobileUI.CreateRow(out var hbox);
 
-            var itemLabel = new Label { Text = "Пусто", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-            var removeBtn = new Button { Text = "Убрать", Disabled = true };
-
-            if (_currentPlacedFurniture.Items != null && i < _currentPlacedFurniture.Items.Count)
+            bool filled = _currentPlacedFurniture.Items != null && i < _currentPlacedFurniture.Items.Count;
+            if (filled)
             {
                 var item = _currentPlacedFurniture.Items[i];
                 var res = GameData.GetResource(item.ResourceId);
-                itemLabel.Text = $"{res?.DisplayName}";
-                removeBtn.Disabled = false;
-                
+
+                var nameLabel = MobileUI.CreateLabel(res?.DisplayName ?? item.ResourceId,
+                    MobileUI.BodyFontSize, Colors.White, wrap: true);
+                nameLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+                nameLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+                hbox.AddChild(nameLabel);
+
+                var removeBtn = MobileUI.CreateButton(MobileUI.Tr("ui.case.remove", "Убрать"),
+                    MobileUI.DangerColor, MobileUI.RowButtonHeight, 130f);
+                removeBtn.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
                 string resId = item.ResourceId;
                 removeBtn.Pressed += () => RemoveItem(resId);
+                hbox.AddChild(removeBtn);
+            }
+            else
+            {
+                var emptyLabel = MobileUI.CreateLabel(MobileUI.Tr("ui.case.empty", "Пусто"),
+                    MobileUI.BodyFontSize, MobileUI.MutedColor);
+                emptyLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+                emptyLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+                hbox.AddChild(emptyLabel);
             }
 
-            row.AddChild(itemLabel);
-            row.AddChild(removeBtn);
             _slotsContainer.AddChild(row);
         }
     }
 
     private void RenderInventory()
     {
-        foreach (var child in _inventoryListContainer.GetChildren()) child.QueueFree();
+        MobileUI.ClearChildren(_inventoryListContainer);
 
         var allItems = InventorySystem.Instance.GetAllItems();
         bool hasExhibits = false;
+        bool isFull = _currentPlacedFurniture.Items.Count >= _currentPlacedFurniture.GetMaxCapacity();
 
         foreach (var invItem in allItems)
         {
@@ -169,39 +143,46 @@ public partial class DisplayCaseUI : CanvasLayer
             if (res is FossilDefinition fossil && fossil.CanExhibitAlone && !fossil.IsCollection)
             {
                 hasExhibits = true;
-                var row = new HBoxContainer();
-                row.AddThemeConstantOverride("separation", 10);
 
-                var infoLabel = new Label { Text = $"{res.DisplayName} (x{invItem.Amount})", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-                var addBtn = new Button { Text = "Добавить" };
+                var row = MobileUI.CreateRow(out var hbox);
 
-                // Проверяем, не заполнена ли витрина
-                if (_currentPlacedFurniture.Items.Count >= _currentPlacedFurniture.GetMaxCapacity())
+                var infoLabel = MobileUI.CreateLabel($"{res.DisplayName} (x{invItem.Amount})",
+                    MobileUI.BodyFontSize, Colors.White, wrap: true);
+                infoLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+                infoLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+                hbox.AddChild(infoLabel);
+
+                Button addBtn;
+                if (isFull)
                 {
+                    addBtn = MobileUI.CreateButton(MobileUI.Tr("ui.case.no_space", "Нет места"),
+                        MobileUI.NeutralColor, MobileUI.RowButtonHeight, 150f);
                     addBtn.Disabled = true;
-                    addBtn.Text = "Нет места";
                 }
                 else
                 {
+                    addBtn = MobileUI.CreateButton(MobileUI.Tr("ui.case.add", "Добавить"),
+                        MobileUI.PrimaryColor, MobileUI.RowButtonHeight, 150f);
                     string resId = invItem.ResourceId;
                     addBtn.Pressed += () => AddItem(resId);
                 }
+                addBtn.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+                hbox.AddChild(addBtn);
 
-                row.AddChild(infoLabel);
-                row.AddChild(addBtn);
                 _inventoryListContainer.AddChild(row);
             }
         }
 
         if (!hasExhibits)
         {
-            _inventoryListContainer.AddChild(new Label { Text = "Нет подходящих экспонатов", Modulate = new Color(0.7f, 0.7f, 0.7f) });
+            _inventoryListContainer.AddChild(MobileUI.CreateLabel(
+                MobileUI.Tr("ui.case.no_items", "Нет подходящих экспонатов"),
+                MobileUI.BodyFontSize, MobileUI.MutedColor, center: true, wrap: true));
         }
     }
 
     private void AddItem(string resourceId)
     {
-        var res = GameData.GetResource(resourceId);
         var newItem = new FoundItem(resourceId, 1);
 
         if (_currentPlacedFurniture.AddItem(newItem))
@@ -210,7 +191,7 @@ public partial class DisplayCaseUI : CanvasLayer
             RenderSlots();
             RenderInventory();
             SaveSystem.Instance?.MarkDirty();
-            
+
             // Обновляем вид, чтобы появился спрайт экспоната
             var museum = GetTree().CurrentScene as Museum;
             museum?.RefreshRoomView();
@@ -226,23 +207,23 @@ public partial class DisplayCaseUI : CanvasLayer
             RenderSlots();
             RenderInventory();
             SaveSystem.Instance?.MarkDirty();
-            
+
             var museum = GetTree().CurrentScene as Museum;
             museum?.RefreshRoomView();
         }
     }
 
-        private void OnMovePressed()
+    private void OnMovePressed()
     {
         GD.Print($"[DisplayCaseUI] 📦 Начинаем перемещение витрины с {_currentPlacedFurniture.Items.Count} экспонатами. TypeId: {_currentPlacedFurniture.FurnitureTypeId}");
 
         // 1. Удаляем витрину с текущего места (но объект в памяти остается живым!)
         _currentRoom.RemoveFurniture(_currentPlacedFurniture);
-        
+
         // 2. Сразу перерисовываем, чтобы старая витрина исчезла
         var museum = GetTree().CurrentScene as Museum;
         museum?.RefreshRoomView();
-        
+
         // 3. Закрываем UI и сбрасываем камеру
         OnClosePressed();
 
@@ -252,7 +233,10 @@ public partial class DisplayCaseUI : CanvasLayer
 
     private void OnSellPressed()
     {
-        _sellConfirmDialog.PopupCentered();
+        _sellConfirm.Show(
+            MobileUI.Tr("ui.case.sell_confirm",
+                "Вы уверены? Витрина будет продана, а все экспонаты вернутся в инвентарь."),
+            ConfirmSell);
     }
 
     private void ConfirmSell()
@@ -268,10 +252,7 @@ public partial class DisplayCaseUI : CanvasLayer
     private void OnClosePressed()
     {
         Visible = false;
-        
-        // Сбрасываем зум камеры
-        var museum = GetTree().CurrentScene as Museum;
-        var camera = museum?.GetNodeOrNull<CameraController>("Camera2D");
-        camera?.ResetZoom();
+        _sellConfirm.Hide();
+        MobileUI.ResetCamera(this);
     }
 }

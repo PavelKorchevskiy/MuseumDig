@@ -13,6 +13,7 @@ public partial class Museum : Node2D
     private MuseumBackground _background;
     private MuseumTopBar _topBar;
 private MuseumBottomBar _bottomBar;
+private OfflineIncomeUI _offlineIncomeUI;
 
 
     public override void _Ready()
@@ -61,6 +62,9 @@ private MuseumBottomBar _bottomBar;
 
         _topBar = new MuseumTopBar();
         uiLayer.AddChild(_topBar);
+
+        // Попап офлайн-дохода - создаём поверх всего остального в этом же UI-слое
+        _offlineIncomeUI = new OfflineIncomeUI(uiLayer);
     }
 
     public override void _Process(double delta)
@@ -70,6 +74,12 @@ private MuseumBottomBar _bottomBar;
             _initialDisplayUpdated = true;
             UpdateDisplay();
             RefreshRoomView();
+
+            int offlineIncome = SaveSystem.Instance?.ConsumePendingOfflineIncome() ?? 0;
+            if (offlineIncome > 0)
+            {
+                _offlineIncomeUI?.Show(offlineIncome);
+            }
         }
             VisitorManager.Instance?.ProcessDelta((float)delta);
     }

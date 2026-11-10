@@ -11,10 +11,7 @@ public partial class ResourceDefinition : Resource
 	
 	// Базовая цена продажи
 	[Export] public int BaseSellPrice = 10;
-	
-	// Базовый пассивный доход в музее (в секунду)
-	[Export] public int BaseMuseumIncome = 1;
-	
+
 	// Множитель дохода в зависимости от редкости
 	public float GetRarityMultiplier()
 	{

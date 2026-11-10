@@ -17,23 +17,34 @@ public partial class Visitor : Control
     private string _currentRoomId;
 
     private int _variantId = 1;
-    
+
     private float GridOffsetX => MuseumConstants.GridOffsetX;
     private float GridOffsetY => MuseumConstants.GridOffsetY;
-    
+
     // === ДВИЖЕНИЕ И ПУТЬ ===
     private List<Vector2I> _path = new();
     private int _pathIndex = 0;
     private float _moveTimer = 0f;
     private const float MoveInterval = 0.5f;
-    
+
     // === СОСТОЯНИЯ ===
     private VisitorState _state = VisitorState.Wandering;
     private float _lookTimer = 0f;
     private const float LookDuration = 4.0f;
-    private float _decisionTimer = 0f;
-    private const float DecisionInterval = 5.0f;
     private PlacedFurniture _lookingAt = null;
+
+    // === ВРЕМЯ ВИЗИТА ===
+    // Допущен ли посетитель в музей. false - музей был полон в момент спавна,
+    // такой посетитель просто проходит по дорожке к другому её концу и уходит,
+    // не заходя внутрь и не принося денег.
+    public bool IsAdmitted { get; private set; } = true;
+
+    // Базовая длительность визита (сек). Держим фиксированной для всех размеров музея,
+    // чтобы увеличение лимита посетителей напрямую увеличивало пропускную способность
+    // (см. VisitorManager.MinSpawnInterval/MaxSpawnInterval).
+    public const float BaseVisitDuration = 60.0f;
+    private float _personalVisitDuration = BaseVisitDuration;
+    private float _visitDurationTimer = 0f;
     
     // === АНИМАЦИЯ И СПРАЙТ ===
     private TextureRect _sprite;
@@ -66,29 +77,77 @@ public partial class Visitor : Control
     
     public void Initialize(MuseumLayout layout, Vector2I startGlobalCell, string startRoomId)
     {
+        IsAdmitted = true;
         _layout = layout;
         _globalCell = startGlobalCell;
         _currentRoomId = startRoomId;
 
-        int randomVariant = (int)(GD.Randi() % 3) + 1; 
+        int randomVariant = (int)(GD.Randi() % 3) + 1;
         _visitorFolder = randomVariant.ToString();
-        
+
         // GD.Print($"[Visitor] Спавн посетителя. Внешность: папка {_visitorFolder}");
-        
+
         _path.Clear();
         _pathIndex = 0;
          _spawnPosition = startGlobalCell;
 
+        // Разброс ±15%, чтобы посетители не уходили одной волной одновременно
+        _personalVisitDuration = BaseVisitDuration * (float)GD.RandRange(0.85, 1.15);
+        _visitDurationTimer = 0f;
+
         ApplyFrameToSprite();
-        
+
         UpdateVisualPosition();
         FindNewWanderTarget();
     }
-    
+
+    /// <summary>
+    /// Спавнит посетителя, которому не хватило места в музее: он не заходит внутрь
+    /// и не платит за вход, а сразу идёт по дорожке к противоположному концу и исчезает там.
+    /// </summary>
+    public void InitializeTurnedAway(MuseumLayout layout, Vector2I startGlobalCell, Vector2I exitGlobalCell)
+    {
+        IsAdmitted = false;
+        _layout = layout;
+        _globalCell = startGlobalCell;
+        _currentRoomId = null;
+
+        int randomVariant = (int)(GD.Randi() % 3) + 1;
+        _visitorFolder = randomVariant.ToString();
+
+        _path.Clear();
+        _pathIndex = 0;
+        _spawnPosition = startGlobalCell;
+
+        ApplyFrameToSprite();
+        UpdateVisualPosition();
+
+        _state = VisitorState.Exiting;
+        _path = FindPath(_globalCell, exitGlobalCell);
+        _pathIndex = 0;
+
+        if (_path.Count == 0)
+        {
+            GD.PrintErr("[Visitor] Музей полон, но путь к другому концу дорожки не найден! Удаляю посетителя.");
+            QueueFree();
+        }
+    }
+
     public override void _Process(double delta)
     {
         float fDelta = (float)delta;
-        
+
+        // Фиксированное время визита: считаем только для допущенных в музей
+        // и только пока они не идут к выходу.
+        if (IsAdmitted && _state != VisitorState.Exiting)
+        {
+            _visitDurationTimer += fDelta;
+            if (_visitDurationTimer >= _personalVisitDuration)
+            {
+                StartExiting();
+            }
+        }
+
         switch (_state)
         {
             case VisitorState.Wandering:
@@ -101,7 +160,7 @@ public partial class Visitor : Control
                 ProcessExiting(fDelta);
                 break;
         }
-        
+
         UpdateAnimation(fDelta);
         ApplyRoomVisibility();
     }
@@ -188,18 +247,11 @@ public partial class Visitor : Control
     private void ProcessWandering(float delta)
     {
         _moveTimer += delta;
-        _decisionTimer += delta;
-        
+
         if (_moveTimer >= MoveInterval)
         {
             _moveTimer = 0f;
             MoveAlongPath();
-        }
-        
-        if (_decisionTimer >= DecisionInterval)
-        {
-            _decisionTimer = 0f;
-            MakeDecision();
         }
     }
     
@@ -476,20 +528,9 @@ public partial class Visitor : Control
         _currentFrame = 0;
         _animTimer = 0f;
         _lookingAt = null;
-        _decisionTimer = 0f;
-        
+
         ApplyFrameToSprite();
         FindNewWanderTarget();
-    }
-    
-    private void MakeDecision()
-    {
-        float roll = GD.Randf();
-        // TODO
-        if (roll < 0.0015f)
-        {
-            StartExiting();
-        }
     }
 
      private void StartExiting()

@@ -10,7 +10,6 @@ public partial class CollectionExhibit : Furniture
         this.DisplayName = collection.DisplayName;
         this.Size = collection.Size; // Например, 2x2
         this.BuyPrice = 0; // Коллекция уже "оплачена" усилиями по сбору
-        // BaseMuseumIncome установим отдельно, если нужно, или через свойство
     }
 
     // Коллекция не может принять дополнительные предметы (она уже полная)

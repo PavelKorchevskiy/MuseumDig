@@ -197,18 +197,18 @@ public static class GameData
     { 
         Id = "dino_tooth", DisplayName = "Dinosaur Tooth", 
         Description = "A sharp tooth from an unknown dinosaur.", 
-        Type = ResourceType.Tooth, Rarity = Rarity.Common, 
-        BaseSellPrice = 15, BaseMuseumIncome = 2, 
-        VariantCount = 2, CanExhibitAlone = true 
+        Type = ResourceType.Tooth, Rarity = Rarity.Common,
+        BaseSellPrice = 15,
+        VariantCount = 2, CanExhibitAlone = true
     };
     
     _resources["dino_egg"] = new FossilDefinition 
     { 
         Id = "dino_egg", DisplayName = "Fossilized Dinosaur Egg", 
         Description = "A perfectly preserved dinosaur egg from the Gobi Desert.", 
-        Type = ResourceType.Egg, Rarity = Rarity.Uncommon, 
-        BaseSellPrice = 40, BaseMuseumIncome = 4, 
-        VariantCount = 2, CanExhibitAlone = true 
+        Type = ResourceType.Egg, Rarity = Rarity.Uncommon,
+        BaseSellPrice = 40,
+        VariantCount = 2, CanExhibitAlone = true
     };
     
     // === НОВЫЕ ===
@@ -216,35 +216,35 @@ public static class GameData
     { 
         Id = "ammonite", DisplayName = "Ammonite Fossil", 
         Description = "A beautifully preserved spiral shell from the Jurassic sea.", 
-        Type = ResourceType.Bone, Rarity = Rarity.Uncommon, 
-        BaseSellPrice = 35, BaseMuseumIncome = 3, 
-        VariantCount = 2, CanExhibitAlone = true 
+        Type = ResourceType.Bone, Rarity = Rarity.Uncommon,
+        BaseSellPrice = 35,
+        VariantCount = 2, CanExhibitAlone = true
     };
     
     _resources["trilobite"] = new FossilDefinition 
     { 
         Id = "trilobite", DisplayName = "Trilobite Fossil", 
         Description = "An ancient marine arthropod from the Paleozoic era.", 
-        Type = ResourceType.Bone, Rarity = Rarity.Rare, 
-        BaseSellPrice = 50, BaseMuseumIncome = 5, 
-        VariantCount = 2, CanExhibitAlone = true 
+        Type = ResourceType.Bone, Rarity = Rarity.Rare,
+        BaseSellPrice = 50,
+        VariantCount = 2, CanExhibitAlone = true
     };
     
     _resources["amber"] = new FossilDefinition 
     { 
         Id = "amber", DisplayName = "Amber with Inclusion", 
         Description = "Fossilized tree resin with a trapped ancient insect.", 
-        Type = ResourceType.Amber, Rarity = Rarity.Rare, 
-        BaseSellPrice = 80, BaseMuseumIncome = 6, 
-        VariantCount = 2, CanExhibitAlone = true 
+        Type = ResourceType.Amber, Rarity = Rarity.Rare,
+        BaseSellPrice = 80,
+        VariantCount = 2, CanExhibitAlone = true
     };
 }
 
     // ===== РЕГИСТРАЦИЯ МИНЕРАЛОВ =====
     private static void RegisterMinerals()
     {
-        _resources["gold_nugget"] = new MineralDefinition { Id = "gold_nugget", DisplayName = "Gold Nugget", Description = "A shiny piece of gold.", Type = ResourceType.Gold, Rarity = Rarity.Common, BaseSellPrice = 25, BaseMuseumIncome = 0, MinDropAmount = 1, MaxDropAmount = 3 };
-        _resources["precious_gem"] = new MineralDefinition { Id = "precious_gem", DisplayName = "Precious Gem", Description = "A sparkling gemstone.", Type = ResourceType.Gem, Rarity = Rarity.Uncommon, BaseSellPrice = 60, BaseMuseumIncome = 0, MinDropAmount = 1, MaxDropAmount = 1 };
+        _resources["gold_nugget"] = new MineralDefinition { Id = "gold_nugget", DisplayName = "Gold Nugget", Description = "A shiny piece of gold.", Type = ResourceType.Gold, Rarity = Rarity.Common, BaseSellPrice = 25, MinDropAmount = 1, MaxDropAmount = 3 };
+        _resources["precious_gem"] = new MineralDefinition { Id = "precious_gem", DisplayName = "Precious Gem", Description = "A sparkling gemstone.", Type = ResourceType.Gem, Rarity = Rarity.Uncommon, BaseSellPrice = 60, MinDropAmount = 1, MaxDropAmount = 1 };
     }
 
     private static void RegisterConcretions()
@@ -256,9 +256,8 @@ public static class GameData
         DisplayName = "Stone Concretion", 
         Description = "A round stone that might contain something interesting.",
         Type = ResourceType.Concretion, 
-        Rarity = Rarity.Common, 
-        BaseSellPrice = 10, 
-        BaseMuseumIncome = 0,
+        Rarity = Rarity.Common,
+        BaseSellPrice = 10,
         HitsToOpen = 5,
         PossibleContents = new List<LootEntry>()
         {
@@ -274,9 +273,8 @@ public static class GameData
         DisplayName = "Precious Concretion", 
         Description = "A strange stone that feels unusually heavy.",
         Type = ResourceType.Concretion, 
-        Rarity = Rarity.Rare, 
-        BaseSellPrice = 30, 
-        BaseMuseumIncome = 0,
+        Rarity = Rarity.Rare,
+        BaseSellPrice = 30,
         HitsToOpen = 8,
         PossibleContents = new List<LootEntry>()
         {
@@ -419,10 +417,9 @@ public static class GameData
         string displayName, 
         string description, 
         string locationId, 
-        Rarity rarity, 
-        Vector2I size, 
-        int baseMuseumIncome = 15,
-        int pieceSellPrice = 50, 
+        Rarity rarity,
+        Vector2I size,
+        int pieceSellPrice = 50,
         int collectionSellPrice = 500)
     {
         // 1. Создаем 3 части (Череп, Тело, Хвост)
@@ -432,11 +429,10 @@ public static class GameData
             DisplayName = $"{displayName} (Череп)", 
             Description = $"Окаменелый череп {displayName}.", 
             Type = ResourceType.Bone, 
-            Rarity = rarity, 
-            BaseSellPrice = pieceSellPrice, 
-            BaseMuseumIncome = baseMuseumIncome / 3, 
-            CollectionId = colId, 
-            PieceIndex = 0, 
+            Rarity = rarity,
+            BaseSellPrice = pieceSellPrice,
+            CollectionId = colId,
+            PieceIndex = 0,
             TotalPieces = 3, 
             CanExhibitAlone = false 
         };
@@ -447,11 +443,10 @@ public static class GameData
             DisplayName = $"{displayName} (Тело)", 
             Description = $"Окаменелый туловище {displayName}.", 
             Type = ResourceType.Bone, 
-            Rarity = rarity, 
-            BaseSellPrice = pieceSellPrice, 
-            BaseMuseumIncome = baseMuseumIncome / 3, 
-            CollectionId = colId, 
-            PieceIndex = 1, 
+            Rarity = rarity,
+            BaseSellPrice = pieceSellPrice,
+            CollectionId = colId,
+            PieceIndex = 1,
             TotalPieces = 3, 
             CanExhibitAlone = false 
         };
@@ -462,11 +457,10 @@ public static class GameData
             DisplayName = $"{displayName} (Хвост)", 
             Description = $"Окаменелый хвост {displayName}.", 
             Type = ResourceType.Bone, 
-            Rarity = rarity, 
-            BaseSellPrice = pieceSellPrice, 
-            BaseMuseumIncome = baseMuseumIncome / 3, 
-            CollectionId = colId, 
-            PieceIndex = 2, 
+            Rarity = rarity,
+            BaseSellPrice = pieceSellPrice,
+            CollectionId = colId,
+            PieceIndex = 2,
             TotalPieces = 3, 
             CanExhibitAlone = false 
         };
@@ -487,7 +481,6 @@ public static class GameData
             CollectionBonus = rarity == Rarity.Uncommon ? 2.0f : 2.5f, // Умное значение по умолчанию
             Size = size,
             TexturePath = $"res://assets/museum/items/{colId}/full.png", // Автоматический путь!
-            BaseMuseumIncome = baseMuseumIncome,
             Pieces = new List<FossilDefinition> { skull, body, tail } // ОБЯЗАТЕЛЬНО ОСТАВЛЯЕМ
         };
 
@@ -498,10 +491,9 @@ public static class GameData
             DisplayName = $"{displayName}", 
             Description = $"Полный скелет {displayName}, готовый к установке в зале.", 
             Type = ResourceType.Bone, 
-            Rarity = rarity, 
-            BaseSellPrice = collectionSellPrice, 
-            BaseMuseumIncome = baseMuseumIncome, 
-            CollectionId = "", 
+            Rarity = rarity,
+            BaseSellPrice = collectionSellPrice,
+            CollectionId = "",
             PieceIndex = -1, 
             TotalPieces = 1, 
             CanExhibitAlone = true,
@@ -518,7 +510,7 @@ public static class GameData
             Description = "Стандартный доступ к Dinosaur Provincial Park.",
             TargetLocationId = "canada",
             ShopPrice = 500,
-            IsSellable = false
+            IsSellable = true
         };
 
         _tickets["ticket_morrison"] = new TicketDefinition
@@ -548,7 +540,7 @@ public static class GameData
             Description = "Исследование юрских морских окаменелостей.",
             TargetLocationId = "undoria",
             ShopPrice = 5000,
-            IsSellable = false
+            IsSellable = true
         };
 
         _tickets["ticket_texas"] = new TicketDefinition
