@@ -36,14 +36,14 @@ public partial class DisplayCaseUI : CanvasLayer
         content.AddChild(_scroll);
 
         list.AddChild(MobileUI.CreateLabel(
-            MobileUI.Tr("ui.case.contents", "Содержимое:"), MobileUI.BodyFontSize, MobileUI.MutedColor));
+            LocalizationManager.Tr("ui.case.contents"), MobileUI.BodyFontSize, MobileUI.MutedColor));
 
         _slotsContainer = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         _slotsContainer.AddThemeConstantOverride("separation", 10);
         list.AddChild(_slotsContainer);
 
         list.AddChild(MobileUI.CreateLabel(
-            MobileUI.Tr("ui.case.available", "Доступные экспонаты:"), MobileUI.BodyFontSize, MobileUI.MutedColor));
+            LocalizationManager.Tr("ui.case.available"), MobileUI.BodyFontSize, MobileUI.MutedColor));
 
         _inventoryListContainer = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         _inventoryListContainer.AddThemeConstantOverride("separation", 10);
@@ -54,12 +54,12 @@ public partial class DisplayCaseUI : CanvasLayer
         actions.AddThemeConstantOverride("separation", 12);
         content.AddChild(actions);
 
-        _moveBtn = MobileUI.CreateButton(MobileUI.Tr("ui.case.move", "Переместить"), MobileUI.PrimaryColor);
+        _moveBtn = MobileUI.CreateButton(LocalizationManager.Tr("ui.case.move"), MobileUI.PrimaryColor);
         _moveBtn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         _moveBtn.Pressed += OnMovePressed;
         actions.AddChild(_moveBtn);
 
-        _sellBtn = MobileUI.CreateButton(MobileUI.Tr("ui.case.sell", "Продать"), MobileUI.WarningColor);
+        _sellBtn = MobileUI.CreateButton(LocalizationManager.Tr("ui.case.sell"), MobileUI.WarningColor);
         _sellBtn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         _sellBtn.Pressed += OnSellPressed;
         actions.AddChild(_sellBtn);
@@ -69,7 +69,7 @@ public partial class DisplayCaseUI : CanvasLayer
 
         // Подтверждение продажи (поверх всего, добавляется последним)
         _sellConfirm = new ConfirmOverlay(this,
-            MobileUI.Tr("ui.case.sell", "Продать"), MobileUI.DangerColor);
+            LocalizationManager.Tr("ui.case.sell"), MobileUI.DangerColor);
     }
 
     public void Open(Room room, PlacedFurniture placed)
@@ -109,7 +109,7 @@ public partial class DisplayCaseUI : CanvasLayer
                 nameLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
                 hbox.AddChild(nameLabel);
 
-                var removeBtn = MobileUI.CreateButton(MobileUI.Tr("ui.case.remove", "Убрать"),
+                var removeBtn = MobileUI.CreateButton(LocalizationManager.Tr("ui.case.remove"),
                     MobileUI.DangerColor, MobileUI.RowButtonHeight, 130f);
                 removeBtn.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
                 string resId = item.ResourceId;
@@ -118,7 +118,7 @@ public partial class DisplayCaseUI : CanvasLayer
             }
             else
             {
-                var emptyLabel = MobileUI.CreateLabel(MobileUI.Tr("ui.case.empty", "Пусто"),
+                var emptyLabel = MobileUI.CreateLabel(LocalizationManager.Tr("ui.case.empty"),
                     MobileUI.BodyFontSize, MobileUI.MutedColor);
                 emptyLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
                 emptyLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
@@ -155,13 +155,13 @@ public partial class DisplayCaseUI : CanvasLayer
                 Button addBtn;
                 if (isFull)
                 {
-                    addBtn = MobileUI.CreateButton(MobileUI.Tr("ui.case.no_space", "Нет места"),
+                    addBtn = MobileUI.CreateButton(LocalizationManager.Tr("ui.case.no_space"),
                         MobileUI.NeutralColor, MobileUI.RowButtonHeight, 150f);
                     addBtn.Disabled = true;
                 }
                 else
                 {
-                    addBtn = MobileUI.CreateButton(MobileUI.Tr("ui.case.add", "Добавить"),
+                    addBtn = MobileUI.CreateButton(LocalizationManager.Tr("ui.case.add"),
                         MobileUI.PrimaryColor, MobileUI.RowButtonHeight, 150f);
                     string resId = invItem.ResourceId;
                     addBtn.Pressed += () => AddItem(resId);
@@ -176,7 +176,7 @@ public partial class DisplayCaseUI : CanvasLayer
         if (!hasExhibits)
         {
             _inventoryListContainer.AddChild(MobileUI.CreateLabel(
-                MobileUI.Tr("ui.case.no_items", "Нет подходящих экспонатов"),
+                LocalizationManager.Tr("ui.case.no_items"),
                 MobileUI.BodyFontSize, MobileUI.MutedColor, center: true, wrap: true));
         }
     }
@@ -234,8 +234,7 @@ public partial class DisplayCaseUI : CanvasLayer
     private void OnSellPressed()
     {
         _sellConfirm.Show(
-            MobileUI.Tr("ui.case.sell_confirm",
-                "Вы уверены? Витрина будет продана, а все экспонаты вернутся в инвентарь."),
+            LocalizationManager.Tr("ui.case.sell_confirm"),
             ConfirmSell);
     }
 

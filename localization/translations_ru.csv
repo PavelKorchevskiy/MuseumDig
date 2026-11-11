@@ -9,7 +9,7 @@ ui.inventory.bones,Bones,Кости
 ui.inventory.tickets,Tickets,Билеты
 ui.inventory.total_value,Total value: {0} coins,Общая стоимость: {0} монет
 ui.inventory.sell,Sell,Продать
-ui.inventory.place, Place, Разместить
+ui.inventory.place,Place,Разместить
 ui.inventory.assemble,Assemble,Собрать
 ui.inventory.cancel,Cancel,Отмена
 ui.inventory.amount,Amount: {0},Количество: {0}
@@ -35,7 +35,7 @@ ui.progress.no_skeletons,No skeletons discovered yet,Пока не открыт�
 ui.progress.findings_title,Unlocked Findings,Открытые находки
 ui.progress.no_findings,No findings discovered yet,Пока не открыто ни одной находки
 ui.inventory.concretions,Concretions,Конкреции
-ui.inventory.concretions_hint,Click 'Open' to break a concretion,Нажмите 'Раскрыть', чтобы открыть конкрецию
+ui.inventory.concretions_hint,Click 'Open' to break a concretion,"Нажмите 'Раскрыть', чтобы открыть конкрецию"
 ui.inventory.open,Open,Раскрыть
 ui.inventory.title,Inventory,Инвентарь
 rarity.common,Common,Обычный
@@ -80,6 +80,96 @@ ui.concretion.next_button_with_count,Next concretion → (remaining: {0}),Сле
 ui.concretion.hits_format,Hits: {0} / {1},Ударов: {0} / {1}
 ui.concretion.revealed,✨ Concretion revealed! ✨,✨ Конкреция раскрыта! ✨
 ui.concretion.found_item,You found: {0}!,Вы нашли: {0}!
-ui.shop.title, Museum Furniture, Мебель для музея
+ui.shop.title,Shop,Магазин
 ui.shop.hint,Buy furniture and place it in the museum,Купите мебель и разместите её в музее
 ui.shop.buy,Buy,Купить
+ui.shop.hint_tickets,Buy a ticket — it will appear in the inventory on the Tickets tab,Купите билет — он появится в инвентаре на вкладке «Билеты»
+ui.shop.no_tickets,No tickets on sale right now,Сейчас нет билетов в продаже
+ui.inventory.hint_assembling,Assemble collections from the bones you found,Соберите коллекции из найденных костей
+ui.digging.return_to_museum,Return to the museum,Вернуться в музей
+ui.placement.cancel,Cancel,Отмена
+ui.placement.confirm,Place,Поставить
+ui.placement.hint_new,"Tap a cell, then press “Place”","Коснитесь клетки, затем нажмите «Поставить»"
+ui.placement.hint_move,"Tap a new cell, then press “Place”","Коснитесь новой клетки, затем нажмите «Поставить»"
+ui.placement.hint_collection,Tap a cell. “Cancel” returns the exhibit to the inventory,Коснитесь клетки. «Отмена» вернёт экспонат в инвентарь
+ui.common.cancel,Cancel,Отмена
+ui.offline_income.title,Welcome back!,С возвращением!
+ui.offline_income.subtitle,"While you were away, the museum earned:","Пока вас не было, музей заработал:"
+ui.case.contents,Contents:,Содержимое:
+ui.case.available,Available exhibits:,Доступные экспонаты:
+ui.case.move,Move,Переместить
+ui.case.sell,Sell,Продать
+ui.case.remove,Remove,Убрать
+ui.case.empty,Empty,Пусто
+ui.case.no_space,No space,Нет места
+ui.case.add,Add,Добавить
+ui.case.no_items,No suitable exhibits,Нет подходящих экспонатов
+ui.case.sell_confirm,Are you sure? The display case will be sold and all exhibits will return to the inventory.,"Вы уверены? Витрина будет продана, а все экспонаты вернутся в инвентарь."
+ui.exhibit.info,Assembled exhibit,Собранный экспонат
+ui.exhibit.move,Move,Переместить
+ui.exhibit.store,To storage,На склад
+ui.exhibit.store_confirm,Are you sure? The exhibit will be removed and returned to your inventory.,Вы уверены? Экспонат будет убран со стены и вернется в ваш инвентарь.
+ui.shop.tab_furniture,Furniture,Мебель
+ui.shop.tab_tickets,Tickets,Билеты
+ui.inventory.hint_tickets,Use a ticket to start digging,Используйте билет для начала раскопок
+ui.inventory.hint_findings,Sell findings or keep them for a collection,Продайте или оставьте находки для коллекции
+ui.inventory.hint_bones,Skeleton parts for assembling collections,Части скелетов для сборки коллекций
+ui.inventory.hint_skeletons,Finished skeletons can be placed in the museum,Готовые скелеты можно разместить в музее
+ui.inventory.hint_concretions,Break concretions open with a hammer,Раскройте конкреции молотком
+ui.inventory.bones_parts,Bone parts,Части костей
+ui.offline_income.amount,+{0} coins,+{0} монет
+ui.digging.title,Dig site,Раскопки
+ui.quests.title,Quests,Задания
+ui.quests.tab_daily,Daily,Ежедневные
+ui.quests.tab_achievements,Achievements,Достижения
+ui.quests.reset_in,Resets in {0},Обновление через {0}
+ui.quests.reward,Reward: {0},Награда: {0}
+ui.quests.reward_gold,{0} gold,{0} золота
+ui.quests.claim,Claim,Забрать
+ui.quests.claimed,Claimed,Получено
+ui.quests.daily.bonus,Complete all daily quests,Выполнить все задания дня
+ui.quests.item.common_concretion,Stone Concretion,Обычная конкреция
+ui.quests.item.rare_concretion,Precious Concretion,Редкая конкреция
+quest.daily.visitor_gold,Earn {0} gold from visitors,Заработать {0} золота на посетителях
+quest.daily.extract_bones,Extract bones: {0},Извлечь кости: {0}
+quest.daily.buy_ticket,Buy a ticket in the shop: {0},Купить билет в магазине: {0}
+quest.daily.open_concretion,Break a concretion: {0},Разбить конкрецию: {0}
+quest.daily.use_diggers,Assign a digger to a tile: {0} times,Назначить копателя на плитку: {0} раз
+quest.achievement.bones_1.name,First Find,Первая находка
+quest.achievement.bones_1.desc,Extract a bone,Извлечь кость
+quest.achievement.bones_25.name,Bone Hunter,Охотник за костями
+quest.achievement.bones_25.desc,Extract bones: {0},Извлечь костей: {0}
+quest.achievement.bones_100.name,Paleontologist,Палеонтолог
+quest.achievement.bones_100.desc,Extract bones: {0},Извлечь костей: {0}
+quest.achievement.tiles_50.name,Digger,Землекоп
+quest.achievement.tiles_50.desc,Fully dig tiles: {0},Полностью выкопать плиток: {0}
+quest.achievement.tiles_100.name,Foreman,Бригадир
+quest.achievement.tiles_100.desc,Fully dig tiles: {0},Полностью выкопать плиток: {0}
+quest.achievement.tiles_200.name,Site Manager,Прораб
+quest.achievement.tiles_200.desc,Fully dig tiles: {0},Полностью выкопать плиток: {0}
+quest.achievement.tiles_500.name,Quarry,Карьер
+quest.achievement.tiles_500.desc,Fully dig tiles: {0},Полностью выкопать плиток: {0}
+quest.achievement.concretions_10.name,Stone Breaker,Камнелом
+quest.achievement.concretions_10.desc,Break concretions: {0},Разбить конкреций: {0}
+quest.achievement.concretions_50.name,Geologist,Геолог
+quest.achievement.concretions_50.desc,Break concretions: {0},Разбить конкреций: {0}
+quest.achievement.concretions_100.name,Master of the Depths,Знаток недр
+quest.achievement.concretions_100.desc,Break concretions: {0},Разбить конкреций: {0}
+quest.achievement.collections_1.name,First Skeleton,Первый скелет
+quest.achievement.collections_1.desc,Assemble a complete collection,Собрать коллекцию целиком
+quest.achievement.skeletons_3.name,Curator,Куратор
+quest.achievement.skeletons_3.desc,Display assembled skeletons in the museum: {0},Выставить собранных скелетов в музее: {0}
+quest.achievement.skeletons_10.name,Chief Keeper,Главный хранитель
+quest.achievement.skeletons_10.desc,Display assembled skeletons in the museum: {0},Выставить собранных скелетов в музее: {0}
+quest.achievement.locations_3.name,Traveler,Путешественник
+quest.achievement.locations_3.desc,Visit different locations: {0},Побывать на разных локациях: {0}
+quest.achievement.locations_5.name,Around the World,Вокруг света
+quest.achievement.locations_5.desc,Visit all locations: {0},Побывать на всех локациях: {0}
+quest.achievement.visitors_100.name,First Guests,Первые гости
+quest.achievement.visitors_100.desc,Welcome visitors: {0},Принять посетителей: {0}
+quest.achievement.visitors_1000.name,Popular Place,Популярное место
+quest.achievement.visitors_1000.desc,Welcome visitors: {0},Принять посетителей: {0}
+quest.achievement.visitors_5000.name,Full House,Аншлаг
+quest.achievement.visitors_5000.desc,Welcome visitors: {0},Принять посетителей: {0}
+quest.achievement.daily_sets_7.name,Regular,Завсегдатай
+quest.achievement.daily_sets_7.desc,Complete all daily quests in a day: {0} times,Выполнить все ежедневные задания за день: {0} раз

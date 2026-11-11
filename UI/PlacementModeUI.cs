@@ -129,12 +129,12 @@ public partial class PlacementModeUI : Node2D
         buttonsRow.AddThemeConstantOverride("separation", 16);
         bottomBar.AddChild(buttonsRow);
 
-        _cancelBtn = MobileUI.CreateButton(MobileUI.Tr("ui.placement.cancel", "Отмена"),
+        _cancelBtn = MobileUI.CreateButton(LocalizationManager.Tr("ui.placement.cancel"),
             MobileUI.NeutralColor, MobileUI.ButtonHeight, 220f);
         _cancelBtn.Pressed += CancelPlacement;
         buttonsRow.AddChild(_cancelBtn);
 
-        _confirmBtn = MobileUI.CreateButton(MobileUI.Tr("ui.placement.confirm", "Поставить"),
+        _confirmBtn = MobileUI.CreateButton(LocalizationManager.Tr("ui.placement.confirm"),
             MobileUI.PrimaryColor, MobileUI.ButtonHeight, 220f);
         _confirmBtn.Disabled = true;
         _confirmBtn.Pressed += ConfirmPlacement;
@@ -172,7 +172,7 @@ public partial class PlacementModeUI : Node2D
 
         SetInfo(
             furniture.DisplayName,
-            MobileUI.Tr("ui.placement.hint_new", "Коснитесь клетки, затем нажмите «Поставить»"));
+            LocalizationManager.Tr("ui.placement.hint_new"));
 
         ResetSelection();
         SetPlacementVisible(true);
@@ -201,7 +201,7 @@ public partial class PlacementModeUI : Node2D
 
         SetInfo(
             furniture.DisplayName,
-            MobileUI.Tr("ui.placement.hint_move", "Коснитесь новой клетки, затем нажмите «Поставить»"));
+            LocalizationManager.Tr("ui.placement.hint_move"));
 
         ResetSelection();
         SetPlacementVisible(true);
@@ -223,7 +223,7 @@ public partial class PlacementModeUI : Node2D
 
         SetInfo(
             furniture.DisplayName,
-            MobileUI.Tr("ui.placement.hint_collection", "Коснитесь клетки. «Отмена» вернёт экспонат в инвентарь"));
+            LocalizationManager.Tr("ui.placement.hint_collection"));
 
         ResetSelection();
         SetPlacementVisible(true);

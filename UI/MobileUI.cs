@@ -150,6 +150,99 @@ public static class MobileUI
         return row;
     }
 
+    // ---------------------------------------------------------------
+    // Вкладки внизу экрана ("ярлычки", свисающие со страницы)
+    // ---------------------------------------------------------------
+
+    /// <summary>Фон страницы с содержимым вкладки; активный ярлычок того же цвета.</summary>
+    public static readonly Color PageColor = new Color(0.18f, 0.18f, 0.26f, 1f);
+    public static readonly Color TabInactiveColor = new Color(0.08f, 0.08f, 0.12f, 1f);
+
+    public const float TabActiveHeight = 70f;
+    public const float TabInactiveHeight = 52f;
+
+    /// <summary>
+    /// Страница + ряд вкладок под ней, без зазора между ними. Активная вкладка
+    /// выше остальных и окрашена в цвет страницы, поэтому её верх сливается
+    /// со страницей — как ярлычок у папки. Содержимое вкладок кладётся в page,
+    /// кнопки (CreateTab) — в tabRow. Возвращаемый контейнер занимает всё
+    /// свободное место по вертикали.
+    /// </summary>
+    public static VBoxContainer CreateTabbedPage(out PanelContainer page, out HBoxContainer tabRow)
+    {
+        var root = new VBoxContainer();
+        root.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        root.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        root.AddThemeConstantOverride("separation", 0);
+
+        page = new PanelContainer();
+        page.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        page.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+
+        // Низ страницы прямой: к нему вплотную примыкают вкладки
+        var pageStyle = new StyleBoxFlat { BgColor = PageColor };
+        pageStyle.CornerRadiusTopLeft = 16;
+        pageStyle.CornerRadiusTopRight = 16;
+        pageStyle.ContentMarginLeft = 8;
+        pageStyle.ContentMarginRight = 8;
+        pageStyle.ContentMarginTop = 10;
+        pageStyle.ContentMarginBottom = 10;
+        page.AddThemeStyleboxOverride("panel", pageStyle);
+        root.AddChild(page);
+
+        tabRow = new HBoxContainer();
+        tabRow.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        tabRow.CustomMinimumSize = new Vector2(0, TabActiveHeight);
+        tabRow.AddThemeConstantOverride("separation", 4);
+        root.AddChild(tabRow);
+
+        return root;
+    }
+
+    /// <summary>Кнопка-вкладка для ряда из CreateTabbedPage. Состояние задаёт SetTabActive.</summary>
+    public static Button CreateTab(string text)
+    {
+        var button = new Button
+        {
+            Text = text,
+            FocusMode = Control.FocusModeEnum.None,
+            AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+            SizeFlagsVertical = Control.SizeFlags.ShrinkBegin // "висит" от нижнего края страницы
+        };
+        button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+        SetTabActive(button, false);
+        return button;
+    }
+
+    public static void SetTabActive(Button tab, bool active)
+    {
+        var style = new StyleBoxFlat { BgColor = active ? PageColor : TabInactiveColor };
+        style.CornerRadiusBottomLeft = active ? 16 : 12;
+        style.CornerRadiusBottomRight = active ? 16 : 12;
+        style.ContentMarginLeft = 6;
+        style.ContentMarginRight = 6;
+        style.ContentMarginTop = 4;
+        style.ContentMarginBottom = 6;
+
+        var pressedStyle = (StyleBoxFlat)style.Duplicate();
+        if (!active) pressedStyle.BgColor = TabInactiveColor.Lightened(0.12f);
+
+        tab.AddThemeStyleboxOverride("normal", style);
+        tab.AddThemeStyleboxOverride("hover", style);
+        tab.AddThemeStyleboxOverride("pressed", pressedStyle);
+
+        Color fontColor = active ? TitleColor : MutedColor;
+        tab.AddThemeColorOverride("font_color", fontColor);
+        tab.AddThemeColorOverride("font_hover_color", fontColor);
+        tab.AddThemeColorOverride("font_pressed_color", fontColor);
+        tab.AddThemeColorOverride("font_focus_color", fontColor);
+        tab.AddThemeFontSizeOverride("font_size", active ? ButtonFontSize - 2 : SmallFontSize - 2);
+
+        tab.CustomMinimumSize = new Vector2(0, active ? TabActiveHeight : TabInactiveHeight);
+        tab.SizeFlagsStretchRatio = active ? 1.25f : 1f; // активная вкладка ещё и шире
+    }
+
     public static void ClearChildren(Node parent)
     {
         foreach (var child in parent.GetChildren())
@@ -338,7 +431,7 @@ public class ConfirmOverlay
         buttons.AddThemeConstantOverride("separation", 12);
         vbox.AddChild(buttons);
 
-        var cancelBtn = MobileUI.CreateButton(MobileUI.Tr("ui.common.cancel", "Отмена"), MobileUI.NeutralColor);
+        var cancelBtn = MobileUI.CreateButton(LocalizationManager.Tr("ui.common.cancel"), MobileUI.NeutralColor);
         cancelBtn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         cancelBtn.Pressed += Hide;
         buttons.AddChild(cancelBtn);

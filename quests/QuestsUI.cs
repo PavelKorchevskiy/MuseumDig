@@ -61,24 +61,20 @@ public partial class QuestsUI : CanvasLayer
         margin.AddChild(mainVBox);
 
         mainVBox.AddChild(MobileUI.CreateLabel(
-            MobileUI.Tr("ui.quests.title", "Задания"), MobileUI.TitleFontSize, MobileUI.TitleColor));
-
-        // Вкладки
-        var tabs = new HBoxContainer();
-        tabs.AddThemeConstantOverride("separation", 8);
-        mainVBox.AddChild(tabs);
-
-        _tabDailyButton = CreateTabButton(MobileUI.Tr("ui.quests.tab_daily", "Ежедневные"), Tab.Daily);
-        _tabAchievementsButton = CreateTabButton(MobileUI.Tr("ui.quests.tab_achievements", "Достижения"), Tab.Achievements);
-        tabs.AddChild(_tabDailyButton);
-        tabs.AddChild(_tabAchievementsButton);
+            LocalizationManager.Tr("ui.quests.title"), MobileUI.TitleFontSize, MobileUI.TitleColor));
 
         // Таймер до обновления ежедневных заданий
         _resetTimerLabel = MobileUI.CreateLabel("", MobileUI.SmallFontSize, MobileUI.MutedColor, center: true);
         mainVBox.AddChild(_resetTimerLabel);
 
-        // Список
-        mainVBox.AddChild(MobileUI.CreateScroll(out _list));
+        // Страница со списком + вкладки под ней (над крестиком)
+        mainVBox.AddChild(MobileUI.CreateTabbedPage(out var page, out var tabs));
+        page.AddChild(MobileUI.CreateScroll(out _list));
+
+        _tabDailyButton = CreateTabButton(LocalizationManager.Tr("ui.quests.tab_daily"), Tab.Daily);
+        _tabAchievementsButton = CreateTabButton(LocalizationManager.Tr("ui.quests.tab_achievements"), Tab.Achievements);
+        tabs.AddChild(_tabDailyButton);
+        tabs.AddChild(_tabAchievementsButton);
 
         mainVBox.AddChild(MobileUI.CreateCloseRow(() => Visible = false));
 
@@ -87,8 +83,7 @@ public partial class QuestsUI : CanvasLayer
 
     private Button CreateTabButton(string text, Tab tab)
     {
-        var button = MobileUI.CreateButton(text, MobileUI.PrimaryColor, MobileUI.RowButtonHeight, 0, MobileUI.SmallFontSize);
-        button.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        var button = MobileUI.CreateTab(text);
         button.Pressed += () => SwitchTab(tab);
         return button;
     }
@@ -102,8 +97,8 @@ public partial class QuestsUI : CanvasLayer
     private void SwitchTab(Tab tab)
     {
         _currentTab = tab;
-        _tabDailyButton.Disabled = (tab == Tab.Daily);
-        _tabAchievementsButton.Disabled = (tab == Tab.Achievements);
+        MobileUI.SetTabActive(_tabDailyButton, tab == Tab.Daily);
+        MobileUI.SetTabActive(_tabAchievementsButton, tab == Tab.Achievements);
         _resetTimerLabel.Visible = (tab == Tab.Daily);
 
         Rebuild();
@@ -117,7 +112,7 @@ public partial class QuestsUI : CanvasLayer
         {
             var left = QuestSystem.Instance.GetTimeUntilReset();
             _resetTimerLabel.Text = string.Format(
-                MobileUI.Tr("ui.quests.reset_in", "Обновление через {0}"),
+                LocalizationManager.Tr("ui.quests.reset_in"),
                 $"{(int)left.TotalHours:00}:{left.Minutes:00}:{left.Seconds:00}");
         }
 
@@ -171,7 +166,7 @@ public partial class QuestsUI : CanvasLayer
     private void BuildDailyList()
     {
         var qs = QuestSystem.Instance;
-        string rewardText = string.Format(MobileUI.Tr("ui.quests.reward_gold", "{0} золота"), qs.GetDailyReward());
+        string rewardText = string.Format(LocalizationManager.Tr("ui.quests.reward_gold"), qs.GetDailyReward());
 
         int completed = 0;
         foreach (var quest in qs.GetDailyQuests())
@@ -194,7 +189,7 @@ public partial class QuestsUI : CanvasLayer
         // Бонус за все задания дня
         int total = qs.GetDailyQuests().Count;
         _list.AddChild(CreateEntry(
-            MobileUI.Tr("ui.quests.daily.bonus", "Выполнить все задания дня"),
+            LocalizationManager.Tr("ui.quests.daily.bonus"),
             null,
             QuestSystem.GetItemName(QuestSystem.DailyBonusItemId),
             completed,
@@ -222,8 +217,8 @@ public partial class QuestsUI : CanvasLayer
 
             string achievementId = achievement.Id;
             _list.AddChild(CreateEntry(
-                achievement.Title,
-                string.Format(achievement.DescriptionFormat, achievement.Target),
+                LocalizationManager.Tr(achievement.TitleKey),
+                LocalizationManager.TrFormat(achievement.DescriptionKey, achievement.Target),
                 QuestSystem.FormatRewards(achievement.Rewards),
                 qs.GetAchievementProgress(achievement),
                 achievement.Target,
@@ -260,7 +255,7 @@ public partial class QuestsUI : CanvasLayer
         }
 
         var rewardLabel = MobileUI.CreateLabel(
-            string.Format(MobileUI.Tr("ui.quests.reward", "Награда: {0}"), rewardText),
+            string.Format(LocalizationManager.Tr("ui.quests.reward"), rewardText),
             MobileUI.SmallFontSize, RewardColor, wrap: true);
         rewardLabel.MouseFilter = Control.MouseFilterEnum.Ignore;
         info.AddChild(rewardLabel);
@@ -285,8 +280,8 @@ public partial class QuestsUI : CanvasLayer
 
         // Кнопка
         string buttonText = claimed
-            ? MobileUI.Tr("ui.quests.claimed", "Получено")
-            : MobileUI.Tr("ui.quests.claim", "Забрать");
+            ? LocalizationManager.Tr("ui.quests.claimed")
+            : LocalizationManager.Tr("ui.quests.claim");
 
         var button = MobileUI.CreateButton(buttonText, DoneColor, MobileUI.RowButtonHeight, 124f, MobileUI.SmallFontSize);
         button.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;

@@ -12,6 +12,7 @@ public partial class DigSiteUI : CanvasLayer
     {
         this.Layer = 50;
         CreateTopBar();
+        CreateReturnButton();
     }
 
     public override void _Process(double delta)
@@ -35,7 +36,8 @@ public partial class DigSiteUI : CanvasLayer
         topPanel.AnchorLeft = 0;
         topPanel.AnchorRight = 1;
         topPanel.AnchorTop = 0;
-        topPanel.OffsetBottom = 104;
+        // Высота — по содержимому (одна строка): кнопка возврата переехала вниз экрана
+        topPanel.OffsetBottom = 0;
 
         var style = MobileUI.MakeStyle(MobileUI.PanelColor);
         style.CornerRadiusTopLeft = 0;
@@ -60,7 +62,7 @@ public partial class DigSiteUI : CanvasLayer
 
         var location = LocationSystem.Instance.GetActiveLocation();
         _locationLabel = MobileUI.CreateLabel(
-            location != null ? $"📍 {location.DisplayName}" : "Раскопки",
+            location != null ? $"📍 {location.DisplayName}" : LocalizationManager.Tr("ui.digging.title"),
             MobileUI.BodyFontSize, MobileUI.TitleColor);
         _mainHBox.AddChild(_locationLabel);
 
@@ -71,15 +73,66 @@ public partial class DigSiteUI : CanvasLayer
 
         _coinsLabel = MobileUI.CreateLabel("0 🪙", MobileUI.BodyFontSize, Colors.Gold);
         _mainHBox.AddChild(_coinsLabel);
+    }
 
-        // === Строка 2: кнопка возврата — отдельной строкой на всю ширину,
-        // чтобы не тесниться с остальным содержимым верхней плашки ===
-        var returnButton = MobileUI.CreateButton(
-            MobileUI.Tr("ui.digging.return_to_museum", "🏛️ Вернуться в музей"),
-            MobileUI.PrimaryColor, MobileUI.RowButtonHeight, 0, MobileUI.SmallFontSize);
-        returnButton.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        returnButton.Pressed += OnReturnPressed;
-        rows.AddChild(returnButton);
+    // ===== КНОПКА ВОЗВРАТА В МУЗЕЙ =====
+    // Отдельная квадратная кнопка со стрелкой в правом нижнем углу, над
+    // панелью инструментов (DiggingUI, слой ниже) — под большой палец.
+
+    private const float ReturnButtonSize = 76f;
+    private const float ReturnButtonMargin = 14f;
+    private const float ToolsPanelHeight = 114f; // см. bottomContainer в DigSite._Ready
+    private const string ReturnIconPath = "res://assets/ui/icons/return.png";
+
+    private void CreateReturnButton()
+    {
+        var button = new Button();
+        button.FocusMode = Control.FocusModeEnum.None;
+        button.TooltipText = LocalizationManager.Tr("ui.digging.return_to_museum");
+
+        button.AnchorLeft = 1;
+        button.AnchorRight = 1;
+        button.AnchorTop = 1;
+        button.AnchorBottom = 1;
+        button.OffsetRight = -ReturnButtonMargin;
+        button.OffsetLeft = -ReturnButtonMargin - ReturnButtonSize;
+        button.OffsetBottom = -ToolsPanelHeight - ReturnButtonMargin;
+        button.OffsetTop = -ToolsPanelHeight - ReturnButtonMargin - ReturnButtonSize;
+        button.PivotOffset = new Vector2(ReturnButtonSize / 2f, ReturnButtonSize / 2f);
+
+        var normal = MobileUI.MakeStyle(MobileUI.PrimaryColor, 20, 2, MobileUI.PrimaryColor.Lightened(0.35f));
+        var pressed = MobileUI.MakeStyle(MobileUI.PrimaryColor.Lightened(0.2f), 20, 2, MobileUI.PrimaryColor.Lightened(0.5f));
+        button.AddThemeStyleboxOverride("normal", normal);
+        button.AddThemeStyleboxOverride("hover", normal);
+        button.AddThemeStyleboxOverride("pressed", pressed);
+        button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+
+        // Иконка: своя картинка, если она есть в проекте, иначе стрелка рисуется кодом
+        Control icon;
+        if (ResourceLoader.Exists(ReturnIconPath))
+        {
+            icon = new TextureRect
+            {
+                Texture = GD.Load<Texture2D>(ReturnIconPath),
+                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+                StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered
+            };
+        }
+        else
+        {
+            icon = new ReturnArrowIcon();
+        }
+        icon.MouseFilter = Control.MouseFilterEnum.Ignore;
+        icon.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        icon.OffsetLeft = 14;
+        icon.OffsetTop = 14;
+        icon.OffsetRight = -14;
+        icon.OffsetBottom = -14;
+        button.AddChild(icon);
+
+        button.Pressed += OnReturnPressed;
+        MobileUI.AttachPressAnimation(button);
+        AddChild(button);
     }
 
     /// <summary>
@@ -98,5 +151,43 @@ public partial class DigSiteUI : CanvasLayer
     private void OnReturnPressed()
     {
         GetTree().ChangeSceneToFile("res://Museum.tscn");
+    }
+}
+
+/// <summary>
+/// Стрелка "назад" (разворот влево), нарисованная линиями — запасной вариант
+/// на случай, если в проекте нет картинки res://assets/ui/icons/return.png.
+/// </summary>
+public partial class ReturnArrowIcon : Control
+{
+    public override void _Draw()
+    {
+        float s = Mathf.Min(Size.X, Size.Y);
+        Vector2 origin = (Size - new Vector2(s, s)) / 2f;
+        Vector2 P(float x, float y) => origin + new Vector2(x * s, y * s);
+
+        Color color = Colors.White;
+        float width = Mathf.Max(4f, s * 0.11f);
+
+        // Верхняя линия (со стрелкой слева) -> дуга справа -> нижняя линия
+        Vector2 arcCenter = P(0.62f, 0.52f);
+        float radius = s * 0.22f;
+
+        DrawLine(P(0.16f, 0.30f), P(0.62f, 0.30f), color, width, true);
+        DrawArc(arcCenter, radius, -Mathf.Pi / 2f, Mathf.Pi / 2f, 24, color, width, true);
+        DrawLine(P(0.62f, 0.74f), P(0.34f, 0.74f), color, width, true);
+
+        // Скругляем стыки и концы линий
+        DrawCircle(P(0.62f, 0.30f), width / 2f, color);
+        DrawCircle(P(0.62f, 0.74f), width / 2f, color);
+        DrawCircle(P(0.34f, 0.74f), width / 2f, color);
+
+        // Наконечник
+        DrawColoredPolygon(new[]
+        {
+            P(0.02f, 0.30f),
+            P(0.26f, 0.10f),
+            P(0.26f, 0.50f)
+        }, color);
     }
 }

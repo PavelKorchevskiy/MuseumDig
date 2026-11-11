@@ -38,12 +38,12 @@ public class OfflineIncomeUI
         panel.AddChild(vbox);
 
         var title = MobileUI.CreateLabel(
-            MobileUI.Tr("ui.offline_income.title", "С возвращением!"),
+            LocalizationManager.Tr("ui.offline_income.title"),
             MobileUI.TitleFontSize, MobileUI.TitleColor, center: true);
         vbox.AddChild(title);
 
         var subtitle = MobileUI.CreateLabel(
-            MobileUI.Tr("ui.offline_income.subtitle", "Пока вас не было, музей заработал:"),
+            LocalizationManager.Tr("ui.offline_income.subtitle"),
             MobileUI.BodyFontSize, Colors.White, center: true, wrap: true);
         vbox.AddChild(subtitle);
 
@@ -85,7 +85,7 @@ public class OfflineIncomeUI
     /// </summary>
     public void Show(int amount)
     {
-        _amountLabel.Text = $"+{amount} монет";
+        _amountLabel.Text = LocalizationManager.TrFormat("ui.offline_income.amount", amount);
         _root.Visible = true;
     }
 

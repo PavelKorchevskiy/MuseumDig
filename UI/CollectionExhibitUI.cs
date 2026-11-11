@@ -26,7 +26,7 @@ public partial class CollectionExhibitUI : CanvasLayer
         content.AddChild(_titleLabel);
 
         content.AddChild(MobileUI.CreateLabel(
-            MobileUI.Tr("ui.exhibit.info", "Собранный экспонат"),
+            LocalizationManager.Tr("ui.exhibit.info"),
             MobileUI.BodyFontSize, MobileUI.MutedColor, center: true));
 
         // Растягиваем свободное место между текстом и кнопками
@@ -37,12 +37,12 @@ public partial class CollectionExhibitUI : CanvasLayer
         actions.AddThemeConstantOverride("separation", 12);
         content.AddChild(actions);
 
-        _moveBtn = MobileUI.CreateButton(MobileUI.Tr("ui.exhibit.move", "Переместить"), MobileUI.PrimaryColor);
+        _moveBtn = MobileUI.CreateButton(LocalizationManager.Tr("ui.exhibit.move"), MobileUI.PrimaryColor);
         _moveBtn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         _moveBtn.Pressed += OnMovePressed;
         actions.AddChild(_moveBtn);
 
-        _storeBtn = MobileUI.CreateButton(MobileUI.Tr("ui.exhibit.store", "На склад"), MobileUI.WarningColor);
+        _storeBtn = MobileUI.CreateButton(LocalizationManager.Tr("ui.exhibit.store"), MobileUI.WarningColor);
         _storeBtn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         _storeBtn.Pressed += OnStorePressed;
         actions.AddChild(_storeBtn);
@@ -52,7 +52,7 @@ public partial class CollectionExhibitUI : CanvasLayer
 
         // Подтверждение (поверх всего, добавляется последним)
         _storeConfirm = new ConfirmOverlay(this,
-            MobileUI.Tr("ui.exhibit.store", "На склад"), MobileUI.WarningColor);
+            LocalizationManager.Tr("ui.exhibit.store"), MobileUI.WarningColor);
     }
 
     public void Open(Room room, PlacedFurniture placed)
@@ -80,8 +80,7 @@ public partial class CollectionExhibitUI : CanvasLayer
     private void OnStorePressed()
     {
         _storeConfirm.Show(
-            MobileUI.Tr("ui.exhibit.store_confirm",
-                "Вы уверены? Экспонат будет убран со стены и вернется в ваш инвентарь."),
+            LocalizationManager.Tr("ui.exhibit.store_confirm"),
             ConfirmStore);
     }
 

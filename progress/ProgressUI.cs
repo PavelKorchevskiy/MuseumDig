@@ -71,10 +71,8 @@ public partial class ProgressUI : CanvasLayer
         _resetButton.Pressed += OnResetPressed;
         mainVBox.AddChild(_resetButton);
 
-        // Вкладки
-        var tabsContainer = new HBoxContainer();
-        tabsContainer.AddThemeConstantOverride("separation", 8);
-        mainVBox.AddChild(tabsContainer);
+        // Страница с содержимым + вкладки под ней (над крестиком)
+        mainVBox.AddChild(MobileUI.CreateTabbedPage(out var page, out var tabsContainer));
 
         _tabSkillTreeButton = CreateTabButton("ui.progress.tab_skills", Tab.SkillTree);
         _tabSkeletonsButton = CreateTabButton("ui.progress.tab_skeletons", Tab.UnlockedSkeletons);
@@ -89,7 +87,7 @@ public partial class ProgressUI : CanvasLayer
         _tabContent.Name = "TabContent";
         _tabContent.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         _tabContent.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
-        mainVBox.AddChild(_tabContent);
+        page.AddChild(_tabContent);
 
         // Создаём вкладки
         _skillTreeTab = new SkillTreeTab();
@@ -108,8 +106,7 @@ public partial class ProgressUI : CanvasLayer
 
     private Button CreateTabButton(string localizationKey, Tab tab)
     {
-        var button = MobileUI.CreateButton(LocalizationManager.Tr(localizationKey), MobileUI.PrimaryColor, MobileUI.RowButtonHeight, 0, MobileUI.SmallFontSize);
-        button.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        var button = MobileUI.CreateTab(LocalizationManager.Tr(localizationKey));
         button.Pressed += () => SwitchTab(tab);
         return button;
     }
@@ -118,9 +115,12 @@ public partial class ProgressUI : CanvasLayer
     {
         _currentTab = newTab;
 
-        _tabSkillTreeButton.Disabled = (_currentTab == Tab.SkillTree);
-        _tabSkeletonsButton.Disabled = (_currentTab == Tab.UnlockedSkeletons);
-        _tabFindingsButton.Disabled = (_currentTab == Tab.UnlockedFindings);
+        MobileUI.SetTabActive(_tabSkillTreeButton, _currentTab == Tab.SkillTree);
+        MobileUI.SetTabActive(_tabSkeletonsButton, _currentTab == Tab.UnlockedSkeletons);
+        MobileUI.SetTabActive(_tabFindingsButton, _currentTab == Tab.UnlockedFindings);
+
+        // Сброс навыков относится только к дереву навыков
+        _resetButton.Visible = (_currentTab == Tab.SkillTree);
 
         // === ЯВНО УСТАНАВЛИВАЕМ ВИДИМОСТЬ ===
         _skillTreeTab.Visible = (_currentTab == Tab.SkillTree);

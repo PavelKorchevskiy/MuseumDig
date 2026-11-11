@@ -135,7 +135,6 @@ public partial class ConcretionOpeningUI : CanvasLayer
         // Кнопка "Ударить молотком" с локализацией
         _hitButton = new Button();
         string hitButtonText = LocalizationManager.Tr("ui.concretion.hit_button");
-        if (hitButtonText == "ui.concretion.hit_button") hitButtonText = "🔨 Ударить молотком!";
         _hitButton.Text = hitButtonText;
         _hitButton.CustomMinimumSize = new Vector2(0, 100);
         _hitButton.AddThemeFontSizeOverride("font_size", 20);
@@ -145,7 +144,6 @@ public partial class ConcretionOpeningUI : CanvasLayer
         // === НОВОЕ: Кнопка "Следующая" ПЕРЕД кнопкой закрытия (изначально скрыта) ===
         _nextButton = new Button();
         string nextButtonText = LocalizationManager.Tr("ui.concretion.next_button");
-        if (nextButtonText == "ui.concretion.next_button") nextButtonText = "Следующая конкреция →";
         _nextButton.Text = nextButtonText;
         _nextButton.CustomMinimumSize = new Vector2(0, 120);
         _nextButton.AddThemeFontSizeOverride("font_size", 18);
@@ -200,10 +198,6 @@ public partial class ConcretionOpeningUI : CanvasLayer
     private void UpdateProgressLabel()
     {
         string format = LocalizationManager.Tr("ui.concretion.hits_format");
-        if (format == "ui.concretion.hits_format")
-        {
-            format = "Ударов: {0} / {1}";
-        }
         _progressLabel.Text = string.Format(format, _currentHits, _requiredHits);
     }
 
@@ -275,18 +269,10 @@ public partial class ConcretionOpeningUI : CanvasLayer
         
         // === Используем локализацию для заголовка ===
         string revealedText = LocalizationManager.Tr("ui.concretion.revealed");
-        if (revealedText == "ui.concretion.revealed")
-        {
-            revealedText = "✨ Конкреция раскрыта! ✨";
-        }
         _titleLabel.Text = revealedText;
         
         // === Используем локализацию для текста находки ===
         string foundFormat = LocalizationManager.Tr("ui.concretion.found_item");
-        if (foundFormat == "ui.concretion.found_item")
-        {
-            foundFormat = "Вы нашли: {0}!";
-        }
         string resultText = string.Format(foundFormat, innerResource?.DisplayName ?? innerItemId);
         _progressLabel.Text = resultText;
         _progressLabel.AddThemeColorOverride("font_color", Colors.LimeGreen);
@@ -355,10 +341,6 @@ public partial class ConcretionOpeningUI : CanvasLayer
         {
             var item = InventorySystem.Instance.GetItem(_concretionId);
             string format = LocalizationManager.Tr("ui.concretion.next_button_with_count");
-            if (format == "ui.concretion.next_button_with_count")
-            {
-                format = "Следующая конкреция → (осталось: {0})";
-            }
             _nextButton.Text = string.Format(format, item.Amount);
         }
     }

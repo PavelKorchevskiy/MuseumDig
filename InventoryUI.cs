@@ -135,7 +135,6 @@ public partial class InventoryUI : CanvasLayer
         // === Заголовок ===
         _titleLabel = new Label();
         _titleLabel.Text = LocalizationManager.Tr("ui.inventory.title");
-        if (_titleLabel.Text == "ui.inventory.title") _titleLabel.Text = "Инвентарь";
         _titleLabel.AddThemeFontSizeOverride("font_size", 24);
         _titleLabel.AddThemeColorOverride("font_color", Colors.Gold);
         _titleLabel.HorizontalAlignment = HorizontalAlignment.Center;
@@ -412,22 +411,7 @@ public partial class InventoryUI : CanvasLayer
             _ => ""
         };
 
-        string hint = LocalizationManager.Tr(hintKey);
-        
-        // Fallback для непереведённых ключей
-        if (hint == hintKey)
-        {
-            hint = _currentTab switch
-            {
-                Tab.Tickets => "Используйте билет для начала раскопок",
-                Tab.Assembling => "Соберите коллекции из найденных костей",
-                Tab.Findings => "Продайте или оставьте находки для коллекции",
-                Tab.Bones => "Части скелетов для сборки коллекций",
-                Tab.Skeletons => "Готовые скелеты можно разместить в музее",
-                Tab.Concretions => "Раскройте конкреции молотком",
-                _ => ""
-            };
-        }
+        string hint = string.IsNullOrEmpty(hintKey) ? "" : LocalizationManager.Tr(hintKey);
 
         _hintLabel.Text = hint;
     }
@@ -513,10 +497,6 @@ public partial class InventoryUI : CanvasLayer
         GD.Print("[AssemblingTab] 🔄 RenderAssemblingTab вызван");
         
         _hintLabel.Text = LocalizationManager.Tr("ui.inventory.hint_assembling");
-        if (_hintLabel.Text == "ui.inventory.hint_assembling")
-        {
-            _hintLabel.Text = "Соберите коллекции из найденных костей";
-        }
 
         var allCollections = GameData.GetAllCollections();
         GD.Print($"[AssemblingTab] Всего коллекций: {allCollections.Count}");
@@ -643,10 +623,6 @@ public partial class InventoryUI : CanvasLayer
                 var emptyLabel = new Label();
                 
                 string noTicketsText = LocalizationManager.Tr("ui.inventory.no_tickets");
-                if (noTicketsText == "ui.inventory.no_tickets")
-                {
-                    noTicketsText = "Нет доступных билетов";
-                }
                 
                 emptyLabel.Text = noTicketsText;
                 emptyLabel.AddThemeFontSizeOverride("font_size", 16);
@@ -734,7 +710,6 @@ public partial class InventoryUI : CanvasLayer
         var openButton = new Button();
         openButton.Name = "OpenButton";
         openButton.Text = "🔨 " + LocalizationManager.Tr("ui.inventory.open");
-        if (openButton.Text == "🔨 ui.inventory.open") openButton.Text = "🔨 Раскрыть";
         openButton.CustomMinimumSize = new Vector2(110, 0);
         openButton.SizeFlagsHorizontal = Control.SizeFlags.ShrinkEnd;  // Не растягивается
         openButton.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;

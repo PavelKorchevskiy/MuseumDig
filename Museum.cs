@@ -27,6 +27,10 @@ private OfflineIncomeUI _offlineIncomeUI;
 
     public override void _Ready()
     {
+        // Язык ставим до создания любого UI: тексты читаются из локализации
+        // прямо в _Ready() каждого экрана.
+        LocalizationManager.SetLanguage("ru"); // или "en"
+
          _background = new MuseumBackground { Name = "MuseumBackground" };
         AddChild(_background);
         _background.Setup(this);
@@ -60,8 +64,6 @@ private OfflineIncomeUI _offlineIncomeUI;
         uiLayer.AddChild(_displayCaseUI);
         _collectionExhibitUI = new CollectionExhibitUI { Name = "CollectionExhibitUI" };
         uiLayer.AddChild(_collectionExhibitUI);
-
-         LocalizationManager.SetLanguage("ru"); // или "en"
 
          _progressUI = new ProgressUI { Name = "ProgressUI" };
         uiLayer.AddChild(_progressUI);

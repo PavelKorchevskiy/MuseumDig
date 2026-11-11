@@ -68,26 +68,11 @@ public partial class MuseumShopUI : CanvasLayer
         // === Заголовок ===
         var titleLabel = new Label();
         string titleText = LocalizationManager.Tr("ui.shop.title");
-        if (titleText == "ui.shop.title") titleText = "🏛️ Магазин";
         titleLabel.Text = titleText;
         titleLabel.AddThemeFontSizeOverride("font_size", 24);
         titleLabel.AddThemeColorOverride("font_color", Colors.Gold);
         titleLabel.HorizontalAlignment = HorizontalAlignment.Center;
         contentContainer.AddChild(titleLabel);
-
-        // === Вкладки: Мебель / Билеты ===
-        var tabsRow = new HBoxContainer();
-        tabsRow.Alignment = BoxContainer.AlignmentMode.Center;
-        tabsRow.AddThemeConstantOverride("separation", 10);
-        contentContainer.AddChild(tabsRow);
-
-        _tabFurnitureBtn = CreateTabButton("ui.shop.tab_furniture", "Мебель");
-        _tabFurnitureBtn.Pressed += () => SwitchTab(ShopTab.Furniture);
-        tabsRow.AddChild(_tabFurnitureBtn);
-
-        _tabTicketsBtn = CreateTabButton("ui.shop.tab_tickets", "Билеты");
-        _tabTicketsBtn.Pressed += () => SwitchTab(ShopTab.Tickets);
-        tabsRow.AddChild(_tabTicketsBtn);
 
         // === Подсказка (текст меняется вместе с вкладкой) ===
         _hintLabel = new Label();
@@ -97,11 +82,29 @@ public partial class MuseumShopUI : CanvasLayer
         _hintLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         contentContainer.AddChild(_hintLabel);
 
+        // === Страница со списком + вкладки под ней (над крестиком) ===
+        contentContainer.AddChild(MobileUI.CreateTabbedPage(out var page, out var tabsRow));
+
+        // Обе вкладки лежат в одной "стопке": PanelContainer растянул бы их
+        // на всю страницу, но видна всегда только одна (см. SwitchTab).
+        var pageStack = new Control();
+        pageStack.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+        pageStack.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        page.AddChild(pageStack);
+
+        _tabFurnitureBtn = MobileUI.CreateTab(LocalizationManager.Tr("ui.shop.tab_furniture"));
+        _tabFurnitureBtn.Pressed += () => SwitchTab(ShopTab.Furniture);
+        tabsRow.AddChild(_tabFurnitureBtn);
+
+        _tabTicketsBtn = MobileUI.CreateTab(LocalizationManager.Tr("ui.shop.tab_tickets"));
+        _tabTicketsBtn.Pressed += () => SwitchTab(ShopTab.Tickets);
+        tabsRow.AddChild(_tabTicketsBtn);
+
         // === Вкладка "Мебель" ===
         _furnitureScroll = new ScrollContainer();
-        _furnitureScroll.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
-        _furnitureScroll.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        contentContainer.AddChild(_furnitureScroll);
+        _furnitureScroll.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        _furnitureScroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
+        pageStack.AddChild(_furnitureScroll);
 
         _furnitureSection = new VBoxContainer();
         _furnitureSection.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
@@ -110,9 +113,9 @@ public partial class MuseumShopUI : CanvasLayer
 
         // === Вкладка "Билеты" ===
         _ticketsScroll = new ScrollContainer();
-        _ticketsScroll.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
-        _ticketsScroll.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        contentContainer.AddChild(_ticketsScroll);
+        _ticketsScroll.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        _ticketsScroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
+        pageStack.AddChild(_ticketsScroll);
 
         _ticketsSection = new VBoxContainer();
         _ticketsSection.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
@@ -168,18 +171,6 @@ public partial class MuseumShopUI : CanvasLayer
 
     // ===== ВКЛАДКИ =====
 
-    private Button CreateTabButton(string localizationKey, string fallback)
-    {
-        var button = new Button();
-        string text = LocalizationManager.Tr(localizationKey);
-        if (text == localizationKey) text = fallback;
-        button.Text = text;
-        button.CustomMinimumSize = new Vector2(140, 48);
-        button.AddThemeFontSizeOverride("font_size", 16);
-        button.FocusMode = Control.FocusModeEnum.None;
-        return button;
-    }
-
     private void SwitchTab(ShopTab tab)
     {
         _currentTab = tab;
@@ -187,27 +178,19 @@ public partial class MuseumShopUI : CanvasLayer
         _furnitureScroll.Visible = tab == ShopTab.Furniture;
         _ticketsScroll.Visible = tab == ShopTab.Tickets;
 
-        UpdateTabButtonStyle(_tabFurnitureBtn, tab == ShopTab.Furniture);
-        UpdateTabButtonStyle(_tabTicketsBtn, tab == ShopTab.Tickets);
+        MobileUI.SetTabActive(_tabFurnitureBtn, tab == ShopTab.Furniture);
+        MobileUI.SetTabActive(_tabTicketsBtn, tab == ShopTab.Tickets);
 
         if (tab == ShopTab.Furniture)
         {
             string hintText = LocalizationManager.Tr("ui.shop.hint");
-            if (hintText == "ui.shop.hint") hintText = "Купите мебель и разместите её в музее";
             _hintLabel.Text = hintText;
         }
         else
         {
             string hintText = LocalizationManager.Tr("ui.shop.hint_tickets");
-            if (hintText == "ui.shop.hint_tickets") hintText = "Купите билет — он появится в инвентаре на вкладке «Билеты»";
             _hintLabel.Text = hintText;
         }
-    }
-
-    private void UpdateTabButtonStyle(Button button, bool active)
-    {
-        button.AddThemeColorOverride("font_color", active ? Colors.Gold : new Color(0.7f, 0.7f, 0.75f));
-        button.Disabled = active; // активная вкладка не нажимается повторно
     }
 
     // ===== ВКЛАДКА "МЕБЕЛЬ" =====
@@ -279,7 +262,6 @@ public partial class MuseumShopUI : CanvasLayer
         var buyBtn = new Button();
         buyBtn.Name = "BuyButton";
         string buyText = LocalizationManager.Tr("ui.shop.buy");
-        if (buyText == "ui.shop.buy") buyText = "Купить";
         buyBtn.Text = buyText;
         buyBtn.CustomMinimumSize = new Vector2(90, 0);
         buyBtn.SizeFlagsHorizontal = Control.SizeFlags.ShrinkEnd;
@@ -355,7 +337,6 @@ public partial class MuseumShopUI : CanvasLayer
         {
             var emptyLabel = new Label();
             string emptyText = LocalizationManager.Tr("ui.shop.no_tickets");
-            if (emptyText == "ui.shop.no_tickets") emptyText = "Сейчас нет билетов в продаже";
             emptyLabel.Text = emptyText;
             emptyLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.6f));
             emptyLabel.HorizontalAlignment = HorizontalAlignment.Center;
@@ -411,7 +392,6 @@ public partial class MuseumShopUI : CanvasLayer
         var buyBtn = new Button();
         buyBtn.Name = "BuyButton";
         string buyText = LocalizationManager.Tr("ui.shop.buy");
-        if (buyText == "ui.shop.buy") buyText = "Купить";
         buyBtn.Text = buyText;
         buyBtn.CustomMinimumSize = new Vector2(90, 0);
         buyBtn.SizeFlagsHorizontal = Control.SizeFlags.ShrinkEnd;

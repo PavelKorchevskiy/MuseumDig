@@ -27,15 +27,17 @@ public class QuestReward
 public class DailyQuestDefinition
 {
     public string Id;
-    public string TitleKey;
-    public string TitleFallback; // {0} — цель
+
+    /// <summary>Ключ локализации названия; {0} в тексте — цель.</summary>
+    public string TitleKey => $"quest.daily.{Id}";
 }
 
 public class AchievementDefinition
 {
     public string Id;
-    public string Title;
-    public string DescriptionFormat; // {0} — цель
+    // Тексты — в файлах локализации: quest.achievement.<Id>.name / .desc ({0} — цель)
+    public string TitleKey => $"quest.achievement.{Id}.name";
+    public string DescriptionKey => $"quest.achievement.{Id}.desc";
     public string StatId;
     public int Target;
     public List<QuestReward> Rewards = new();
@@ -111,11 +113,11 @@ public class QuestSystem
 
     private void RegisterDailyQuests()
     {
-        _dailyQuests.Add(new DailyQuestDefinition { Id = DailyVisitorGold, TitleKey = "ui.quests.daily.visitor_gold", TitleFallback = "Заработать {0} золота на посетителях" });
-        _dailyQuests.Add(new DailyQuestDefinition { Id = DailyExtractBones, TitleKey = "ui.quests.daily.extract_bones", TitleFallback = "Извлечь кости: {0}" });
-        _dailyQuests.Add(new DailyQuestDefinition { Id = DailyBuyTicket, TitleKey = "ui.quests.daily.buy_ticket", TitleFallback = "Купить билет в магазине: {0}" });
-        _dailyQuests.Add(new DailyQuestDefinition { Id = DailyOpenConcretion, TitleKey = "ui.quests.daily.open_concretion", TitleFallback = "Разбить конкрецию: {0}" });
-        _dailyQuests.Add(new DailyQuestDefinition { Id = DailyUseDiggers, TitleKey = "ui.quests.daily.use_diggers", TitleFallback = "Назначить копателя на плитку: {0} раз" });
+        _dailyQuests.Add(new DailyQuestDefinition { Id = DailyVisitorGold });
+        _dailyQuests.Add(new DailyQuestDefinition { Id = DailyExtractBones });
+        _dailyQuests.Add(new DailyQuestDefinition { Id = DailyBuyTicket });
+        _dailyQuests.Add(new DailyQuestDefinition { Id = DailyOpenConcretion });
+        _dailyQuests.Add(new DailyQuestDefinition { Id = DailyUseDiggers });
     }
 
     private void RegisterAchievements()
@@ -124,47 +126,45 @@ public class QuestSystem
         const string rare = "rare_concretion";
 
         // --- Кости ---
-        AddAchievement("bones_1", "Первая находка", "Извлечь кость", StatBones, 1, (common, 1));
-        AddAchievement("bones_25", "Охотник за костями", "Извлечь костей: {0}", StatBones, 25, (rare, 1));
-        AddAchievement("bones_100", "Палеонтолог", "Извлечь костей: {0}", StatBones, 100, ("ticket_morrison", 1));
+        AddAchievement("bones_1", StatBones, 1, (common, 1));
+        AddAchievement("bones_25", StatBones, 25, (rare, 1));
+        AddAchievement("bones_100", StatBones, 100, ("ticket_morrison", 1));
 
         // --- Плитки ---
-        AddAchievement("tiles_50", "Землекоп", "Полностью выкопать плиток: {0}", StatTiles, 50, (common, 2));
-        AddAchievement("tiles_100", "Бригадир", "Полностью выкопать плиток: {0}", StatTiles, 100, (rare, 2));
-        AddAchievement("tiles_200", "Прораб", "Полностью выкопать плиток: {0}", StatTiles, 200, ("ticket_morrison", 1));
-        AddAchievement("tiles_500", "Карьер", "Полностью выкопать плиток: {0}", StatTiles, 500, ("ticket_gobi", 1));
+        AddAchievement("tiles_50", StatTiles, 50, (common, 2));
+        AddAchievement("tiles_100", StatTiles, 100, (rare, 2));
+        AddAchievement("tiles_200", StatTiles, 200, ("ticket_morrison", 1));
+        AddAchievement("tiles_500", StatTiles, 500, ("ticket_gobi", 1));
 
         // --- Конкреции ---
-        AddAchievement("concretions_10", "Камнелом", "Разбить конкреций: {0}", StatConcretions, 10, (rare, 1));
-        AddAchievement("concretions_50", "Геолог", "Разбить конкреций: {0}", StatConcretions, 50, (rare, 3));
-        AddAchievement("concretions_100", "Знаток недр", "Разбить конкреций: {0}", StatConcretions, 100, ("ticket_gobi", 1));
+        AddAchievement("concretions_10", StatConcretions, 10, (rare, 1));
+        AddAchievement("concretions_50", StatConcretions, 50, (rare, 3));
+        AddAchievement("concretions_100", StatConcretions, 100, ("ticket_gobi", 1));
 
         // --- Коллекции и скелеты ---
-        AddAchievement("collections_1", "Первый скелет", "Собрать коллекцию целиком", StatCollections, 1, (rare, 2));
-        AddAchievement("skeletons_3", "Куратор", "Выставить собранных скелетов в музее: {0}", StatSkeletonsDisplayed, 3, ("ticket_morrison", 1));
-        AddAchievement("skeletons_10", "Главный хранитель", "Выставить собранных скелетов в музее: {0}", StatSkeletonsDisplayed, 10, ("ticket_texas", 1));
+        AddAchievement("collections_1", StatCollections, 1, (rare, 2));
+        AddAchievement("skeletons_3", StatSkeletonsDisplayed, 3, ("ticket_morrison", 1));
+        AddAchievement("skeletons_10", StatSkeletonsDisplayed, 10, ("ticket_texas", 1));
 
         // --- Локации ---
-        AddAchievement("locations_3", "Путешественник", "Побывать на разных локациях: {0}", StatLocations, 3, ("ticket_undoria", 1));
-        AddAchievement("locations_5", "Вокруг света", "Побывать на всех локациях: {0}", StatLocations, 5, ("ticket_texas", 1));
+        AddAchievement("locations_3", StatLocations, 3, ("ticket_undoria", 1));
+        AddAchievement("locations_5", StatLocations, 5, ("ticket_texas", 1));
 
         // --- Посетители ---
-        AddAchievement("visitors_100", "Первые гости", "Принять посетителей: {0}", StatVisitors, 100, (common, 1));
-        AddAchievement("visitors_1000", "Популярное место", "Принять посетителей: {0}", StatVisitors, 1000, (rare, 2));
-        AddAchievement("visitors_5000", "Аншлаг", "Принять посетителей: {0}", StatVisitors, 5000, ("ticket_gobi", 1));
+        AddAchievement("visitors_100", StatVisitors, 100, (common, 1));
+        AddAchievement("visitors_1000", StatVisitors, 1000, (rare, 2));
+        AddAchievement("visitors_5000", StatVisitors, 5000, ("ticket_gobi", 1));
 
         // --- Ежедневные ---
-        AddAchievement("daily_sets_7", "Завсегдатай", "Выполнить все ежедневные задания за день: {0} раз", StatDailySets, 7, ("ticket_texas", 1), (rare, 3));
+        AddAchievement("daily_sets_7", StatDailySets, 7, ("ticket_texas", 1), (rare, 3));
     }
 
-    private void AddAchievement(string id, string title, string description, string statId, int target,
+    private void AddAchievement(string id, string statId, int target,
         params (string itemId, int amount)[] rewards)
     {
         var def = new AchievementDefinition
         {
             Id = id,
-            Title = title,
-            DescriptionFormat = description,
             StatId = statId,
             Target = target
         };
@@ -270,8 +270,7 @@ public class QuestSystem
 
     public string GetDailyTitle(DailyQuestDefinition quest)
     {
-        string format = MobileUI.Tr(quest.TitleKey, quest.TitleFallback);
-        return string.Format(format, GetDailyTarget(quest.Id));
+        return LocalizationManager.TrFormat(quest.TitleKey, GetDailyTarget(quest.Id));
     }
 
     // =================================================================
@@ -427,8 +426,8 @@ public class QuestSystem
     {
         switch (itemId)
         {
-            case "common_concretion": return MobileUI.Tr("ui.quests.item.common_concretion", "Обычная конкреция");
-            case "rare_concretion": return MobileUI.Tr("ui.quests.item.rare_concretion", "Редкая конкреция");
+            case "common_concretion": return LocalizationManager.Tr("ui.quests.item.common_concretion");
+            case "rare_concretion": return LocalizationManager.Tr("ui.quests.item.rare_concretion");
         }
 
         var ticket = GameData.GetTicket(itemId);
