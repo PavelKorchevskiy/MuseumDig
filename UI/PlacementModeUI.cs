@@ -28,12 +28,26 @@ public partial class PlacementModeUI : Node2D
 
     public override void _Ready()
     {
-        Visible = false;
-
         _uiLayer = new CanvasLayer { Layer = 50 };
         AddChild(_uiLayer);
 
         CreateOverlay();
+
+        SetPlacementVisible(false);
+    }
+
+    /// <summary>
+    /// Скрывает/показывает весь режим размещения. Visible у самого узла
+    /// (Node2D) прячет сетку клеток и призрак мебели, но НЕ прячет
+    /// _uiLayer — CanvasLayer не наследует видимость от родителя в Godot,
+    /// у него своё отдельное свойство Visible. Поэтому панель с кнопками
+    /// "Отмена"/"Поставить" раньше оставалась на экране после закрытия
+    /// режима — её нужно скрывать отдельно.
+    /// </summary>
+    private void SetPlacementVisible(bool value)
+    {
+        Visible = value;
+        _uiLayer.Visible = value;
     }
 
     public override void _Process(double delta)
@@ -135,6 +149,17 @@ public partial class PlacementModeUI : Node2D
         _hintLabel.Text = hint;
     }
 
+    /// <summary>
+    /// Нижняя навигационная панель музея (квесты/прогресс/раскопки/магазин/инвентарь)
+    /// лежит выше этого UI (CanvasLayer 100 против наших 50) и перекрывает
+    /// "Отмена"/"Поставить" внизу экрана — клики по ним не доходят. Прячем её
+    /// на время размещения и возвращаем при закрытии режима.
+    /// </summary>
+    private void SetMuseumBottomBarVisible(bool visible)
+    {
+        (GetTree().CurrentScene as Museum)?.SetBottomBarVisible(visible);
+    }
+
     // ===== ЗАПУСК РЕЖИМА =====
 
     public void StartPlacement(Room room, Furniture furniture)
@@ -150,7 +175,8 @@ public partial class PlacementModeUI : Node2D
             MobileUI.Tr("ui.placement.hint_new", "Коснитесь клетки, затем нажмите «Поставить»"));
 
         ResetSelection();
-        Visible = true;
+        SetPlacementVisible(true);
+        SetMuseumBottomBarVisible(false);
         GD.Print($"[PlacementMode] Started for {furniture.DisplayName} ({furniture.Size.X}x{furniture.Size.Y})");
     }
 
@@ -178,7 +204,8 @@ public partial class PlacementModeUI : Node2D
             MobileUI.Tr("ui.placement.hint_move", "Коснитесь новой клетки, затем нажмите «Поставить»"));
 
         ResetSelection();
-        Visible = true;
+        SetPlacementVisible(true);
+        SetMuseumBottomBarVisible(false);
         GD.Print($"[PlacementMode] 📦 Режим перемещения активирован. TypeId: {_placedToMove.FurnitureTypeId}, Экспонатов: {_placedToMove.Items.Count}");
     }
 
@@ -199,7 +226,8 @@ public partial class PlacementModeUI : Node2D
             MobileUI.Tr("ui.placement.hint_collection", "Коснитесь клетки. «Отмена» вернёт экспонат в инвентарь"));
 
         ResetSelection();
-        Visible = true;
+        SetPlacementVisible(true);
+        SetMuseumBottomBarVisible(false);
         GD.Print($"[PlacementMode] 🦖 Начато размещение коллекции: {furniture.DisplayName}");
     }
 
@@ -440,7 +468,8 @@ public partial class PlacementModeUI : Node2D
 
     private void CancelPlacement()
     {
-        Visible = false;
+        SetPlacementVisible(false);
+        SetMuseumBottomBarVisible(true);
 
         if (_placedToMove != null)
         {
@@ -463,7 +492,8 @@ public partial class PlacementModeUI : Node2D
     /// <summary>Закрытие после УСПЕШНОЙ установки — без возврата на прежнее место.</summary>
     private void FinishPlacement()
     {
-        Visible = false;
+        SetPlacementVisible(false);
+        SetMuseumBottomBarVisible(true);
         MuseumSystem.Instance.CancelPlacementMode();
         ClearGrid();
     }

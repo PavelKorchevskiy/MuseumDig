@@ -1,11 +1,12 @@
 using Godot;
+using System;
 using System.Collections.Generic;
 
 public partial class Museum : Node2D
 {
     private GlobalRoomViewUI _globalRoomView;
-    
-    private MuseumShopUI _shopUI;    
+
+    private MuseumShopUI _shopUI;
     private bool _initialDisplayUpdated = false;
     private DisplayCaseUI _displayCaseUI;
     private CollectionExhibitUI _collectionExhibitUI;
@@ -14,6 +15,14 @@ public partial class Museum : Node2D
     private MuseumTopBar _topBar;
 private MuseumBottomBar _bottomBar;
 private OfflineIncomeUI _offlineIncomeUI;
+
+    // Таймстамп выхода со сцены музея (при переходе на раскопки) — хранится в
+    // static-поле, т.к. сам Node уничтожается при смене сцены. Используется
+    // для догонки дохода посетителей, пока игрок был на раскопках: та же
+    // идея, что и офлайн-доход (SaveSystem/MuseumSystem.CalculateOfflineIncome),
+    // но без деления пополам и привязана не к закрытию приложения, а к
+    // переключению сцены внутри сессии.
+    private static long _lastExitTimestamp = 0;
 
 
     public override void _Ready()
@@ -45,7 +54,7 @@ private OfflineIncomeUI _offlineIncomeUI;
             Vector2I mainHallCenter = MuseumLayout.Instance.GetRoomGlobalCenter("main_hall");
             camera.SnapToRoomCenter(mainHallCenter);
         }
-        
+
 
         _displayCaseUI = new DisplayCaseUI { Name = "DisplayCaseUI" };
         uiLayer.AddChild(_displayCaseUI);
@@ -65,6 +74,41 @@ private OfflineIncomeUI _offlineIncomeUI;
 
         // Попап офлайн-дохода - создаём поверх всего остального в этом же UI-слое
         _offlineIncomeUI = new OfflineIncomeUI(uiLayer);
+
+        // === Догонка дохода посетителей за время на сцене раскопок ===
+        // Пока игрок копал, музей не тикал (сцена была выгружена) — считаем,
+        // сколько посетителей зашло бы и доплачиваем монетами одним куском,
+        // ровно как делает офлайн-доход при закрытии приложения.
+        if (_lastExitTimestamp > 0)
+        {
+            long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            long elapsed = Math.Max(0, now - _lastExitTimestamp);
+            _lastExitTimestamp = 0;
+
+            int catchUpIncome = MuseumSystem.Instance?.CalculateVisitorCatchUpIncome(elapsed) ?? 0;
+            if (catchUpIncome > 0)
+            {
+                Wallet.Instance?.AddCoins(catchUpIncome);
+                SaveSystem.Instance?.MarkDirty();
+                GD.Print($"[Museum] 🚶 Догонка посетителей: +{catchUpIncome} монет (прошло {elapsed} сек на раскопках)");
+            }
+
+            // === Сразу заселяем музей, а не ждём, пока новые посетители дойдут от входа ===
+            // Старые Visitor-узлы были уничтожены вместе со сценой музея при переходе
+            // на раскопки. Чем дольше игрок был на раскопках, тем ближе музей к своей
+            // обычной заполненности (при elapsed >= BaseVisitDuration он уже был бы полон).
+            int maxVisitors = MuseumSystem.Instance?.CalculateMaxVisitors() ?? 0;
+            float fillFraction = Mathf.Min(1f, (float)elapsed / Visitor.BaseVisitDuration);
+            int targetVisitorCount = Mathf.RoundToInt(maxVisitors * fillFraction);
+            VisitorManager.Instance?.SpawnCatchUpVisitors(targetVisitorCount);
+        }
+    }
+
+    public override void _ExitTree()
+    {
+        // Запоминаем момент выхода со сцены музея — используется при следующем
+        // входе, чтобы досчитать доход посетителей (см. _Ready выше).
+        _lastExitTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
     }
 
     public override void _Process(double delta)
@@ -93,7 +137,7 @@ private OfflineIncomeUI _offlineIncomeUI;
             _globalRoomView.UpdateRoomVisibility();
         }
     }
-    
+
 
     /// <summary>
     /// Вызывается для обновления затемнения комнат
@@ -128,12 +172,23 @@ private OfflineIncomeUI _offlineIncomeUI;
 
         SetActiveRoom(targetRoomId);
 
-        var camera = GetNodeOrNull<CameraController>("Camera2D"); 
+        var camera = GetNodeOrNull<CameraController>("Camera2D");
         if (camera != null)
         {
             Vector2I center = MuseumLayout.Instance.GetRoomGlobalCenter(targetRoomId);
             camera.MoveToRoomCenter(center);
         }
+    }
+
+    /// <summary>
+    /// Показывает/скрывает нижнюю навигационную панель музея. Прячем её на
+    /// время режима размещения: её кнопки лежат на CanvasLayer с Layer=100,
+    /// выше внутреннего слоя PlacementModeUI (Layer=50) — физически
+    /// перекрывают его "Отмена"/"Поставить" и перехватывают тапы по ним.
+    /// </summary>
+    public void SetBottomBarVisible(bool visible)
+    {
+        if (_bottomBar != null) _bottomBar.Visible = visible;
     }
 
     /// <summary>

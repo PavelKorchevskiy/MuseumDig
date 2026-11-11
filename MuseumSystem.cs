@@ -382,6 +382,21 @@ public partial class MuseumSystem : Node
         float offlineIncomePerSecond = GetEstimatedIncomePerSecond() / 2f;
         return Mathf.RoundToInt(offlineIncomePerSecond * cappedSeconds);
     }
+
+    /// <summary>
+    /// Догонка дохода посетителей за время, пока игрок был на сцене раскопок
+    /// (приложение при этом не закрывалось — для закрытия приложения есть
+    /// CalculateOfflineIncome). Берём полную скорость дохода: по просьбе
+    /// игрока музей должен работать "как будто бы" он всё это время был там.
+    /// </summary>
+    public int CalculateVisitorCatchUpIncome(long elapsedSeconds)
+    {
+        const long maxCatchUpSeconds = 12 * 3600;
+        long cappedSeconds = Math.Min(Math.Max(elapsedSeconds, 0), maxCatchUpSeconds);
+        if (cappedSeconds <= 0) return 0;
+
+        return Mathf.RoundToInt(GetEstimatedIncomePerSecond() * cappedSeconds);
+    }
 }
 
 

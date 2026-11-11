@@ -138,6 +138,66 @@ public class VisitorManager
         }
     }
 
+    /// <summary>
+    /// Спавнит посетителей сразу ВНУТРИ музея (на случайных проходимых клетках
+    /// открытых комнат), а не у входа на дорожке. Нужно для догонки: когда
+    /// игрок возвращается с раскопок, доход за посетителей уже начислен одним
+    /// куском (MuseumSystem.CalculateVisitorCatchUpIncome) — но все старые
+    /// Visitor-узлы были уничтожены вместе со сценой музея при переходе на
+    /// раскопки, и без этого музей выглядел бы пустым, пока новые посетители
+    /// не дойдут от входа своим ходом.
+    /// </summary>
+    public void SpawnCatchUpVisitors(int count)
+    {
+        if (!_isInitialized)
+        {
+            Initialize();
+            if (!_isInitialized) return;
+        }
+        if (count <= 0) return;
+
+        var floorCells = new List<Vector2I>();
+        for (int x = 0; x < MuseumLayout.GridWidth; x++)
+        {
+            for (int y = 0; y < MuseumLayout.GridHeight; y++)
+            {
+                if (_layout.Grid[x, y] != TileType.Floor) continue;
+
+                var cell = new Vector2I(x, y);
+                if (_layout.IsGlobalCellOccupiedByFurniture(cell)) continue;
+
+                int roomIdx = _layout.RoomIndex[x, y];
+                if (roomIdx < 0 || roomIdx >= _layout.Rooms.Count) continue;
+                if (!_layout.Rooms[roomIdx].IsUnlocked) continue;
+
+                floorCells.Add(cell);
+            }
+        }
+
+        if (floorCells.Count == 0) return;
+
+        _visitors.RemoveAll(v => !GodotObject.IsInstanceValid(v));
+
+        int admittedCount = GetActiveVisitorsCount();
+        int maxVisitors = MuseumSystem.Instance?.CalculateMaxVisitors() ?? 0;
+        int toSpawn = Mathf.Min(count, Mathf.Max(0, maxVisitors - admittedCount));
+
+        for (int i = 0; i < toSpawn; i++)
+        {
+            var cell = floorCells[GD.RandRange(0, floorCells.Count - 1)];
+            int roomIdx = _layout.RoomIndex[cell.X, cell.Y];
+            string roomId = _layout.Rooms[roomIdx].Id;
+
+            var visitor = new Visitor();
+            visitor.Initialize(_layout, cell, roomId);
+            visitor.AddToSceneTree();
+            _visitors.Add(visitor);
+        }
+
+        if (toSpawn > 0)
+            GD.Print($"[VisitorManager] 🚶 Догонка: сразу внутри музея появилось {toSpawn} посетителей.");
+    }
+
     private Vector2I FindNearestWalkable(Vector2I from)
     {
         for (int radius = 1; radius < 5; radius++)

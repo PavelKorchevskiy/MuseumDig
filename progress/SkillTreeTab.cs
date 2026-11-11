@@ -13,12 +13,15 @@ public partial class SkillTreeTab : Control
     // 2 колонки на ветку, 4 колонки всего — обе ветки видно целиком по
     // ширине, скроллить нужно только вертикально (см. SkillData.cs —
     // позиции навыков пересчитаны под 2 колонки по глубине зависимостей).
-    private const float CellSize = 64f;
-    private const float ColumnSpacing = 20f;   // между колонками внутри ветки
-    private const float BranchGap = 48f;       // между ветками
-    private const float RowSpacing = 40f;
-    private const float TopOffset = 44f;       // место под заголовок ветки
-    private const float LeftMargin = 16f;
+    // Подобрано под доступную ширину вкладки (экран 540px минус поля ProgressUI
+    // 16+16 = ~508px): раньше дерево занимало ~376px и справа оставалось пустое
+    // место — теперь раскладка использует почти всю ширину.
+    private const float CellSize = 80f;
+    private const float ColumnSpacing = 26f;   // между колонками внутри ветки
+    private const float BranchGap = 60f;       // между ветками
+    private const float RowSpacing = 44f;
+    private const float TopOffset = 48f;       // место под заголовок ветки
+    private const float LeftMargin = 22f;
     private const float BranchWidth = CellSize * 2f + ColumnSpacing; // ширина ветки (2 колонки)
 
     private const float MuseumX0 = LeftMargin;

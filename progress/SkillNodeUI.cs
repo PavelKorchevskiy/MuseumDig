@@ -12,6 +12,10 @@ public partial class SkillNodeUI : Control
     private string _skillId;
     private SkillDefinition _skill;
 
+    // Должно совпадать с CellSize в SkillTreeTab.cs (там же считаются Position
+    // узлов) — свой размер узел всё равно переустанавливает в _Ready().
+    private const float CellSize = 80f;
+
     // Тап/свайп: дерево лежит в ScrollContainer, который листается пальцем,
     // поэтому клик по узлу засчитываем только при отпускании и только если
     // палец не уехал дальше порога — иначе любой скролл дерева открывал бы
@@ -30,15 +34,15 @@ public partial class SkillNodeUI : Control
     public override void _Ready()
     {
         // === ФИКСИРОВАННЫЙ РАЗМЕР ЯЧЕЙКИ ===
-        CustomMinimumSize = new Vector2(64, 64);
-        Size = new Vector2(64, 64);
+        CustomMinimumSize = new Vector2(CellSize, CellSize);
+        Size = new Vector2(CellSize, CellSize);
         ClipContents = true; // Обрезаем всё, что выходит за пределы
         MouseFilter = MouseFilterEnum.Stop;
         GuiInput += OnGuiInput;
 
         _panel = new PanelContainer();
         // Явно задаём размер панели, а не растягиваем на весь родитель
-        _panel.Size = new Vector2(64, 64);
+        _panel.Size = new Vector2(CellSize, CellSize);
         _panel.Position = Vector2.Zero;
         _panel.MouseFilter = MouseFilterEnum.Ignore;
 
@@ -51,7 +55,7 @@ public partial class SkillNodeUI : Control
 
         _iconRect = new TextureRect();
         // Явно задаём размер иконки
-        _iconRect.Size = new Vector2(64, 64);
+        _iconRect.Size = new Vector2(CellSize, CellSize);
         _iconRect.Position = Vector2.Zero;
         _iconRect.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
         _iconRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;

@@ -422,6 +422,12 @@ public partial class DigSite : Node2D
             }
         }
     }
+
+        // === Догонка прогресса за время, пока игрок был в музее ===
+        // Все тайлы локации уже созданы и зарегистрированы в DiggingManager
+        // (Tile.Initialize -> RegisterTile) — можно безопасно применить урон/
+        // прогресс накопленный с момента ухода со сцены раскопок.
+        DiggingManager.Instance.ApplyCatchUpForLocation(location.Id);
     }
 
     /// <summary>
@@ -496,6 +502,7 @@ public partial class DigSite : Node2D
         {
             var data = CollectTileData();
             DiggingManager.Instance.SetSaveDataForLocation(location.Id, data);
+            DiggingManager.Instance.MarkLocationExited(location.Id);
             GD.Print($"[DigSite] 💾 Сохранено {data.Count} плиток при выходе из сцены: {location.Id}");
         }
     }

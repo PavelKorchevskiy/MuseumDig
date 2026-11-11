@@ -21,6 +21,13 @@ public class DiggingManager
     // Ключ: locationId, Значение: словарь "x,y" -> DiggingTileData
     private Dictionary<string, Dictionary<string, DiggingTileData>> _savedProgressByLocation = new();
 
+    // Таймстамп выхода со сцены раскопок по локациям — используется для
+    // догонки прогресса копателей/извлекателей, пока игрок был в музее
+    // (та же идея, что офлайн-доход музея, но без деления пополам: игрок
+    // просил "как будто бы я и на сцене раскопок"). Живёт только в памяти,
+    // как и сам синглтон — не переживает перезапуск приложения.
+    private Dictionary<string, long> _lastExitTimestampByLocation = new();
+
     private DiggingManager() { }
 
     // ===== РАБОТА С АКТИВНЫМИ ПЛИТКАМИ =====
@@ -71,6 +78,65 @@ public class DiggingManager
                 tile.ApplyExtractionProgress(baseExtractProgressPerSec * delta);
             }
         }
+    }
+
+    /// <summary>
+    /// Запоминает момент выхода со сцены раскопок для локации (переход в
+    /// музей и т.п.). Вызывается из DigSite._ExitTree().
+    /// </summary>
+    public void MarkLocationExited(string locationId)
+    {
+        _lastExitTimestampByLocation[locationId] = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    }
+
+    /// <summary>
+    /// Догоняет прогресс активных (уже зарегистрированных) тайлов локации за
+    /// время, прошедшее с момента выхода со сцены раскопок. Вызывается из
+    /// DigSite сразу после загрузки/генерации сетки для этой локации — т.е.
+    /// когда все её тайлы уже есть в _activeTiles.
+    ///
+    /// Работает одним разовым применением урона/прогресса (как офлайн-доход
+    /// музея), а не покадровым циклом: ApplyDiggingDamage/ApplyExtractionProgress
+    /// сами переводят Action в None при завершении стадии/извлечения, так что
+    /// тайл не "проскакивает" сразу несколько стадий — ровно как если бы
+    /// игрок всё это время стоял на раскопках, не перезапуская работу вручную.
+    /// </summary>
+    public void ApplyCatchUpForLocation(string locationId)
+    {
+        if (!_lastExitTimestampByLocation.TryGetValue(locationId, out long lastExit))
+            return; // игрок ещё не уходил с этой локации — догонять нечего
+
+        _lastExitTimestampByLocation.Remove(locationId);
+
+        const long maxCatchUpSeconds = 12 * 3600;
+        long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        long elapsed = Math.Min(Math.Max(now - lastExit, 0), maxCatchUpSeconds);
+        if (elapsed <= 0) return;
+        if (_activeTiles.Count == 0) return;
+
+        float diggerSpeedMod = 1f + (SkillSystem.Instance.GetModifier("digger_speed") / 100f);
+        float extractorSpeedMod = 1f + (SkillSystem.Instance.GetModifier("extractor_speed") / 100f);
+
+        float digDamage = (10f / 60f) * diggerSpeedMod * elapsed;
+        float extractProgress = (10f / 60f) * extractorSpeedMod * elapsed;
+
+        int affected = 0;
+        foreach (var tile in _activeTiles.Values)
+        {
+            if (tile.Action == TileAction.Digging)
+            {
+                tile.ApplyDiggingDamage(digDamage);
+                affected++;
+            }
+            else if (tile.Action == TileAction.Extracting)
+            {
+                tile.ApplyExtractionProgress(extractProgress);
+                affected++;
+            }
+        }
+
+        if (affected > 0)
+            GD.Print($"[DiggingManager] ⏱️ Догонка для '{locationId}': {elapsed} сек, затронуто тайлов: {affected}");
     }
 
     // ===== ЛИМИТЫ РАБОЧИХ =====
