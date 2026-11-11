@@ -201,8 +201,14 @@ public partial class ConcretionOpeningUI : CanvasLayer
         _progressLabel.Text = string.Format(format, _currentHits, _requiredHits);
     }
 
+    // Конкреция уже расколота и ждёт раскрытия: лишние удары за эти полсекунды
+    // раньше запускали раскрытие повторно и выдавали несколько находок за одну.
+    private bool _isOpening = false;
+
     private void OnHitButtonPressed()
     {
+        if (_isOpening) return;
+
         _currentHits++;
         
         AnimateHit();
@@ -213,6 +219,8 @@ public partial class ConcretionOpeningUI : CanvasLayer
 
         if (_currentHits >= _requiredHits)
         {
+            _isOpening = true;
+            _hitButton.Disabled = true;
             GetTree().CreateTimer(0.5).Timeout += () => OpenConcretion();
         }
     }
@@ -247,6 +255,17 @@ public partial class ConcretionOpeningUI : CanvasLayer
     {
         GD.Print($"[ConcretionOpeningUI] Конкреция раскрыта: {_concretionId}");
 
+        // Находку выдаём только взамен реально лежащей в инвентаре конкреции.
+        // Без этой проверки RemoveItem молча не срабатывал, а находка всё равно
+        // добавлялась — так получались бесконечные находки.
+        if (!HasMoreConcretions())
+        {
+            GD.PrintErr($"[ConcretionOpeningUI] Конкреции '{_concretionId}' нет в инвентаре, раскрытие отменено");
+            InventoryUI.Instance?.RequestRefresh();
+            CloseUI();
+            return;
+        }
+
         string innerItemId = RollInnerItem();
         
         if (string.IsNullOrEmpty(innerItemId))
@@ -259,6 +278,10 @@ public partial class ConcretionOpeningUI : CanvasLayer
         InventorySystem.Instance.RemoveItem(_concretionId, 1);
         InventorySystem.Instance.AddItem(innerItemId, 1);
         QuestSystem.Instance.OnConcretionOpened();
+
+        // Список в инвентаре под этим окном обновляем сразу: иначе строка
+        // с уже потраченной конкрецией и кнопкой "Раскрыть" оставалась на месте.
+        InventoryUI.Instance?.RequestRefresh();
 
         AnimateReveal(innerItemId);
     }
@@ -355,6 +378,8 @@ public partial class ConcretionOpeningUI : CanvasLayer
         }
 
         // Сбрасываем состояние
+        _isOpening = false;
+        _hitButton.Disabled = false;
         _currentHits = 0;
         _progressBar.Value = 0;
          UpdateProgressLabel();
@@ -424,6 +449,7 @@ public partial class ConcretionOpeningUI : CanvasLayer
 
     private void CloseUI()
     {
+        InventoryUI.Instance?.RequestRefresh();
         QueueFree();
     }
 }

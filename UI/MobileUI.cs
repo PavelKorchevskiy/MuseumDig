@@ -243,6 +243,30 @@ public static class MobileUI
         tab.SizeFlagsStretchRatio = active ? 1.25f : 1f; // активная вкладка ещё и шире
     }
 
+    /// <summary>
+    /// Красный кружок-уведомление в правом верхнем углу кнопки/вкладки
+    /// ("здесь есть что забрать"). Создаётся скрытым — показывать через Visible.
+    /// </summary>
+    public static Panel CreateBadge(Control parent, float size = 20f, float inset = 6f)
+    {
+        var badge = new Panel { MouseFilter = Control.MouseFilterEnum.Ignore };
+        badge.AnchorLeft = 1;
+        badge.AnchorRight = 1;
+        badge.OffsetLeft = -inset - size;
+        badge.OffsetRight = -inset;
+        badge.OffsetTop = inset;
+        badge.OffsetBottom = inset + size;
+
+        var style = new StyleBoxFlat { BgColor = new Color(0.9f, 0.2f, 0.2f), BorderColor = Colors.White };
+        style.SetCornerRadiusAll((int)(size / 2f));
+        style.SetBorderWidthAll(2);
+        badge.AddThemeStyleboxOverride("panel", style);
+
+        badge.Visible = false;
+        parent.AddChild(badge);
+        return badge;
+    }
+
     public static void ClearChildren(Node parent)
     {
         foreach (var child in parent.GetChildren())

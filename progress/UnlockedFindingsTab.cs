@@ -23,12 +23,12 @@ public partial class UnlockedFindingsTab : Control
         _scroll = new ScrollContainer();
         _scroll.SizeFlagsVertical = SizeFlags.ExpandFill;
         _scroll.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        _scroll.CustomMinimumSize = new Vector2(800, 500); // ← ЯВНЫЙ РАЗМЕР
+        _scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
         mainVBox.AddChild(_scroll);
 
         _grid = new GridContainer();
         _grid.Columns = 3;
-        _grid.AddThemeConstantOverride("h_separation", 30);
+        _grid.AddThemeConstantOverride("h_separation", 12);
         _grid.AddThemeConstantOverride("v_separation", 20);
         _grid.SizeFlagsHorizontal = SizeFlags.ExpandFill; // ← РАСШИРЯЕМ ПО ГОРИЗОНТАЛИ
         _scroll.AddChild(_grid);
@@ -45,7 +45,9 @@ public partial class UnlockedFindingsTab : Control
             child.QueueFree();
         }
 
-        var unlocked = ProgressSystem.Instance.GetUnlockedResourcesList();
+        // Билеты — не находки: в списке открытого их не показываем
+        var unlocked = ProgressSystem.Instance.GetUnlockedResourcesList()
+            .FindAll(r => GameData.GetTicket(r.Id) == null);
         GD.Print($"[UnlockedFindingsTab] 📊 Получено {unlocked.Count} ресурсов из ProgressSystem");
 
         if (unlocked.Count == 0)
@@ -71,6 +73,7 @@ public partial class UnlockedFindingsTab : Control
     {
         var card = new VBoxContainer();
         card.CustomMinimumSize = new Vector2(140, 0);
+        card.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         card.AddThemeConstantOverride("separation", 5);
         card.Alignment = BoxContainer.AlignmentMode.Center;
 
@@ -81,15 +84,8 @@ public partial class UnlockedFindingsTab : Control
         iconRect.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
         iconRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
 
-        string iconPath = $"res://assets/museum/items/common/{resource.Id}.png";
-        if (ResourceLoader.Exists(iconPath))
-        {
-            iconRect.Texture = GD.Load<Texture2D>(iconPath);
-        }
-        else
-        {
-            iconRect.Texture = GD.Load<Texture2D>("res://icon.svg");
-        }
+        iconRect.Texture = GD.Load<Texture2D>(GetSpritePath(resource));
+        iconRect.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         card.AddChild(iconRect);
 
         // Имя
@@ -109,6 +105,31 @@ public partial class UnlockedFindingsTab : Control
         card.AddChild(rarityLabel);
 
         return card;
+    }
+
+    /// <summary>
+    /// Тот же спрайт, которым находка рисуется в витрине (GlobalRoomViewUI):
+    /// первый вариант из папки находки, иначе одиночная картинка. Для
+    /// конкреций — первый кадр, как в инвентаре.
+    /// </summary>
+    private static string GetSpritePath(ResourceDefinition resource)
+    {
+        const string root = "res://assets/museum/items/common";
+
+        if (resource is ConcretionDefinition)
+        {
+            string shortName = resource.Id.Replace("_concretion", "");
+            string concretionPath = $"{root}/concretion/{shortName}_1.png";
+            if (ResourceLoader.Exists(concretionPath)) return concretionPath;
+        }
+
+        string variantPath = $"{root}/{resource.Id}/1.png";
+        if (ResourceLoader.Exists(variantPath)) return variantPath;
+
+        string commonPath = $"{root}/{resource.Id}.png";
+        if (ResourceLoader.Exists(commonPath)) return commonPath;
+
+        return "res://icon.svg";
     }
 
     private Color GetRarityColor(Rarity rarity)

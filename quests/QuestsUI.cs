@@ -18,6 +18,10 @@ public partial class QuestsUI : CanvasLayer
     private Button _tabAchievementsButton;
     private Label _resetTimerLabel;
     private VBoxContainer _list;
+    private Panel _dailyBadge;
+    private Panel _achievementsBadge;
+
+    private const float HeaderHeight = 200f;
 
     // Список перестраиваем только когда реально изменилось состояние
     // (прогресс/награды), а не каждый кадр — иначе рвались бы нажатия и скролл.
@@ -60,12 +64,20 @@ public partial class QuestsUI : CanvasLayer
         mainVBox.AddThemeConstantOverride("separation", 12);
         margin.AddChild(mainVBox);
 
-        mainVBox.AddChild(MobileUI.CreateLabel(
-            LocalizationManager.Tr("ui.quests.title"), MobileUI.TitleFontSize, MobileUI.TitleColor));
+        // Высокая шапка: опускает список, чтобы до кнопки "Забрать" у верхнего
+        // задания было легко дотянуться большим пальцем.
+        var header = new VBoxContainer();
+        header.CustomMinimumSize = new Vector2(0, HeaderHeight);
+        header.Alignment = BoxContainer.AlignmentMode.Center;
+        header.AddThemeConstantOverride("separation", 10);
+        mainVBox.AddChild(header);
+
+        header.AddChild(MobileUI.CreateLabel(
+            LocalizationManager.Tr("ui.quests.title"), MobileUI.TitleFontSize + 8, MobileUI.TitleColor, center: true));
 
         // Таймер до обновления ежедневных заданий
         _resetTimerLabel = MobileUI.CreateLabel("", MobileUI.SmallFontSize, MobileUI.MutedColor, center: true);
-        mainVBox.AddChild(_resetTimerLabel);
+        header.AddChild(_resetTimerLabel);
 
         // Страница со списком + вкладки под ней (над крестиком)
         mainVBox.AddChild(MobileUI.CreateTabbedPage(out var page, out var tabs));
@@ -75,6 +87,10 @@ public partial class QuestsUI : CanvasLayer
         _tabAchievementsButton = CreateTabButton(LocalizationManager.Tr("ui.quests.tab_achievements"), Tab.Achievements);
         tabs.AddChild(_tabDailyButton);
         tabs.AddChild(_tabAchievementsButton);
+
+        // Красные кружки на вкладках: там есть неполученная награда
+        _dailyBadge = MobileUI.CreateBadge(_tabDailyButton);
+        _achievementsBadge = MobileUI.CreateBadge(_tabAchievementsButton);
 
         mainVBox.AddChild(MobileUI.CreateCloseRow(() => Visible = false));
 
@@ -99,7 +115,8 @@ public partial class QuestsUI : CanvasLayer
         _currentTab = tab;
         MobileUI.SetTabActive(_tabDailyButton, tab == Tab.Daily);
         MobileUI.SetTabActive(_tabAchievementsButton, tab == Tab.Achievements);
-        _resetTimerLabel.Visible = (tab == Tab.Daily);
+        // Таймер прячем прозрачностью, а не Visible, чтобы шапка не меняла раскладку
+        _resetTimerLabel.Modulate = (tab == Tab.Daily) ? Colors.White : Colors.Transparent;
 
         Rebuild();
     }
@@ -121,6 +138,13 @@ public partial class QuestsUI : CanvasLayer
         _refreshTimer = 0f;
 
         if (BuildSignature() != _lastSignature) Rebuild();
+        UpdateBadges();
+    }
+
+    private void UpdateBadges()
+    {
+        _dailyBadge.Visible = QuestSystem.Instance.HasClaimableDaily();
+        _achievementsBadge.Visible = QuestSystem.Instance.HasClaimableAchievements();
     }
 
     // ===== ПОСТРОЕНИЕ СПИСКА =====
@@ -161,6 +185,7 @@ public partial class QuestsUI : CanvasLayer
         else BuildAchievementsList();
 
         _lastSignature = BuildSignature();
+        UpdateBadges();
     }
 
     private void BuildDailyList()

@@ -401,7 +401,9 @@ public class QuestSystem
     }
 
     /// <summary>Есть ли хоть одна неполученная награда — для красной точки на кнопке заданий.</summary>
-    public bool HasClaimableRewards()
+    public bool HasClaimableRewards() => HasClaimableDaily() || HasClaimableAchievements();
+
+    public bool HasClaimableDaily()
     {
         EnsureToday();
 
@@ -409,8 +411,11 @@ public class QuestSystem
         {
             if (IsDailyCompleted(quest.Id) && !IsDailyClaimed(quest.Id)) return true;
         }
-        if (!_data.DailyBonusClaimed && AreAllDailyCompleted()) return true;
+        return !_data.DailyBonusClaimed && AreAllDailyCompleted();
+    }
 
+    public bool HasClaimableAchievements()
+    {
         foreach (var achievement in _achievements)
         {
             if (!IsAchievementClaimed(achievement) && IsAchievementCompleted(achievement)) return true;

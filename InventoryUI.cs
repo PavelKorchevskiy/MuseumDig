@@ -752,6 +752,14 @@ public partial class InventoryUI : CanvasLayer
     private void OnOpenConcretionPressed(string concretionId)
     {
         GD.Print($"[InventoryUI] Открытие конкреции: {concretionId}");
+
+        // Строка могла устареть — не открываем окно для конкреции, которой уже нет
+        var owned = InventorySystem.Instance.GetItem(concretionId);
+        if (owned == null || owned.Amount <= 0)
+        {
+            RequestRefresh();
+            return;
+        }
         
         var openingUI = new ConcretionOpeningUI();
         openingUI.Setup(concretionId);
