@@ -52,27 +52,27 @@ public partial class SaveSystem : Node
         }
     }
     
-        public override void _Notification(int what)
+    public override void _Notification(int what)
+    {
+        if (what == NotificationWMCloseRequest)
         {
-            if (what == NotificationWMCloseRequest)
-            {
-                // Закрытие окна (крестик) — актуально только на ПК.
-                GD.Print("[SaveSystem] ⚠️ Закрытие окна, экстренное сохранение...");
-                SaveGame();
-                GetTree().Quit();
-            }
-            else if (what == NotificationApplicationFocusOut || what == NotificationApplicationPaused)
-            {
-                // На Android/iOS таймер автосейва не спасает: когда игрок сворачивает
-                // или закрывает приложение, WMCloseRequest не присылается, а ОС может
-                // прибить процесс в любой момент после сворачивания — без предупреждения.
-                // Поэтому сохраняем принудительно сразу при потере фокуса/уходе в фон.
-                GD.Print("[SaveSystem] 📱 Приложение уходит в фон, принудительное сохранение...");
-                SaveGame();
-                _dirty = false;
-                _saveTimer = 0;
-            }
+            // Закрытие окна (крестик) — актуально только на ПК.
+            GD.Print("[SaveSystem] ⚠️ Закрытие окна, экстренное сохранение...");
+            SaveGame();
+            GetTree().Quit();
         }
+        else if (what == NotificationApplicationFocusOut || what == NotificationApplicationPaused)
+        {
+            // На Android/iOS таймер автосейва не спасает: когда игрок сворачивает
+            // или закрывает приложение, WMCloseRequest не присылается, а ОС может
+            // прибить процесс в любой момент после сворачивания — без предупреждения.
+            // Поэтому сохраняем принудительно сразу при потере фокуса/уходе в фон.
+            GD.Print("[SaveSystem] 📱 Приложение уходит в фон, принудительное сохранение...");
+            SaveGame();
+            _dirty = false;
+            _saveTimer = 0;
+        }
+    }
     
     public void MarkDirty() => _dirty = true;
 
@@ -105,6 +105,8 @@ public partial class SaveSystem : Node
         {
             data.DiggingProgressByLocation = DiggingManager.Instance.GetAllSaveData();
         }
+
+        data.QuestData = QuestSystem.Instance.GetSaveData();
 
         if (isAutoSave)
         {
@@ -143,15 +145,18 @@ public partial class SaveSystem : Node
     {
         GD.Print("=== LOAD GAME START ===");
         
-                if (!FileAccess.FileExists(SavePath))
-                {
-                    GD.Print("No save file found, starting new game");
+        if (!FileAccess.FileExists(SavePath))
+        {
+            GD.Print("No save file found, starting new game");
 
-                    // === Стартовый подарок новому игроку: 3 билета в Канаду ===
-                    InventorySystem.Instance?.AddItem("ticket_canada", 3);
+            // === Стартовый подарок новому игроку: 3 билета в Канаду ===
+            InventorySystem.Instance?.AddItem("ticket_canada", 3);
 
-                    return;
-                }
+            // Первый набор ежедневных заданий
+            QuestSystem.Instance.EnsureToday();
+
+            return;
+        }
         
         using var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Read);
         if (file == null)
@@ -218,6 +223,12 @@ public partial class SaveSystem : Node
                 DiggingManager.Instance.LoadAllSaveData(data.DiggingProgressByLocation);
             }
             
+            // === Задания и достижения ===
+            // Грузим в самом конце: награда дня считается от дохода музея, а он
+            // зависит от уже загруженных комнат, мебели и навыков.
+            QuestSystem.Instance.LoadFromSaveData(data.QuestData);
+            QuestSystem.Instance.EnsureToday();
+
             GD.Print("=== LOAD GAME END ===");
         }
         catch (System.Exception e)

@@ -440,6 +440,7 @@ public partial class MuseumShopUI : CanvasLayer
         }
 
         InventorySystem.Instance.AddItem(ticketId, 1);
+        QuestSystem.Instance.OnTicketBought();
         SaveSystem.Instance?.MarkDirty();
 
         GD.Print($"[MuseumShop] 🎫 Куплен билет: {ticketId}");

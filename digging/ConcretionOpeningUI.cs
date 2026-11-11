@@ -264,6 +264,7 @@ public partial class ConcretionOpeningUI : CanvasLayer
 
         InventorySystem.Instance.RemoveItem(_concretionId, 1);
         InventorySystem.Instance.AddItem(innerItemId, 1);
+        QuestSystem.Instance.OnConcretionOpened();
 
         AnimateReveal(innerItemId);
     }

@@ -323,6 +323,7 @@ public partial class MuseumSystem : Node
         int ticketPrice = ticketPriceModifier > 0 ? (int)ticketPriceModifier : BaseVisitorTicketPrice;
         
         Wallet.Instance.AddCoins(ticketPrice);
+        QuestSystem.Instance.OnVisitorIncome(ticketPrice, 1);
         
         // === Шанс получить билет на раскопки ===
         float ticketChance = SkillSystem.Instance.GetModifier("ticket_drop_chance");
@@ -354,6 +355,13 @@ public partial class MuseumSystem : Node
     /// с которой VisitorManager физически успевает спавнить (1 / MinSpawnInterval).
     /// Используется для UI и расчёта офлайн-дохода.
     /// </summary>
+    /// <summary>Текущая цена входного билета для посетителя (с учётом навыка).</summary>
+    public int GetVisitorTicketPrice()
+    {
+        float ticketPriceModifier = SkillSystem.Instance.GetModifier("visitor_ticket_price");
+        return ticketPriceModifier > 0 ? (int)ticketPriceModifier : BaseVisitorTicketPrice;
+    }
+
     public float GetEstimatedIncomePerSecond()
     {
         int maxVisitors = CalculateMaxVisitors();

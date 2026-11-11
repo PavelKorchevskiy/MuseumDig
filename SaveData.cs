@@ -31,5 +31,8 @@ public class SaveData
 	    public Dictionary<string, Dictionary<string, DiggingTileData>> DiggingProgressByLocation { get; set; } = new();
 
 	
+	// Ежедневные задания и достижения
+	public QuestSaveData QuestData { get; set; } = new();
+
 	public long LastSaveTimestamp { get; set; } = 0;
 }

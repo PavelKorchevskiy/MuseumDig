@@ -64,7 +64,12 @@ var (smallSize, largeSize, spacing) = CalculateButtonSizes();
         _container.AddChild(_inventoryBtn);
 
         // === Подключаем действия ===
-        _questBtn.Pressed += () => GD.Print("[BottomBar] Задания (заглушка)");
+        _questBtn.Pressed += () => {
+            var questsUI = QuestsUI.Instance;
+            if (questsUI != null && GodotObject.IsInstanceValid(questsUI))
+                questsUI.Open();
+        };
+        CreateQuestBadge(smallSize);
         _progressBtn.Pressed += () => {
             var progressUI = ProgressUI.Instance;
             if (progressUI != null && GodotObject.IsInstanceValid(progressUI))
@@ -96,6 +101,42 @@ var (smallSize, largeSize, spacing) = CalculateButtonSizes();
         AttachPressAnimation(_digBtn);
         AttachPressAnimation(_shopBtn);
         AttachPressAnimation(_inventoryBtn);
+    }
+
+    // ===== Красная точка на кнопке заданий: есть неполученная награда =====
+
+    private Panel _questBadge;
+    private float _badgeTimer = 0f;
+
+    private void CreateQuestBadge(float buttonSize)
+    {
+        const float badgeSize = 22f;
+
+        _questBadge = new Panel();
+        _questBadge.MouseFilter = MouseFilterEnum.Ignore;
+        _questBadge.Size = new Vector2(badgeSize, badgeSize);
+        _questBadge.Position = new Vector2(buttonSize - badgeSize - 4f, 4f);
+
+        var style = new StyleBoxFlat { BgColor = new Color(0.9f, 0.2f, 0.2f) };
+        style.SetCornerRadiusAll((int)(badgeSize / 2f));
+        style.SetBorderWidthAll(2);
+        style.BorderColor = Colors.White;
+        _questBadge.AddThemeStyleboxOverride("panel", style);
+
+        _questBadge.Visible = false;
+        _questBtn.AddChild(_questBadge);
+    }
+
+    public override void _Process(double delta)
+    {
+        if (_questBadge == null) return;
+
+        // Раз в полсекунды достаточно — прогресс заданий меняется редко
+        _badgeTimer -= (float)delta;
+        if (_badgeTimer > 0f) return;
+        _badgeTimer = 0.5f;
+
+        _questBadge.Visible = QuestSystem.Instance.HasClaimableRewards();
     }
 
         /// <summary>

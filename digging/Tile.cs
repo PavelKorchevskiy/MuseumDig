@@ -249,6 +249,7 @@ public partial class Tile : Panel
                 break;
             case TileStage.Dug2:
                 Stage = TileStage.FullyDug;
+                QuestSystem.Instance.OnTileFullyDug();
                 break;
         }
         
@@ -286,10 +287,12 @@ public partial class Tile : Panel
                 InventorySystem.Instance.AddItem(_loot.ResourceId, _loot.Amount);
                 GD.Print($"[Tile] 🦴 Извлечено: {_loot.ResourceId} x{_loot.Amount}");
                 _loot.Collected = true;
+                QuestSystem.Instance.OnBoneExtracted();
             }
             
             // После извлечения кости → FullyDug
             Stage = TileStage.FullyDug;
+            QuestSystem.Instance.OnTileFullyDug();
 
             var digSite = GetParent() as DigSite;
             digSite?.RefreshLootSummary();
@@ -723,6 +726,7 @@ public partial class Tile : Panel
                 }
                 
                 Action = TileAction.Digging;
+                QuestSystem.Instance.OnDiggerAssigned();
                 UpdateVisuals();
                 DiggingUI.Instance.ClearSelection();
             }

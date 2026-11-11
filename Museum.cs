@@ -54,7 +54,7 @@ private OfflineIncomeUI _offlineIncomeUI;
             Vector2I mainHallCenter = MuseumLayout.Instance.GetRoomGlobalCenter("main_hall");
             camera.SnapToRoomCenter(mainHallCenter);
         }
-
+        
 
         _displayCaseUI = new DisplayCaseUI { Name = "DisplayCaseUI" };
         uiLayer.AddChild(_displayCaseUI);
@@ -65,6 +65,9 @@ private OfflineIncomeUI _offlineIncomeUI;
 
          _progressUI = new ProgressUI { Name = "ProgressUI" };
         uiLayer.AddChild(_progressUI);
+
+        // Экран ежедневных заданий и достижений (открывается кнопкой в нижней панели)
+        uiLayer.AddChild(new QuestsUI { Name = "QuestsUI" });
 
          _bottomBar = new MuseumBottomBar();
         uiLayer.AddChild(_bottomBar);
@@ -89,6 +92,11 @@ private OfflineIncomeUI _offlineIncomeUI;
             if (catchUpIncome > 0)
             {
                 Wallet.Instance?.AddCoins(catchUpIncome);
+
+                // Догонка идёт в зачёт заданий так же, как обычные входы посетителей
+                int ticketPrice = Math.Max(1, MuseumSystem.Instance.GetVisitorTicketPrice());
+                QuestSystem.Instance.OnVisitorIncome(catchUpIncome, catchUpIncome / ticketPrice);
+
                 SaveSystem.Instance?.MarkDirty();
                 GD.Print($"[Museum] 🚶 Догонка посетителей: +{catchUpIncome} монет (прошло {elapsed} сек на раскопках)");
             }
@@ -137,7 +145,7 @@ private OfflineIncomeUI _offlineIncomeUI;
             _globalRoomView.UpdateRoomVisibility();
         }
     }
-
+    
 
     /// <summary>
     /// Вызывается для обновления затемнения комнат
@@ -172,7 +180,7 @@ private OfflineIncomeUI _offlineIncomeUI;
 
         SetActiveRoom(targetRoomId);
 
-        var camera = GetNodeOrNull<CameraController>("Camera2D");
+        var camera = GetNodeOrNull<CameraController>("Camera2D"); 
         if (camera != null)
         {
             Vector2I center = MuseumLayout.Instance.GetRoomGlobalCenter(targetRoomId);

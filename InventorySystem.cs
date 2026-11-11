@@ -167,6 +167,7 @@ public partial class InventorySystem : Node
 
         // Добавляем собранную коллекцию
         AddItem(collection.Id, 1);
+        QuestSystem.Instance.OnCollectionAssembled();
         GD.Print($"[Inventory] Успешно собрана коллекция: {collection.DisplayName}");
         
         return true;

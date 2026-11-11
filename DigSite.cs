@@ -62,6 +62,8 @@ public partial class DigSite : Node2D
 
         _current = this;
 
+        QuestSystem.Instance.OnLocationVisited(location.Id);
+
         _background = new DigSiteBackground();
         AddChild(_background);
         _background.Setup(this, location);
@@ -384,22 +386,22 @@ public partial class DigSite : Node2D
         {
             var tile = new Tile();
             AddChild(tile);
-
+            
             string key = $"{x},{y}";
             bool hasSavedData = savedData != null && savedData.ContainsKey(key);
-
+            
             if (hasSavedData)
             {
                 // === ЗАГРУЗКА: лут НЕ роллим, берём из сохранения ===
                 tile.Initialize(x, y, location.BaseTileHp, location.TileHpGrowthPerRow, location.Id, rollLoot: false);
-
+                
                 var data = savedData[key];
                 tile.Stage = data.Stage;
                 tile.Action = data.Action;
                 tile.CurrentHP = data.CurrentHP;
                 tile.MaxHP = data.MaxHP;
                 tile.ExtractionProgress = data.ExtractionProgress;
-
+                
                 if (!string.IsNullOrEmpty(data.LootResourceId))
                 {
                     tile._loot = new TileLoot
@@ -412,7 +414,7 @@ public partial class DigSite : Node2D
                     };
                 }
                 // Если в сохранении лута нет — он и так null (rollLoot:false)
-
+                
                 tile.UpdateVisuals();
             }
             else
@@ -532,17 +534,17 @@ public partial class DigSite : Node2D
     {
         int gridWidth = location.GridWidth;
         int gridHeight = location.GridHeight;
-
+        
         const float TileWidth = 128f;
         const float TileHeight = 74f;
         const float VerticalOffset = (128f - TileHeight) / 2f;
-
+        
         // Фон рисуется от -BackgroundPadding до gridWidth + BackgroundPadding - 1
         int minGX = -BackgroundPadding;
         int maxGX = gridWidth + BackgroundPadding - 1;
         int minGY = -BackgroundPadding;
         int maxGY = gridHeight + BackgroundPadding - 1;
-
+        
         // Крайние точки фона в мировых координатах (формула из UpdatePosition)
         float bgMinX = (minGX - maxGY) * (TileWidth / 2f);    // Самая левая точка
         float bgMaxX = (maxGX - minGY) * (TileWidth / 2f);    // Самая правая точка
