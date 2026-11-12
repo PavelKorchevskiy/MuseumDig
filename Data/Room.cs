@@ -11,7 +11,13 @@ public partial class Room : Resource
     [Export] public bool IsMainHall;
     
     // === МЕХАНИКА ОТКРЫТИЯ КОМНАТ ===
-    [Export] public bool IsUnlocked = true; 
+    [Export] public bool IsUnlocked = true;
+
+    /// <summary>Цена открытия в монетах. 0 — комната открыта с самого начала.</summary>
+    [Export] public int UnlockCost = 0;
+
+    /// <summary>Ключ локализации названия комнаты.</summary>
+    public string NameKey => $"room.{Id}.name";
 
     // Для системы освещения
     public List<string> AdjacentRoomIds = new();

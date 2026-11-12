@@ -194,7 +194,8 @@ public partial class MuseumSystem : Node
             var room = MuseumLayout.Instance.GetRoom(roomData.Id);
             if (room == null) continue;
 
-            room.IsUnlocked = roomData.IsUnlocked; // Восстанавливаем состояние открытия
+            // Бесплатные комнаты открыты всегда; у платных состояние берём из сохранения
+            room.IsUnlocked = room.UnlockCost <= 0 || roomData.IsUnlocked;
 
             if (roomData.Furniture != null)
             {
@@ -230,7 +231,36 @@ public partial class MuseumSystem : Node
                 }
             }
         }
+        // Проходы зависят от того, какие комнаты открыты — пересобираем сетку
+        MuseumLayout.Instance.RebuildGrid();
+
         GD.Print($"[MuseumSystem] Загружено {MuseumLayout.Instance.Rooms.Count} комнат.");
+    }
+
+    // ===== ПОКУПКА КОМНАТ =====
+
+    public bool CanAffordRoom(Room room)
+    {
+        return room != null && !room.IsUnlocked && Wallet.Instance.GetCoins() >= room.UnlockCost;
+    }
+
+    /// <summary>
+    /// Открывает закрытую комнату за монеты (Room.UnlockCost). Деньги не
+    /// возвращаются. После успеха вызывающий должен перерисовать музей
+    /// (Museum.RefreshRoomView) — в стенах появились проходы.
+    /// </summary>
+    public bool TryUnlockRoom(string roomId)
+    {
+        var room = MuseumLayout.Instance.GetRoom(roomId);
+        if (room == null || room.IsUnlocked) return false;
+        if (!Wallet.Instance.SpendCoins(room.UnlockCost)) return false;
+
+        room.IsUnlocked = true;
+        MuseumLayout.Instance.RebuildGrid();
+
+        GD.Print($"[MuseumSystem] 🏛️ Открыта комната '{roomId}' за {room.UnlockCost} монет");
+        SaveSystem.Instance?.MarkDirty();
+        return true;
     }
 
         public bool SellFurnitureWithItems(string roomId, PlacedFurniture placed)

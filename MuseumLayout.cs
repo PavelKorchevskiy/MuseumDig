@@ -20,14 +20,42 @@ public class MuseumLayout
         }
     }
 
-    public const int GridWidth = 44;
-    public const int GridHeight = 33;
+    // Сетка: X растёт вправо, Y — вниз (вход в музей внизу). Схема (вид сверху):
+    //
+    //   +----------7-----------+--------8---------+
+    //   |        26 x 15       |      31 x 15     |
+    //   +----4-----+-----5-----+---6----+----9----+
+    //   |  15x15   |   10x20   | 15x15  |  15x31  |
+    //   +----2-----+           +---3----+         |
+    //   |  15x15   +-----1-----+ 15x15  |         |
+    //   |          |   10x10   |        |         |
+    //   +----------+--[вход]---+--------+---------+
+    //
+    //   1 main_hall, 2 left_wing, 3 right_wing, 4 back_left, 5 back_center,
+    //   6 back_right, 7 upper_left, 8 upper_right, 9 east_wing.
+    //   Комнаты 7-9 закрыты и покупаются за монеты (Room.UnlockCost).
+    public const int GridWidth = 60;
+    public const int GridHeight = 49;
 
     public TileType[,] Grid { get; private set; }
     public int[,] RoomIndex { get; private set; }
     public List<Room> Rooms { get; private set; }
 
     private string _activeRoomId = "main_hall";
+
+    /// <summary>
+    /// Проход в стене между двумя комнатами. Появляется только когда открыты
+    /// обе комнаты: до покупки комнаты стена на его месте сплошная.
+    /// RoomB == null — проход наружу (главный вход).
+    /// </summary>
+    private class Doorway
+    {
+        public string RoomA;
+        public string RoomB;
+        public Vector2I[] Cells;
+    }
+
+    private readonly List<Doorway> _doorways = new();
 
     // Приватный конструктор
     public MuseumLayout() { }
@@ -37,13 +65,72 @@ public class MuseumLayout
         Grid = new TileType[GridWidth, GridHeight];
         RoomIndex = new int[GridWidth, GridHeight];
         Rooms = new List<Room>();
-        BuildLayout();
+        CreateRooms();
+        RebuildGrid();
         GD.Print("[MuseumLayout] ✅ Инициализирован как ленивый синглтон.");
     }
 
-    private void BuildLayout()
+    private void CreateRooms()
     {
-        // 1. Очистка
+        // === Комнаты (id, левый верхний угол пола, ширина, высота) ===
+        var upperLeft = AddRoom("upper_left", new Vector2I(1, 1), 26, 15, false, unlockCost: 200000);    // 7
+        var upperRight = AddRoom("upper_right", new Vector2I(28, 1), 31, 15, false, unlockCost: 300000); // 8
+        var backLeft = AddRoom("back_left", new Vector2I(1, 17), 15, 15, false);                         // 4
+        var backCenter = AddRoom("back_center", new Vector2I(17, 17), 10, 20, false);                    // 5
+        var backRight = AddRoom("back_right", new Vector2I(28, 17), 15, 15, false);                      // 6
+        var eastWing = AddRoom("east_wing", new Vector2I(44, 17), 15, 31, false, unlockCost: 400000);    // 9
+        var leftWing = AddRoom("left_wing", new Vector2I(1, 33), 15, 15, false);                         // 2
+        var mainHall = AddRoom("main_hall", new Vector2I(17, 38), 10, 10, true);                         // 1
+        var rightWing = AddRoom("right_wing", new Vector2I(28, 33), 15, 15, false);                      // 3
+
+        // === Проходы (по 2 клетки в общей стене) ===
+        AddDoorway("main_hall", null, (21, 48), (22, 48));            // главный вход
+        AddDoorway("main_hall", "left_wing", (16, 42), (16, 43));
+        AddDoorway("main_hall", "right_wing", (27, 42), (27, 43));
+        AddDoorway("main_hall", "back_center", (21, 37), (22, 37));
+        AddDoorway("back_center", "back_left", (16, 24), (16, 25));
+        AddDoorway("back_center", "back_right", (27, 24), (27, 25));
+        AddDoorway("left_wing", "back_left", (8, 32), (9, 32));
+        AddDoorway("right_wing", "back_right", (35, 32), (36, 32));
+        AddDoorway("back_left", "upper_left", (8, 16), (9, 16));      // 4 <-> 7
+        AddDoorway("back_center", "upper_left", (21, 16), (22, 16));  // 5 <-> 7
+        AddDoorway("back_right", "upper_right", (35, 16), (36, 16));  // 6 <-> 8
+        AddDoorway("back_right", "east_wing", (43, 24), (43, 25));    // 6 <-> 9
+        AddDoorway("right_wing", "east_wing", (43, 40), (43, 41));    // 3 <-> 9
+        AddDoorway("upper_right", "east_wing", (51, 16), (52, 16));   // 8 <-> 9
+
+        // === Смежность для освещения: комнаты, между которыми есть проход ===
+        foreach (var door in _doorways)
+        {
+            if (door.RoomB == null) continue;
+            var a = GetRoom(door.RoomA);
+            var b = GetRoom(door.RoomB);
+            if (!a.AdjacentRoomIds.Contains(b.Id)) a.AdjacentRoomIds.Add(b.Id);
+            if (!b.AdjacentRoomIds.Contains(a.Id)) b.AdjacentRoomIds.Add(a.Id);
+        }
+    }
+
+    private void AddDoorway(string roomA, string roomB, params (int x, int y)[] cells)
+    {
+        var door = new Doorway { RoomA = roomA, RoomB = roomB, Cells = new Vector2I[cells.Length] };
+        for (int i = 0; i < cells.Length; i++)
+        {
+            door.Cells[i] = new Vector2I(cells[i].x, cells[i].y);
+        }
+        _doorways.Add(door);
+    }
+
+    /// <summary>
+    /// Заново заполняет сетку (пол, стены, проходы) по текущему состоянию комнат.
+    /// Вызывать после изменения Room.IsUnlocked: покупки комнаты или загрузки
+    /// сохранения. Массивы Grid/RoomIndex не пересоздаются — на них держат
+    /// ссылки посетители и менеджер посетителей.
+    ///
+    /// Закрытые комнаты тоже есть в сетке (пол и стены): они рисуются
+    /// затемнёнными. Попасть в них нельзя, потому что проходов к ним нет.
+    /// </summary>
+    public void RebuildGrid()
+    {
         for (int x = 0; x < GridWidth; x++)
             for (int y = 0; y < GridHeight; y++)
             {
@@ -51,28 +138,10 @@ public class MuseumLayout
                 RoomIndex[x, y] = -1;
             }
 
-        // 2. Создание комнат
-        var backLeft = AddRoom("back_left", new Vector2I(1, 1), 15, 15, false);
-        var backCenter = AddRoom("back_center", new Vector2I(17, 1), 10, 20, false);
-        var backRight = AddRoom("back_right", new Vector2I(28, 1), 15, 15, false);
-        var leftWing = AddRoom("left_wing", new Vector2I(1, 17), 15, 15, false);
-        var mainHall = AddRoom("main_hall", new Vector2I(17, 22), 10, 10, true);
-        var rightWing = AddRoom("right_wing", new Vector2I(28, 17), 15, 15, false);
-
-        // 3. Настройка смежности для освещения
-        mainHall.AdjacentRoomIds.AddRange(new[] { "left_wing", "right_wing", "back_center" });
-        leftWing.AdjacentRoomIds.AddRange(new[] { "main_hall", "back_left" });
-        rightWing.AdjacentRoomIds.AddRange(new[] { "main_hall", "back_right" });
-        backCenter.AdjacentRoomIds.AddRange(new[] { "main_hall", "back_left", "back_right" });
-        backLeft.AdjacentRoomIds.Add("back_center");
-        backRight.AdjacentRoomIds.Add("back_center");
-
-        // 4. Заполнение сетки (Пол и Стены)
+        // Пол и стены
         for (int i = 0; i < Rooms.Count; i++)
         {
             var room = Rooms[i];
-            if (!room.IsUnlocked) continue; // ЗАКРЫТЫЕ КОМНАТЫ НЕ РИСУЮТСЯ В СЕТКЕ
-
             int ox = room.GlobalOffset.X;
             int oy = room.GlobalOffset.Y;
 
@@ -93,27 +162,34 @@ public class MuseumLayout
             }
         }
 
-        // 5. Проходы (просто меняем тип тайла)
-        Grid[21, 32] = TileType.Door; Grid[22, 32] = TileType.Door; // Главный вход
-        Grid[16, 26] = TileType.Door; Grid[16, 27] = TileType.Door; // main <-> left
-        Grid[27, 26] = TileType.Door; Grid[27, 27] = TileType.Door; // main <-> right
-        Grid[21, 21] = TileType.Door; Grid[22, 21] = TileType.Door; // main <-> back
-        Grid[16, 8] = TileType.Door; Grid[16, 9] = TileType.Door;   // back_center <-> back_left
-        Grid[27, 8] = TileType.Door; Grid[27, 9] = TileType.Door;   // back_center <-> back_right
-        Grid[8, 16] = TileType.Door; Grid[9, 16] = TileType.Door;   // left <-> back_left
-        Grid[35, 16] = TileType.Door; Grid[36, 16] = TileType.Door; // right <-> back_right
+        // Проходы — только между двумя открытыми комнатами
+        foreach (var door in _doorways)
+        {
+            var a = GetRoom(door.RoomA);
+            var b = door.RoomB != null ? GetRoom(door.RoomB) : null;
+
+            if (a == null || !a.IsUnlocked) continue;
+            if (door.RoomB != null && (b == null || !b.IsUnlocked)) continue;
+
+            foreach (var cell in door.Cells)
+            {
+                Grid[cell.X, cell.Y] = TileType.Door;
+            }
+        }
     }
 
-    private Room AddRoom(string id, Vector2I offset, int w, int h, bool isMain)
+    private Room AddRoom(string id, Vector2I offset, int w, int h, bool isMain, int unlockCost = 0)
     {
         var room = new Room
         {
             Id = id,
-            DisplayName = id == "main_hall" ? "Главный зал" : $"Зал {id}",
+            DisplayName = id,
             GlobalOffset = offset,
             Width = w,
             Height = h,
-            IsMainHall = isMain
+            IsMainHall = isMain,
+            UnlockCost = unlockCost,
+            IsUnlocked = unlockCost <= 0 // платные комнаты закрыты, пока их не купят
         };
         room.InitializeGrid();
         Rooms.Add(room);
@@ -138,9 +214,12 @@ public class MuseumLayout
 
     public Vector2I GetStreetExitPosition()
     {
-        // В BuildLayout мы задали главный вход на (21, 32) и (22, 32)
-        // Возвращаем одну из этих клеток
-        return new Vector2I(21, 32);
+        // Первая клетка главного входа (проход без второй комнаты)
+        foreach (var door in _doorways)
+        {
+            if (door.RoomB == null) return door.Cells[0];
+        }
+        return Vector2I.Zero;
     }
 
     public Room GetRoom(string roomId) => Rooms.Find(r => r.Id == roomId);

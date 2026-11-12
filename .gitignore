@@ -4,7 +4,6 @@
 # .NET / C#
 bin/
 obj/
-*.csproj
 *.sln
 *.suo
 *.user

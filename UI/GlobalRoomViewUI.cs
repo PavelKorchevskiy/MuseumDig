@@ -68,21 +68,29 @@ public partial class GlobalRoomViewUI : Node2D
             container.QueueFree();
         _roomContainers.Clear();
 
-        // 3. Создаём и рендерим комнаты
+        foreach (var marker in _lockMarkers)
+            marker.QueueFree();
+        _lockMarkers.Clear();
+
+        // 3. Создаём и рендерим комнаты. Закрытые (ещё не купленные) тоже
+        //    рисуются — затемнёнными, со сплошными стенами и табличкой с ценой.
         foreach (var room in MuseumLayout.Instance.Rooms)
         {
-            if (!room.IsUnlocked) continue;
-
             var container = new Node2D { Name = room.Id };
             AddChild(container);
             _roomContainers[room.Id] = container;
 
             // RenderRoom сам отрисует пол, стены и двери внутри этого контейнера
             RenderRoom(room, container);
+
+            if (!room.IsUnlocked) AddLockMarker(room);
         }
 
         // 4. Рендерим мебель поверх всего
         RenderAllFurniture();
+
+        // 5. Затемнение: контейнеры только что созданы с полной яркостью
+        UpdateRoomVisibility();
     }
 
      private void RenderRoom(Room room, Node2D container)
@@ -90,7 +98,75 @@ public partial class GlobalRoomViewUI : Node2D
         RenderFloor(room, container);
         RenderWalls(room, container);
         RenderLowWalls(room, container);
-        RenderDoorFloors(room, container); 
+
+        // У закрытой комнаты проходов нет (см. MuseumLayout.RebuildGrid)
+        if (room.IsUnlocked) RenderDoorFloors(room, container);
+    }
+
+    // ===== ЗАКРЫТЫЕ КОМНАТЫ =====
+
+    // Яркость закрытой комнаты (0 = чёрная, 1 = полная)
+    private const float LockedRoomDarkness = 0.22f;
+
+    // Плитки пола для закрытых комнат ("мусор"/"стройка"). Пока этих файлов
+    // нет — используется обычный пол. Достаточно положить картинки по этим
+    // путям (тот же размер, что у обычных плиток), код менять не нужно.
+    private const string FloorPath = "res://assets/museum/floor/";
+    private const string LockedFloorPath = "res://assets/museum/floor_locked/";
+
+    private readonly List<Node2D> _lockMarkers = new List<Node2D>();
+
+    /// <summary>Текстура плитки пола: варианты 1/2 в шахматном порядке.</summary>
+    private static string GetFloorTexturePath(int x, int y, bool locked)
+    {
+        string file = ((x + y) % 2 == 0) ? "1.png" : "2.png";
+
+        if (locked)
+        {
+            string lockedPath = LockedFloorPath + file;
+            if (ResourceLoader.Exists(lockedPath)) return lockedPath;
+        }
+        return FloorPath + file;
+    }
+
+    public static string FormatCoins(int amount)
+    {
+        return amount.ToString("#,0", System.Globalization.CultureInfo.InvariantCulture).Replace(",", " ");
+    }
+
+    /// <summary>
+    /// Табличка "замок + цена" в центре закрытой комнаты. Лежит вне
+    /// контейнера комнаты, чтобы не затемняться вместе с ним. Тапы не
+    /// перехватывает: покупка открывается тапом в любом месте комнаты.
+    /// </summary>
+    private void AddLockMarker(Room room)
+    {
+        var size = new Vector2(300f, 84f);
+
+        Vector2I center = MuseumLayout.Instance.GetRoomGlobalCenter(room.Id);
+        Vector2 iso = IsoUtils.GridToIso(center.X, center.Y);
+
+        var marker = new Node2D { Name = $"Lock_{room.Id}", ZIndex = 4000 };
+        marker.Position = new Vector2(
+            GridOffsetX + iso.X + IsoUtils.TileWidth / 2f,
+            GridOffsetY + iso.Y + IsoUtils.TileHeight / 2f);
+
+        var panel = new PanelContainer();
+        panel.MouseFilter = Control.MouseFilterEnum.Ignore;
+        panel.CustomMinimumSize = size;
+        panel.Position = -size / 2f;
+        panel.AddThemeStyleboxOverride("panel",
+            MobileUI.MakeStyle(new Color(0.08f, 0.08f, 0.12f, 0.92f), 20, 3, MobileUI.TitleColor));
+
+        var label = MobileUI.CreateLabel(
+            $"🔒 {FormatCoins(room.UnlockCost)} 🪙", 34, MobileUI.TitleColor, center: true);
+        label.VerticalAlignment = VerticalAlignment.Center;
+        label.MouseFilter = Control.MouseFilterEnum.Ignore;
+        panel.AddChild(label);
+
+        marker.AddChild(panel);
+        AddChild(marker);
+        _lockMarkers.Add(marker);
     }
 
         /// <summary>
@@ -125,9 +201,7 @@ public partial class GlobalRoomViewUI : Node2D
                 if (tile == TileType.Floor || tile == TileType.Door)
                 {
                     var isoPos = IsoUtils.GridToIso(x, y);
-                    string texturePath = ((x + y) % 2 == 0)
-                        ? "res://assets/museum/floor/1.png"
-                        : "res://assets/museum/floor/2.png";
+                    string texturePath = GetFloorTexturePath(x, y, !room.IsUnlocked);
 
                     if (!ResourceLoader.Exists(texturePath)) continue;
 
@@ -230,9 +304,7 @@ public partial class GlobalRoomViewUI : Node2D
 
         // Обычный пол для всех дверей (арка рисуется отдельно)
         var isoPos = IsoUtils.GridToIso(x, y);
-        string texturePath = ((x + y) % 2 == 0)
-            ? "res://assets/museum/floor/1.png"
-            : "res://assets/museum/floor/2.png";
+        string texturePath = GetFloorTexturePath(x, y, false);
 
         if (ResourceLoader.Exists(texturePath))
         {
@@ -335,6 +407,10 @@ public partial class GlobalRoomViewUI : Node2D
     /// </summary>
     private float GetRoomDarkness(string roomId)
     {
+        // Закрытая комната всегда тёмная, какая бы комната ни была активной
+        var thisRoom = MuseumLayout.Instance.GetRoom(roomId);
+        if (thisRoom != null && !thisRoom.IsUnlocked) return LockedRoomDarkness;
+
         if (roomId == MuseumLayout.Instance.ActiveRoomId) return 1.0f; // Активная комната — полная яркость
         
         var activeRoom = MuseumLayout.Instance.GetRoom(MuseumLayout.Instance.ActiveRoomId);
@@ -424,7 +500,12 @@ public partial class GlobalRoomViewUI : Node2D
             return;
 
         var room = MuseumLayout.Instance.Rooms[roomIdx];
-        if (!room.IsUnlocked) return;
+        if (!room.IsUnlocked)
+        {
+            // Закрытую комнату нельзя выбрать — тап по ней предлагает её купить
+            (GetTree().CurrentScene as Museum)?.RequestRoomPurchase(room);
+            return;
+        }
 
         Vector2I localCell = new Vector2I(cell.X - room.GlobalOffset.X, cell.Y - room.GlobalOffset.Y);
 
@@ -826,7 +907,7 @@ GD.Print($"[RenderFurnitureItem] Добавляем {placed.FurnitureTypeId} в 
     {
         foreach (var other in MuseumLayout.Instance.Rooms)
         {
-            if (!other.IsUnlocked) continue;
+            // Закрытые комнаты тоже рисуют свои стены, поэтому учитываем все
 
             int oox = other.GlobalOffset.X;
             int ooy = other.GlobalOffset.Y;

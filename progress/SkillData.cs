@@ -123,22 +123,7 @@ public static class SkillData
             IsFlag = false
         });
 
-        // 6. Открывает новую комнату (флаг)
-        RegisterSkill(new SkillDefinition
-        {
-            Id = "museum_new_room",
-            NameKey = "skill.museum.new_room.name",
-            DescriptionKey = "skill.museum.new_room.desc",
-            IconPath = "res://assets/skills/museum/new_room.png",
-            Branch = SkillBranch.Museum,
-            GridPosition = new Vector2I(1, 1),
-            Prerequisites = new List<string> { "museum_ticket_price" },
-            MaxLevel = 1,
-            CostPerLevel = new int[] { 10 },
-            EffectType = "unlock_room",
-            ValuePerLevel = new float[] { 1 },
-            IsFlag = true
-        });
+        // (Навык "Новая комната" убран: комнаты теперь покупаются за монеты, см. Room.UnlockCost)
 
         // 7. Возможность купить большую витрину (флаг)
         RegisterSkill(new SkillDefinition

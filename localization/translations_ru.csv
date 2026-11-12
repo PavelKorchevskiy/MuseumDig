@@ -60,8 +60,6 @@ skill.museum.visitors_epic_legendary.name,Epic Appeal,Привлекательн
 skill.museum.visitors_epic_legendary.desc,Increases max visitors from Epic/Legendary skeletons.,Увеличивает макс. посетителей от Эпических/Легендарных скелетов.
 skill.museum.ticket_chance.name,Ticket Chance,Шанс билета
 skill.museum.ticket_chance.desc,Visitors have a chance to give you digging tickets.,Посетители могут дать билеты на раскопки.
-skill.museum.new_room.name,New Room,Новая комната
-skill.museum.new_room.desc,Unlocks a new exhibition hall.,Открывает новый выставочный зал.
 skill.museum.large_display.name,Large Display,Большая витрина
 skill.museum.large_display.desc,Allows purchasing large display cases.,Позволяет покупать большие витрины.
 skill.digging.diggers_count.name,More Diggers,Больше землекопов
@@ -173,3 +171,15 @@ quest.achievement.visitors_5000.name,Full House,Аншлаг
 quest.achievement.visitors_5000.desc,Welcome visitors: {0},Принять посетителей: {0}
 quest.achievement.daily_sets_7.name,Regular,Завсегдатай
 quest.achievement.daily_sets_7.desc,Complete all daily quests in a day: {0} times,Выполнить все ежедневные задания за день: {0} раз
+room.main_hall.name,Main Hall,Главный зал
+room.left_wing.name,Left Wing,Левое крыло
+room.right_wing.name,Right Wing,Правое крыло
+room.back_left.name,Left Hall,Левый зал
+room.back_center.name,Central Hall,Центральный зал
+room.back_right.name,Right Hall,Правый зал
+room.upper_left.name,North Hall,Северный зал
+room.upper_right.name,Grand North Hall,Большой северный зал
+room.east_wing.name,East Gallery,Восточная галерея
+ui.room.unlock,Unlock,Открыть
+ui.room.unlock_confirm,Unlock “{0}” for {1} coins? The money is not refundable.,Открыть «{0}» за {1} монет? Деньги за комнату не возвращаются.
+ui.room.unlock_not_enough,“{0}” costs {1} coins. You have {2}.,«{0}» стоит {1} монет. У вас сейчас {2}.

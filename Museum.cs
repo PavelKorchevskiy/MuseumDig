@@ -80,6 +80,10 @@ private OfflineIncomeUI _offlineIncomeUI;
         // Попап офлайн-дохода - создаём поверх всего остального в этом же UI-слое
         _offlineIncomeUI = new OfflineIncomeUI(uiLayer);
 
+        // Подтверждение покупки комнаты
+        _roomPurchaseConfirm = new ConfirmOverlay(uiLayer,
+            LocalizationManager.Tr("ui.room.unlock"), MobileUI.PrimaryColor);
+
         // === Догонка дохода посетителей за время на сцене раскопок ===
         // Пока игрок копал, музей не тикал (сцена была выгружена) — считаем,
         // сколько посетителей зашло бы и доплачиваем монетами одним куском,
@@ -196,6 +200,39 @@ private OfflineIncomeUI _offlineIncomeUI;
     /// выше внутреннего слоя PlacementModeUI (Layer=50) — физически
     /// перекрывают его "Отмена"/"Поставить" и перехватывают тапы по ним.
     /// </summary>
+    // ===== ПОКУПКА КОМНАТ =====
+
+    private ConfirmOverlay _roomPurchaseConfirm;
+
+    /// <summary>
+    /// Тап по закрытой комнате (см. GlobalRoomViewUI.OnWorldTap): спрашиваем
+    /// подтверждение и открываем её за монеты. Если монет не хватает — то же
+    /// окно с ценой и неактивной кнопкой.
+    /// </summary>
+    public void RequestRoomPurchase(Room room)
+    {
+        if (room == null || room.IsUnlocked || _roomPurchaseConfirm == null) return;
+
+        string name = LocalizationManager.Tr(room.NameKey);
+        string price = GlobalRoomViewUI.FormatCoins(room.UnlockCost);
+        bool canAfford = MuseumSystem.Instance.CanAffordRoom(room);
+
+        string message = canAfford
+            ? LocalizationManager.TrFormat("ui.room.unlock_confirm", name, price)
+            : LocalizationManager.TrFormat("ui.room.unlock_not_enough", name, price,
+                GlobalRoomViewUI.FormatCoins(Wallet.Instance.GetCoins()));
+
+        string roomId = room.Id;
+        _roomPurchaseConfirm.Show(message, () =>
+        {
+            if (!MuseumSystem.Instance.TryUnlockRoom(roomId)) return;
+
+            // В стенах появились проходы, комната стала обычной — перерисовываем
+            RefreshRoomView();
+            OnDoorClicked(roomId); // делаем её активной и ведём туда камеру
+        }, canAfford);
+    }
+
     public void SetBottomBarVisible(bool visible)
     {
         if (_bottomBar != null) _bottomBar.Visible = visible;

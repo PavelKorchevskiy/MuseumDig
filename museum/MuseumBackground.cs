@@ -48,24 +48,27 @@ public partial class MuseumBackground : Node2D
     private static readonly TreePlacement[] TreePlacements = new TreePlacement[]
     {
         // Левая сторона (западнее музея)
-        new TreePlacement { GridX = -10, GridY = 20, Offset = Vector2.Zero, Variant = 0 },
-        new TreePlacement { GridX = -8,  GridY = 25, Offset = Vector2.Zero, Variant = 0 },
-        new TreePlacement { GridX = -5,  GridY = 32, Offset = Vector2.Zero, Variant = 0 },
-        new TreePlacement { GridX = -12, GridY = 38, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = -10, GridY = 36, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = -8,  GridY = 41, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = -5,  GridY = 48, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = -12, GridY = 54, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = -7,  GridY = 22, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = -11, GridY = 8,  Offset = Vector2.Zero, Variant = 0 },
 
         // Правая сторона (восточнее музея)
-        new TreePlacement { GridX = 40,  GridY = 22, Offset = Vector2.Zero, Variant = 0 },
-        new TreePlacement { GridX = 42,  GridY = 30, Offset = Vector2.Zero, Variant = 0 },
-        new TreePlacement { GridX = 45,  GridY = 36, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 64,  GridY = 12, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 67,  GridY = 26, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 63,  GridY = 38, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 66,  GridY = 46, Offset = Vector2.Zero, Variant = 0 },
 
         // Нижняя часть (южнее развилки)
-        new TreePlacement { GridX = 10,  GridY = 45, Offset = Vector2.Zero, Variant = 0 },
-        new TreePlacement { GridX = 25,  GridY = 44, Offset = Vector2.Zero, Variant = 0 },
-        new TreePlacement { GridX = 20,  GridY = 50, Offset = Vector2.Zero, Variant = 0 },
-        new TreePlacement { GridX = 33,  GridY = 48, Offset = Vector2.Zero, Variant = 0 },
-        new TreePlacement { GridX = 45,  GridY = 47, Offset = Vector2.Zero, Variant = 0 },
-        new TreePlacement { GridX = 60,  GridY = 43, Offset = Vector2.Zero, Variant = 0 },
-        new TreePlacement { GridX = 53,  GridY = 51, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 10,  GridY = 61, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 25,  GridY = 60, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 20,  GridY = 66, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 33,  GridY = 64, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 45,  GridY = 63, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 60,  GridY = 59, Offset = Vector2.Zero, Variant = 0 },
+        new TreePlacement { GridX = 53,  GridY = 67, Offset = Vector2.Zero, Variant = 0 },
 
     };
 

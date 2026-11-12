@@ -419,6 +419,7 @@ public class ConfirmOverlay
     private readonly ColorRect _root;
     private readonly Label _message;
     private Action _onConfirm;
+    private readonly Button _confirmBtn;
 
     public ConfirmOverlay(CanvasLayer parent, string confirmText, Color confirmColor)
     {
@@ -461,6 +462,7 @@ public class ConfirmOverlay
         buttons.AddChild(cancelBtn);
 
         var confirmBtn = MobileUI.CreateButton(confirmText, confirmColor);
+        _confirmBtn = confirmBtn;
         confirmBtn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         confirmBtn.Pressed += () =>
         {
@@ -471,10 +473,12 @@ public class ConfirmOverlay
         buttons.AddChild(confirmBtn);
     }
 
-    public void Show(string message, Action onConfirm)
+    /// <param name="confirmEnabled">false — кнопка подтверждения серая (например, не хватает монет).</param>
+    public void Show(string message, Action onConfirm, bool confirmEnabled = true)
     {
         _message.Text = message;
         _onConfirm = onConfirm;
+        _confirmBtn.Disabled = !confirmEnabled;
         _root.Visible = true;
     }
 
