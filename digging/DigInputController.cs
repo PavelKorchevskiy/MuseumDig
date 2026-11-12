@@ -54,12 +54,10 @@ public partial class DigInputController : Node2D
             {
                 if (clickedTile.HasCollectableFinding)
                 {
+                    // Панель находок обновится сама, когда находка до неё долетит
+                    // (см. Tile.CollectFinding -> DigSite.PlayLootFlyAnimation)
                     clickedTile.CollectFinding();
-                    
-                    // === НОВОЕ: Обновляем панель находок ===
-                    var digSite = GetParent() as DigSite;
-                    digSite?.RefreshLootSummary();
-                    
+
                     GetViewport().SetInputAsHandled();
                     return;
                 }

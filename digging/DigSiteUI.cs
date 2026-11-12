@@ -1,4 +1,5 @@
 using Godot;
+using System;
 
 public partial class DigSiteUI : CanvasLayer
 {
@@ -146,6 +147,52 @@ public partial class DigSiteUI : CanvasLayer
         int spacerIndex = _spacer.GetIndex();
         _mainHBox.AddChild(lootBar);
         _mainHBox.MoveChild(lootBar, spacerIndex); // Перемещаем перед spacer
+    }
+
+    /// <summary>
+    /// Анимация сбора: картинка находки подпрыгивает на месте и летит в
+    /// плашку находок, уменьшаясь до размера ячейки. Рисуется на этом же
+    /// CanvasLayer, поэтому координаты — экранные, камера на неё не влияет.
+    /// </summary>
+    public void FlyToLootBar(Texture2D texture, Vector2 from, float startSize, Vector2 to, Action onArrive)
+    {
+        const float endSize = 44f;
+        startSize = Mathf.Clamp(startSize, 40f, 110f);
+
+        var icon = new TextureRect
+        {
+            Texture = texture,
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            Size = new Vector2(startSize, startSize),
+            PivotOffset = new Vector2(startSize, startSize) / 2f,
+            ZIndex = 100
+        };
+        icon.Position = from - icon.Size / 2f;
+        AddChild(icon);
+
+        float endScale = endSize / startSize;
+        Vector2 endPosition = to - icon.Size / 2f;
+
+        var tween = icon.CreateTween();
+
+        // 1. Подпрыгнуть и чуть увеличиться — "взяли в руку"
+        tween.TweenProperty(icon, "scale", new Vector2(1.3f, 1.3f), 0.12f)
+             .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
+        tween.Parallel().TweenProperty(icon, "position", icon.Position + new Vector2(0, -18f), 0.12f);
+
+        // 2. Полёт в плашку
+        tween.TweenProperty(icon, "position", endPosition, 0.45f)
+             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.InOut);
+        tween.Parallel().TweenProperty(icon, "scale", new Vector2(endScale, endScale), 0.45f)
+             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+
+        tween.TweenCallback(Callable.From(() =>
+        {
+            icon.QueueFree();
+            onArrive?.Invoke();
+        }));
     }
 
     private void OnReturnPressed()

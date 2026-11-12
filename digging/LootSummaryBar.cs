@@ -49,6 +49,40 @@ public partial class LootSummaryBar : HBoxContainer
         }
     }
 
+    private const float SlotSize = 52f;
+
+    /// <summary>
+    /// Куда на экране лететь собранной находке: центр её ячейки, а если такой
+    /// ячейки ещё нет — место, где она появится (сразу за последней).
+    /// </summary>
+    public Vector2 GetSlotScreenCenter(string resourceId)
+    {
+        if (_itemCache.TryGetValue(resourceId, out var slot) && GodotObject.IsInstanceValid(slot))
+        {
+            return slot.GlobalPosition + slot.Size / 2f;
+        }
+
+        Vector2 origin = GlobalPosition;
+        if (_itemCache.Count == 0)
+        {
+            return origin + new Vector2(Mathf.Max(Size.X, SlotSize) / 2f, SlotSize / 2f);
+        }
+        return origin + new Vector2(Size.X + SlotSize / 2f, SlotSize / 2f);
+    }
+
+    /// <summary>Короткий "хлопок" ячейки, когда в неё прилетела находка.</summary>
+    public void Pulse(string resourceId)
+    {
+        if (!_itemCache.TryGetValue(resourceId, out var slot) || !GodotObject.IsInstanceValid(slot)) return;
+
+        slot.PivotOffset = slot.Size / 2f;
+        slot.Scale = Vector2.One;
+
+        var tween = slot.CreateTween();
+        tween.TweenProperty(slot, "scale", new Vector2(1.3f, 1.3f), 0.09f);
+        tween.TweenProperty(slot, "scale", Vector2.One, 0.14f);
+    }
+
     /// <summary>
     /// Вычисляет найденные предметы из состояния плиток.
     /// </summary>

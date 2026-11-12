@@ -5,6 +5,7 @@ public partial class DigSite : Node2D
 {
     [Export] public int TileSize = 64;
     private LootSummaryBar _lootSummaryBar;
+    private DigSiteUI _topUI;
     private DiggingUI _diggingUI;
 
     private DigSiteBackground _background;
@@ -75,6 +76,7 @@ public partial class DigSite : Node2D
 
         // === Верхняя плашка: монеты + кнопка + найденные предметы ===
         var topUI = new DigSiteUI();
+        _topUI = topUI;
         AddChild(topUI);
 
         // Создаём панель находок и добавляем её внутрь DigSiteUI
@@ -491,6 +493,28 @@ public partial class DigSite : Node2D
     public void RefreshLootSummary()
     {
         _lootSummaryBar?.Refresh(this);
+    }
+
+    /// <summary>
+    /// Собранная находка летит с плитки в верхнюю плашку; счётчик в плашке
+    /// обновляется в момент "приземления".
+    /// </summary>
+    /// <param name="screenFrom">Центр находки в координатах экрана.</param>
+    /// <param name="screenSize">Её размер на экране в пикселях.</param>
+    public void PlayLootFlyAnimation(Texture2D texture, Vector2 screenFrom, float screenSize, string resourceId)
+    {
+        if (_topUI == null || _lootSummaryBar == null || texture == null)
+        {
+            RefreshLootSummary();
+            return;
+        }
+
+        Vector2 target = _lootSummaryBar.GetSlotScreenCenter(resourceId);
+        _topUI.FlyToLootBar(texture, screenFrom, screenSize, target, () =>
+        {
+            RefreshLootSummary();
+            _lootSummaryBar.Pulse(resourceId);
+        });
     }
 
     public override void _ExitTree()

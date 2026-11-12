@@ -11,10 +11,43 @@ public partial class DiggingUI : Control
     private Button _extractorButton;
     private Button _excavatorButton;
     
-    // === НОВОЕ: Ссылки на Labels внутри кнопок для обновления текста ===
-    private Label _diggerLabel;
-    private Label _extractorLabel;
+    // Подпись под картинкой экскаватора: цена или замок (счётчика у него нет)
     private Label _excavatorLabel;
+
+    /// <summary>
+    /// Индикатор рабочих внизу кнопки: по одной полоске на каждого.
+    /// Зелёная — свободен, жёлтая — сейчас работает.
+    /// </summary>
+    private class WorkerBars
+    {
+        public HBoxContainer Row;
+        public int Total = -1;
+        public int Busy = -1;
+    }
+
+    private readonly Dictionary<WorkerType, WorkerBars> _workerBars = new();
+
+    private static readonly Color BarFreeColor = new Color(0.30f, 0.85f, 0.35f);
+    private static readonly Color BarBusyColor = new Color(1.00f, 0.80f, 0.15f);
+    private const float BarHeight = 9f;
+
+    /// <summary>
+    /// Картинка на кнопке: кадры той же анимации, что рабочий проигрывает на
+    /// плитке. Пока инструмент не выбран — стоит первый кадр, у выбранного
+    /// анимация крутится по кругу, так что сразу видно, что сейчас в руках.
+    /// </summary>
+    private class ToolIcon
+    {
+        public TextureRect Rect;
+        public List<Texture2D> Frames = new();
+        public float Fps = 8f;
+        public float Time = 0f;
+        public int ShownFrame = -1;
+    }
+
+    private readonly Dictionary<WorkerType, ToolIcon> _toolIcons = new();
+
+    private const int ToolFrameCount = 8;
 
     private StyleBoxFlat _normalStyle;
     private StyleBoxFlat _selectedStyle;
@@ -60,7 +93,7 @@ public partial class DiggingUI : Control
         panelContainer.AnchorTop = 1;
         panelContainer.OffsetTop = -104; // чуть выше: кнопки стали крупнее под палец
         panelContainer.MouseFilter = MouseFilterEnum.Ignore;
-
+        
         var panelStyle = new StyleBoxFlat();
         panelStyle.BgColor = new Color(0.1f, 0.1f, 0.12f, 0.85f);
         panelStyle.CornerRadiusTopLeft = 12;
@@ -70,39 +103,42 @@ public partial class DiggingUI : Control
 
         var hbox = new HBoxContainer();
         hbox.Alignment = BoxContainer.AlignmentMode.Center;
-        hbox.AddThemeConstantOverride("separation", 16);
+        hbox.AddThemeConstantOverride("separation", 14);
         panelContainer.AddChild(hbox);
 
         // === Кнопка Копателя ===
          // === Кнопка Копателя ===
         CreateToolButton(
+            tool: WorkerType.Digger,
+            framesFolder: "res://assets/dig/digger",
+            fps: 8f,
             iconPath: "res://assets/dig/buttons/shovel.png",
             textKey: "ui.digging.digger",
-            price: null,
-            out _diggerButton,
-            out _diggerLabel
+            out _diggerButton
         );
         _diggerButton.Pressed += () => SelectTool(WorkerType.Digger);
         hbox.AddChild(_diggerButton);
 
         // === Кнопка Извлекателя ===
         CreateToolButton(
+            tool: WorkerType.Extractor,
+            framesFolder: "res://assets/dig/extracter",
+            fps: 8f,
             iconPath: "res://assets/dig/buttons/pickaxe.png",
             textKey: "ui.digging.extractor",
-            price: null,
-            out _extractorButton,
-            out _extractorLabel
+            out _extractorButton
         );
         _extractorButton.Pressed += () => SelectTool(WorkerType.Extractor);
         hbox.AddChild(_extractorButton);
 
         // === Кнопка Экскаватора ===
         CreateToolButton(
+            tool: WorkerType.Excavator,
+            framesFolder: "res://assets/dig/bulldozer",
+            fps: 12f,
             iconPath: "res://assets/dig/buttons/bulldozer.png",
             textKey: "ui.digging.excavator",
-            price: 100,
-            out _excavatorButton,
-            out _excavatorLabel
+            out _excavatorButton
         );
         _excavatorButton.Pressed += () => SelectTool(WorkerType.Excavator);
         hbox.AddChild(_excavatorButton);
@@ -111,65 +147,95 @@ public partial class DiggingUI : Control
     }
 
     /// <summary>
-    /// Создаёт кнопку инструмента с центрированным изображением и текстом.
+    /// Создаёт кнопку инструмента: картинка рабочего (кадры его анимации из
+    /// framesFolder), а под ней — индикатор: полоски рабочих у копателя и
+    /// извлекателя, цена у экскаватора. Названия на кнопке нет.
     /// </summary>
+    /// <param name="iconPath">Запасная статичная иконка, если кадров анимации нет.</param>
+    /// <param name="textKey">Название инструмента — для всплывающей подсказки.</param>
     private void CreateToolButton(
-        string iconPath,
+        WorkerType tool,
+        string framesFolder,
+        float fps,
+        string iconPath, 
         string textKey,
-        int? price,
-        out Button button,
-        out Label label)
+        out Button button)
     {
         button = new Button();
-        button.CustomMinimumSize = new Vector2(150, 76);
+        button.CustomMinimumSize = new Vector2(150, 84);
         button.FocusMode = Control.FocusModeEnum.None;
-
-        // === ВАЖНО: Контейнер растягивается на ВСЮ кнопку ===
+        button.TooltipText = LocalizationManager.Tr(textKey);
+        
+        // Контейнер растягивается на всю кнопку
         var vbox = new VBoxContainer();
-        vbox.Alignment = BoxContainer.AlignmentMode.Center;  // Контент по центру вертикально
-        vbox.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill; // Заполняет всю ширину
-        vbox.SizeFlagsVertical = Control.SizeFlags.ExpandFill;   // Заполняет всю высоту
-        vbox.AddThemeConstantOverride("separation", 2);
+        vbox.SetAnchorsPreset(LayoutPreset.FullRect);
+        vbox.OffsetLeft = 10;
+        vbox.OffsetRight = -10;
+        vbox.OffsetTop = 5;
+        vbox.OffsetBottom = -7;
+        vbox.AddThemeConstantOverride("separation", 3);
         vbox.MouseFilter = MouseFilterEnum.Ignore; // Пропускаем клики к кнопке
-
-        // === Иконка ===
+        
+        // === Картинка рабочего: занимает всё место над индикатором ===
         var icon = new TextureRect();
         icon.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
-        icon.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize; // Фиксированный размер
-        icon.CustomMinimumSize = new Vector2(44, 36);
-        icon.Size = new Vector2(44, 36);
-        icon.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter; // Центрируем по горизонтали
-        icon.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        icon.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
+        icon.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        icon.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
         icon.MouseFilter = MouseFilterEnum.Ignore;
 
-        if (ResourceLoader.Exists(iconPath))
+        var toolIcon = new ToolIcon { Rect = icon, Fps = fps };
+        for (int i = 1; i <= ToolFrameCount; i++)
+        {
+            string framePath = $"{framesFolder}/1_{i}.png";
+            if (ResourceLoader.Exists(framePath))
+            {
+                toolIcon.Frames.Add(GD.Load<Texture2D>(framePath));
+            }
+        }
+
+        if (toolIcon.Frames.Count > 0)
+        {
+            icon.Texture = toolIcon.Frames[0];
+            toolIcon.ShownFrame = 0;
+        }
+        else if (ResourceLoader.Exists(iconPath))
         {
             icon.Texture = GD.Load<Texture2D>(iconPath);
         }
+        _toolIcons[tool] = toolIcon;
         vbox.AddChild(icon);
 
-        // === Текст ===
-        label = new Label();
-        label.HorizontalAlignment = HorizontalAlignment.Center;
-        label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill; // Заполняет ширину
-        label.AddThemeFontSizeOverride("font_size", 15);
-        label.MouseFilter = MouseFilterEnum.Ignore;
-
-        string baseText = LocalizationManager.Tr(textKey);
-        label.Text = price.HasValue ? $"{baseText}\n🪙{price.Value}" : baseText;
-
-        vbox.AddChild(label);
-
+        // === Индикатор внизу кнопки ===
+        if (tool == WorkerType.Excavator)
+        {
+            _excavatorLabel = new Label();
+            _excavatorLabel.HorizontalAlignment = HorizontalAlignment.Center;
+            _excavatorLabel.AddThemeFontSizeOverride("font_size", 14);
+            _excavatorLabel.AddThemeColorOverride("font_color", Colors.Gold);
+            _excavatorLabel.MouseFilter = MouseFilterEnum.Ignore;
+            vbox.AddChild(_excavatorLabel);
+        }
+        else
+        {
+            var row = new HBoxContainer();
+            row.CustomMinimumSize = new Vector2(0, BarHeight);
+            row.AddThemeConstantOverride("separation", 4);
+            row.MouseFilter = MouseFilterEnum.Ignore;
+            vbox.AddChild(row);
+            _workerBars[tool] = new WorkerBars { Row = row };
+        }
+        
         button.AddChild(vbox);
-
+        
         // === ВАЖНО: очищаем встроенный текст и убираем content margin ===
         button.Text = "";
-
+        
         // Делаем все стили с одинаковыми симметричными отступами
         UpdateButtonMargins(_normalStyle);
         UpdateButtonMargins(_selectedStyle);
         UpdateButtonMargins(_disabledStyle);
-
+        
         button.AddThemeStyleboxOverride("normal", _normalStyle);
         button.AddThemeStyleboxOverride("hover", _normalStyle);
         button.AddThemeStyleboxOverride("pressed", _normalStyle);
@@ -194,6 +260,37 @@ public partial class DiggingUI : Control
     public override void _Process(double delta)
     {
         UpdateButtons();
+        AnimateToolIcons((float)delta);
+    }
+
+    /// <summary>
+    /// Крутит анимацию на кнопке выбранного инструмента; остальные кнопки
+    /// возвращает на первый кадр.
+    /// </summary>
+    private void AnimateToolIcons(float delta)
+    {
+        foreach (var kvp in _toolIcons)
+        {
+            var icon = kvp.Value;
+            if (icon.Frames.Count == 0) continue;
+
+            int frame = 0;
+            if (SelectedTool == kvp.Key)
+            {
+                icon.Time += delta;
+                frame = (int)(icon.Time * icon.Fps) % icon.Frames.Count;
+            }
+            else
+            {
+                icon.Time = 0f;
+            }
+
+            if (frame != icon.ShownFrame)
+            {
+                icon.ShownFrame = frame;
+                icon.Rect.Texture = icon.Frames[frame];
+            }
+        }
     }
 
     private void UpdateButtons()
@@ -203,38 +300,94 @@ public partial class DiggingUI : Control
         // === Копатель ===
         int activeDiggers = DiggingManager.Instance.GetActiveDiggersCount();
         int maxDiggers = DiggingManager.Instance.GetMaxDiggers();
-        _diggerLabel.Text = $"{LocalizationManager.Tr("ui.digging.digger")}\n({activeDiggers}/{maxDiggers})";
+        UpdateWorkerBars(WorkerType.Digger, activeDiggers, maxDiggers);
         _diggerButton.Disabled = (activeDiggers >= maxDiggers) && SelectedTool != WorkerType.Digger;
 
         // === Извлекатель ===
         int activeExtractors = DiggingManager.Instance.GetActiveExtractorsCount();
         int maxExtractors = DiggingManager.Instance.GetMaxExtractors();
-        _extractorLabel.Text = $"{LocalizationManager.Tr("ui.digging.extractor")}\n({activeExtractors}/{maxExtractors})";
+        UpdateWorkerBars(WorkerType.Extractor, activeExtractors, maxExtractors);
         _extractorButton.Disabled = (activeExtractors >= maxExtractors) && SelectedTool != WorkerType.Extractor;
 
-        // === Экскаватор ===
+        // === Экскаватор: цена или замок ===
         bool excavatorUnlocked = DiggingManager.Instance.IsExcavatorUnlocked();
-        if (excavatorUnlocked)
-        {
-            _excavatorLabel.Text = $"{LocalizationManager.Tr("ui.digging.excavator")}\n🪙100";
-        }
-        else
-        {
-            _excavatorLabel.Text = $"🔒 {LocalizationManager.Tr("ui.digging.excavator")}";
-        }
+        _excavatorLabel.Text = excavatorUnlocked ? "🪙100" : "🔒";
         _excavatorButton.Disabled = !excavatorUnlocked;
+
+        // Затемняем картинку, когда инструмент недоступен: нет свободных
+        // рабочих (и он не выбран) либо экскаватор ещё закрыт.
+        SetIconDimmed(WorkerType.Digger, _diggerButton.Disabled);
+        SetIconDimmed(WorkerType.Extractor, _extractorButton.Disabled);
+        SetIconDimmed(WorkerType.Excavator, _excavatorButton.Disabled);
 
         UpdateButtonStyle(_diggerButton, SelectedTool == WorkerType.Digger);
         UpdateButtonStyle(_extractorButton, SelectedTool == WorkerType.Extractor);
         UpdateButtonStyle(_excavatorButton, SelectedTool == WorkerType.Excavator);
     }
 
+    /// <summary>
+    /// Перекрашивает полоски рабочих: слева зелёные (свободные), справа жёлтые
+    /// (работают). Если изменилось общее число рабочих (выкуплен навык) —
+    /// полоски пересоздаются. Ничего не делает, если числа прежние.
+    /// </summary>
+    private void UpdateWorkerBars(WorkerType tool, int busy, int total)
+    {
+        if (!_workerBars.TryGetValue(tool, out var bars)) return;
+
+        total = Mathf.Max(total, 0);
+        busy = Mathf.Clamp(busy, 0, total);
+        if (bars.Total == total && bars.Busy == busy) return;
+
+        if (bars.Total != total)
+        {
+            foreach (var child in bars.Row.GetChildren())
+            {
+                bars.Row.RemoveChild(child);
+                child.QueueFree();
+            }
+
+            for (int i = 0; i < total; i++)
+            {
+                var segment = new Panel();
+                segment.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+                segment.CustomMinimumSize = new Vector2(0, BarHeight);
+                segment.MouseFilter = MouseFilterEnum.Ignore;
+                bars.Row.AddChild(segment);
+            }
+        }
+
+        int free = total - busy;
+        for (int i = 0; i < total; i++)
+        {
+            var style = new StyleBoxFlat { BgColor = i < free ? BarFreeColor : BarBusyColor };
+            style.SetCornerRadiusAll(4);
+            style.SetBorderWidthAll(1);
+            style.BorderColor = new Color(0f, 0f, 0f, 0.45f);
+            ((Panel)bars.Row.GetChild(i)).AddThemeStyleboxOverride("panel", style);
+        }
+
+        bars.Total = total;
+        bars.Busy = busy;
+    }
+
+    private static readonly Color IconDimColor = new Color(0.38f, 0.38f, 0.42f, 1f);
+
+    private void SetIconDimmed(WorkerType tool, bool dimmed)
+    {
+        if (!_toolIcons.TryGetValue(tool, out var icon)) return;
+
+        Color target = dimmed ? IconDimColor : Colors.White;
+        if (icon.Rect.Modulate != target) icon.Rect.Modulate = target;
+    }
+
     private void UpdateButtonStyle(Button button, bool isSelected)
     {
-        var style = isSelected ? _selectedStyle : _normalStyle;
+        // Недоступная кнопка — тёмный фон, чтобы отличалась и без картинки
+        var style = isSelected ? _selectedStyle : (button.Disabled ? _disabledStyle : _normalStyle);
         button.AddThemeStyleboxOverride("normal", style);
         button.AddThemeStyleboxOverride("hover", style);
         button.AddThemeStyleboxOverride("pressed", style);
+        button.AddThemeStyleboxOverride("disabled", _disabledStyle);
     }
 
     public void SelectTool(WorkerType tool)

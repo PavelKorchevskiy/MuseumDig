@@ -34,6 +34,9 @@ public partial class Tile : Panel
 
         private AnimatedSprite2D _bulldozerSprite;
     private Sprite2D _findingSprite;
+    private Sprite2D _glowSprite;
+    private Tween _glowTween;
+    private static Texture2D _glowTexture;
     private ProgressBar _progressBar;
     private Label _statusLabel;
 
@@ -80,6 +83,15 @@ public partial class Tile : Panel
         _extractorSprite.SpriteFrames = extractorFrames;
         AddChild(_extractorSprite);
         _extractorSprite.Visible = false;
+
+        // Золотое свечение под находкой, которую можно забрать. Добавляется
+        // раньше спрайта находки, поэтому при том же ZIndex рисуется под ним.
+        _glowSprite = new Sprite2D();
+        _glowSprite.Texture = GetGlowTexture();
+        _glowSprite.Material = new CanvasItemMaterial { BlendMode = CanvasItemMaterial.BlendModeEnum.Add };
+        _glowSprite.ZIndex = 1;
+        _glowSprite.Visible = false;
+        AddChild(_glowSprite);
 
         _findingSprite = new Sprite2D();
         _findingSprite.Position = new Vector2(64, 64);
@@ -152,12 +164,14 @@ public partial class Tile : Panel
         Stage >= _loot.RevealedAtStage &&
         Stage != TileStage.FullyDug;
     
-    /// Находка, которую можно собрать кликом. Видна на Dug1, Dug2, FullyDug.
+    /// Находка, которую можно собрать кликом. Обычные находки видны на Dug1,
+    /// Dug2, FullyDug. Кость становится собираемой только после извлечения:
+    /// извлекатель переводит плитку в FullyDug, и кость остаётся лежать на ней.
     public bool HasCollectableFinding =>
         _loot != null &&
-        !_loot.IsBone &&
         !_loot.Collected &&
-        Stage >= _loot.RevealedAtStage;
+        Stage >= _loot.RevealedAtStage &&
+        (!_loot.IsBone || Stage == TileStage.FullyDug);
 
     private void RollLoot(string locationId)
     {
@@ -284,19 +298,15 @@ public partial class Tile : Panel
             
             if (_loot != null)
             {
-                InventorySystem.Instance.AddItem(_loot.ResourceId, _loot.Amount);
-                GD.Print($"[Tile] 🦴 Извлечено: {_loot.ResourceId} x{_loot.Amount}");
-                _loot.Collected = true;
-                QuestSystem.Instance.OnBoneExtracted();
+                GD.Print($"[Tile] 🦴 Извлечено: {_loot.ResourceId} x{_loot.Amount} — лежит на плитке, ждёт сбора");
             }
-            
-            // После извлечения кости → FullyDug
+
+            // После извлечения плитка выкопана до конца, а кость остаётся лежать
+            // на ней (HasCollectableFinding) — в инвентарь она попадёт по тапу,
+            // как конкреции и золото (см. CollectFinding).
             Stage = TileStage.FullyDug;
             QuestSystem.Instance.OnTileFullyDug();
 
-            var digSite = GetParent() as DigSite;
-            digSite?.RefreshLootSummary();
-            
             UpdateVisuals();
             SaveSystem.Instance?.MarkDirty();
         }
@@ -309,8 +319,17 @@ public partial class Tile : Panel
         if (!HasCollectableFinding) return;
         if (_loot == null) return;
 
+        // Запоминаем, как находка выглядит на экране, до того как спрайт спрячется:
+        // отсюда стартует анимация полёта в верхнюю плашку.
+        Texture2D flyTexture = _findingSprite.Texture;
+        Transform2D onScreen = _findingSprite.GetGlobalTransformWithCanvas();
+        float flySize = flyTexture != null ? flyTexture.GetWidth() * onScreen.Scale.X : 48f;
+        string resourceId = _loot.ResourceId;
+
         InventorySystem.Instance.AddItem(_loot.ResourceId, _loot.Amount);
         GD.Print($"[Tile] ✅ Собрана находка: {_loot.ResourceId} x{_loot.Amount}");
+
+        if (_loot.IsBone) QuestSystem.Instance.OnBoneExtracted(); // кость попала на склад
 
         _loot.Collected = true;
         Action = TileAction.None;
@@ -319,6 +338,10 @@ public partial class Tile : Panel
         
         UpdateVisuals();
         SaveSystem.Instance?.MarkDirty();
+
+        // Счётчик в плашке обновится, когда находка до неё долетит
+        var digSite = GetParent() as DigSite;
+        digSite?.PlayLootFlyAnimation(flyTexture, onScreen.Origin, flySize, resourceId);
     }
 
     // ===== ЭКСКАВАТОР =====
@@ -465,7 +488,11 @@ public partial class Tile : Panel
         // Находка (кость или собираемый предмет)
         if ((HasExtractableFinding || HasCollectableFinding) && _loot != null)
         {
-            string findingPath = GetDigTextureForFinding(_loot.ResourceId);
+            // Извлечённая кость лежит на плитке уже "чистой" — её обычным
+            // спрайтом, а не видом "в земле"
+            string findingPath = (_loot.IsBone && Stage == TileStage.FullyDug)
+                ? GetResourceIconPath(_loot.ResourceId)
+                : GetDigTextureForFinding(_loot.ResourceId);
             if (ResourceLoader.Exists(findingPath))
             {
                 _findingSprite.Texture = GD.Load<Texture2D>(findingPath);
@@ -492,6 +519,9 @@ public partial class Tile : Panel
             _findingSprite.Visible = false;
         }
 
+        // Свечение — только у того, что уже можно забрать тапом
+        SetGlowActive(HasCollectableFinding && _findingSprite.Visible);
+
         // Статус
         if (Action == TileAction.Digging)
         {
@@ -507,6 +537,68 @@ public partial class Tile : Panel
         {
             _statusLabel.Visible = false;
         }
+    }
+
+    // ===== ЗОЛОТОЕ СВЕЧЕНИЕ =====
+
+    /// <summary>
+    /// Мягкое круглое пятно (радиальный градиент от золотого к прозрачному).
+    /// Генерируется кодом один раз на все плитки — отдельная картинка не нужна.
+    /// </summary>
+    private static Texture2D GetGlowTexture()
+    {
+        if (_glowTexture != null) return _glowTexture;
+
+        var gradient = new Gradient();
+        gradient.Offsets = new float[] { 0f, 0.35f, 1f };
+        gradient.Colors = new Color[]
+        {
+            new Color(1.0f, 0.92f, 0.55f, 0.95f),
+            new Color(1.0f, 0.78f, 0.20f, 0.55f),
+            new Color(1.0f, 0.70f, 0.10f, 0.0f)
+        };
+
+        _glowTexture = new GradientTexture2D
+        {
+            Gradient = gradient,
+            Width = 128,
+            Height = 128,
+            Fill = GradientTexture2D.FillEnum.Radial,
+            FillFrom = new Vector2(0.5f, 0.5f),
+            FillTo = new Vector2(1.0f, 0.5f)
+        };
+        return _glowTexture;
+    }
+
+    private void SetGlowActive(bool active)
+    {
+        if (_glowSprite == null) return;
+
+        if (!active)
+        {
+            _glowTween?.Kill();
+            _glowTween = null;
+            _glowSprite.Visible = false;
+            return;
+        }
+
+        _glowSprite.Position = _findingSprite.Position;
+        if (_glowSprite.Visible && _glowTween != null) return; // уже пульсирует
+
+        _glowSprite.Visible = true;
+
+        // Пятно чуть сплюснуто по вертикали — под изометрию плитки
+        var small = new Vector2(0.78f, 0.60f);
+        var big = new Vector2(1.00f, 0.78f);
+        _glowSprite.Scale = small;
+        _glowSprite.Modulate = new Color(1f, 1f, 1f, 0.65f);
+
+        _glowTween = CreateTween().SetLoops();
+        _glowTween.SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+        _glowTween.TweenProperty(_glowSprite, "scale", big, 0.8f);
+        _glowTween.Parallel().TweenProperty(_glowSprite, "modulate:a", 1.0f, 0.8f);
+        _glowTween.TweenProperty(_glowSprite, "scale", small, 0.8f);
+        _glowTween.Parallel().TweenProperty(_glowSprite, "modulate:a", 0.65f, 0.8f);
     }
 
     private string GetTextureForStage()
