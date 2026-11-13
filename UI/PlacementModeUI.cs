@@ -26,12 +26,98 @@ public partial class PlacementModeUI : Node2D
     private Button _cancelBtn;
     private Button _confirmBtn;
 
+    // ===== Для обучения =====
+
+    public static PlacementModeUI Current { get; private set; }
+
+    public override void _ExitTree()
+    {
+        if (Current == this) Current = null;
+    }
+
+    public bool IsPlacing => Visible;
+    public bool HasValidSelection => Visible && _confirmBtn != null && !_confirmBtn.Disabled;
+
+    /// <summary>
+    /// Область на экране для клетки, куда обучение предлагает поставить
+    /// объект: ближайшая к центру комнаты свободная клетка.
+    /// </summary>
+    public Rect2? GetSuggestedCellScreenRect()
+    {
+        if (!Visible || _currentRoom == null || _furnitureToPlace == null) return null;
+
+        var center = new Vector2I(_currentRoom.Width / 2, _currentRoom.Height / 2);
+        Vector2I? best = null;
+        int bestDistance = int.MaxValue;
+
+        for (int x = 0; x < _currentRoom.Width; x++)
+        {
+            for (int y = 0; y < _currentRoom.Height; y++)
+            {
+                var cell = new Vector2I(x, y);
+                if (!_currentRoom.CanPlaceFurniture(cell, _furnitureToPlace.Size)) continue;
+
+                int distance = Mathf.Abs(x - center.X) + Mathf.Abs(y - center.Y);
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    best = cell;
+                }
+            }
+        }
+        if (best == null) return null;
+
+        // Центр прямоугольника, который займёт объект
+        float gx = _currentRoom.GlobalOffset.X + best.Value.X + (_furnitureToPlace.Size.X - 1) / 2f;
+        float gy = _currentRoom.GlobalOffset.Y + best.Value.Y + (_furnitureToPlace.Size.Y - 1) / 2f;
+
+        // "Окно" берём с запасом в клетку вокруг: по одной клетке 64x32 пальцем
+        // попасть трудно, а любая соседняя свободная клетка тоже подходит.
+        return MuseumWorldToScreenRect(this, gx, gy, _furnitureToPlace.Size.X + 2, _furnitureToPlace.Size.Y + 2, 0f);
+    }
+
+    /// <summary>
+    /// Экранная область вокруг клетки музея (gx, gy — координаты сетки,
+    /// могут быть дробными). extraTop — запас вверх в мировых пикселях под
+    /// высокий спрайт (витрина, скелет).
+    /// </summary>
+    public static Rect2 MuseumWorldToScreenRect(Node context, float gx, float gy, int sizeX, int sizeY, float extraTop)
+    {
+        // Те же формулы, что IsoUtils.GridToIso, но для дробных координат
+        float isoX = (gx - gy) * (IsoUtils.TileWidth / 2f);
+        float isoY = (gx + gy) * (IsoUtils.TileHeight / 2f);
+
+        var world = new Vector2(
+            MuseumConstants.GridOffsetX + isoX + IsoUtils.TileWidth / 2f,
+            MuseumConstants.GridOffsetY + isoY + IsoUtils.TileHeight / 2f);
+
+        Transform2D canvas = context.GetViewport().GetCanvasTransform();
+        Vector2 screen = canvas * world;
+        float zoom = canvas.Scale.X;
+
+        float span = (sizeX + sizeY) / 2f;
+        float halfW = IsoUtils.TileWidth / 2f * span * zoom;
+        float halfH = IsoUtils.TileHeight / 2f * span * zoom;
+
+        return new Rect2(
+            screen.X - halfW,
+            screen.Y - halfH - extraTop * zoom,
+            halfW * 2f,
+            halfH * 2f + extraTop * zoom);
+    }
+
     public override void _Ready()
     {
+        Current = this;
+
         _uiLayer = new CanvasLayer { Layer = 50 };
         AddChild(_uiLayer);
 
         CreateOverlay();
+
+        TutorialTargets.RegisterProvider("placement.cell", () =>
+            Current != null && GodotObject.IsInstanceValid(Current) ? Current.GetSuggestedCellScreenRect() : null);
+        if (_confirmBtn != null) TutorialTargets.Register("placement.confirm", _confirmBtn);
 
         SetPlacementVisible(false);
     }

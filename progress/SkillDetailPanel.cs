@@ -24,8 +24,19 @@ public partial class SkillDetailPanel : CanvasLayer
 
     private string _currentSkillId;
 
+    /// <summary>Панель навыка в текущей сцене (для обучения).</summary>
+    public static SkillDetailPanel Current { get; private set; }
+
+    public override void _ExitTree()
+    {
+        if (Current == this) Current = null;
+    }
+
+    public bool IsShowing(string skillId) => Visible && _currentSkillId == skillId;
+
     public override void _Ready()
     {
+        Current = this;
         Layer = 103; // выше панели прогресса (102), чтобы лист рисовался над деревом
         Visible = false;
 
@@ -54,6 +65,7 @@ public partial class SkillDetailPanel : CanvasLayer
         _upgradeBtn.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         _upgradeBtn.Pressed += OnUpgradePressed;
         content.AddChild(_upgradeBtn);
+        TutorialTargets.Register("skill.upgrade", _upgradeBtn);
 
         content.AddChild(MobileUI.CreateCloseRow(Hide));
     }

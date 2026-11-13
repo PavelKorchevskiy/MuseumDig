@@ -132,6 +132,7 @@ public partial class DigSiteUI : CanvasLayer
         button.AddChild(icon);
 
         button.Pressed += OnReturnPressed;
+        TutorialTargets.Register("dig.return", button);
         MobileUI.AttachPressAnimation(button);
         AddChild(button);
     }

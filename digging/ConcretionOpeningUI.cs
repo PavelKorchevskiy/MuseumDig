@@ -37,10 +37,22 @@ public partial class ConcretionOpeningUI : CanvasLayer
         CreateUI();
     }
 
+    /// <summary>Открытое сейчас окно раскалывания (для обучения).</summary>
+    public static ConcretionOpeningUI Current { get; private set; }
+
     public override void _Ready()
     {
         Layer = 200;
+        Current = this;
     }
+
+    public override void _ExitTree()
+    {
+        if (Current == this) Current = null;
+    }
+
+    /// <summary>Закрыть окно программно (обучение переходит к следующему шагу).</summary>
+    public void ForceClose() => CloseUI();
 
     private void CreateUI()
     {
@@ -137,6 +149,7 @@ public partial class ConcretionOpeningUI : CanvasLayer
         string hitButtonText = LocalizationManager.Tr("ui.concretion.hit_button");
         _hitButton.Text = hitButtonText;
         _hitButton.CustomMinimumSize = new Vector2(0, 100);
+        TutorialTargets.Register("concretion.hit", _hitButton);
         _hitButton.AddThemeFontSizeOverride("font_size", 20);
         _hitButton.Pressed += OnHitButtonPressed;
         vbox.AddChild(_hitButton);
@@ -431,6 +444,10 @@ public partial class ConcretionOpeningUI : CanvasLayer
 
     private string RollInnerItem()
     {
+        // В основном обучении из первой конкреции всегда выпадает аммонит
+        string scripted = TutorialSystem.Instance.GetScriptedConcretionContent();
+        if (scripted != null) return scripted;
+
         if (_definition.PossibleContents == null || _definition.PossibleContents.Count == 0)
         {
             return null;

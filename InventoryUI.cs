@@ -184,6 +184,14 @@ public partial class InventoryUI : CanvasLayer
         _btnBones = CreateTabButton("ui.inventory.bones", Tab.Bones, isParent: true);
         _btnFindings = CreateTabButton("ui.inventory.findings", Tab.Findings);
         _btnConcretions = CreateTabButton("ui.inventory.concretions", Tab.Concretions);
+
+        // Вкладки — цели для подсветки в обучении
+        TutorialTargets.Register("inventory.tab.tickets", _btnTickets);
+        TutorialTargets.Register("inventory.tab.bones", _btnBones);
+        TutorialTargets.Register("inventory.tab.findings", _btnFindings);
+        TutorialTargets.Register("inventory.tab.concretions", _btnConcretions);
+        TutorialTargets.Register("inventory.tab.assembling", _btnAssembling);
+        TutorialTargets.Register("inventory.tab.skeletons", _btnSkeletons);
         
         mainRow.AddChild(_btnTickets);
         mainRow.AddChild(_btnBones);
@@ -747,6 +755,9 @@ public partial class InventoryUI : CanvasLayer
 
         var amountLabel = row.GetNodeOrNull<Label>("AmountLabel");
         if (amountLabel != null) amountLabel.Text = $"x{item.Amount}";
+
+        var openButton = row.GetNodeOrNull<Button>("OpenButton");
+        if (openButton != null) TutorialTargets.Register($"inventory.concretion_open.{item.ResourceId}", openButton);
     }
 
     private void OnOpenConcretionPressed(string concretionId)
@@ -768,35 +779,45 @@ public partial class InventoryUI : CanvasLayer
 
     private Control CreateTicketRow(FoundItem item)
     {
+        // Высокая строка под палец: крупная иконка билета и кнопка 64px
         var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 10);
+        row.CustomMinimumSize = new Vector2(0, 88);
+        row.AddThemeConstantOverride("separation", 12);
         row.SetMeta("resource_id", item.ResourceId);
 
         var iconRect = new TextureRect();
         iconRect.Name = "IconRect";
-        iconRect.CustomMinimumSize = new Vector2(40, 40);
+        iconRect.CustomMinimumSize = new Vector2(68, 68);
+        iconRect.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
         iconRect.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+        iconRect.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
         row.AddChild(iconRect);
 
         var nameLabel = new Label();
         nameLabel.Name = "NameLabel";
-        nameLabel.AddThemeFontSizeOverride("font_size", 14);
+        nameLabel.AddThemeFontSizeOverride("font_size", 18);
         nameLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        nameLabel.VerticalAlignment = VerticalAlignment.Center;
+        nameLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         row.AddChild(nameLabel);
 
         var amountLabel = new Label();
         amountLabel.Name = "AmountLabel";
-        amountLabel.AddThemeFontSizeOverride("font_size", 14);
+        amountLabel.AddThemeFontSizeOverride("font_size", 20);
         amountLabel.AddThemeColorOverride("font_color", new Color(1f, 0.9f, 0.5f));
+        amountLabel.VerticalAlignment = VerticalAlignment.Center;
         row.AddChild(amountLabel);
 
         var useBtn = new Button();
         useBtn.Name = "UseButton";
         useBtn.Text = LocalizationManager.Tr("ui.inventory.use_ticket");
-        useBtn.CustomMinimumSize = new Vector2(120, 0);
+        useBtn.CustomMinimumSize = new Vector2(140, 64);
+        useBtn.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        useBtn.AddThemeFontSizeOverride("font_size", 18);
         useBtn.AddThemeColorOverride("font_color", new Color(0.2f, 0.8f, 0.2f));
         useBtn.Pressed += () => OnUseTicketPressed((string)row.GetMeta("resource_id"));
         row.AddChild(useBtn);
+        TutorialTargets.Register($"inventory.ticket_use.{item.ResourceId}", useBtn);
 
         return row;
     }
@@ -840,6 +861,10 @@ public partial class InventoryUI : CanvasLayer
         // Активируем локацию
         LocationSystem.Instance.StartDiggingSession(ticket.TargetLocationId);
         
+        // Инвентарь — автозагрузка и живёт между сценами: без явного закрытия
+        // он остался бы открытым поверх раскопок.
+        Visible = false;
+
         // Переходим на сцену раскопок
         GetTree().ChangeSceneToFile("res://DigSite.tscn");
     }
@@ -898,6 +923,7 @@ public partial class InventoryUI : CanvasLayer
             placeBtn.SizeFlagsHorizontal = Control.SizeFlags.ShrinkEnd;
             placeBtn.Pressed += () => OnPlaceCollectionPressed((string)row.GetMeta("resource_id"));
             row.AddChild(placeBtn);
+            TutorialTargets.Register($"inventory.place.{item.ResourceId}", placeBtn);
         }
 
         // === ИСПРАВЛЕНО: Цена с иконкой монеты вместо смайлика ===
@@ -1054,6 +1080,9 @@ public partial class InventoryUI : CanvasLayer
         _needsRefresh = true;
     }
 
+    /// <summary>Открыта ли сейчас вкладка с таким именем (Tickets, Concretions, Assembling...).</summary>
+    public bool IsTabOpen(string tabName) => Visible && _currentTab.ToString() == tabName;
+
     public void SwitchToTicketsTab()
     {
         SwitchTab(Tab.Tickets);
@@ -1155,6 +1184,7 @@ public partial class InventoryUI : CanvasLayer
         assembleBtn.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
         assembleBtn.Pressed += () => OnAssemblePressed(collection);
         row.AddChild(assembleBtn);
+        TutorialTargets.Register($"inventory.assemble.{collection.Id}", assembleBtn);
 
         return row;
     }

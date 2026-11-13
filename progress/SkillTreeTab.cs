@@ -107,6 +107,7 @@ public partial class SkillTreeTab : Control
             node.OnNodeClicked += OnNodeClicked;
             _canvas.AddChild(node);
             _nodes[skill.Id] = node;
+            TutorialTargets.Register($"skill.node.{skill.Id}", node);
         }
     }
 

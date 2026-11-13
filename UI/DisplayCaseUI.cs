@@ -20,8 +20,19 @@ public partial class DisplayCaseUI : CanvasLayer
     private Room _currentRoom;
     private PlacedFurniture _currentPlacedFurniture;
 
+    /// <summary>Панель витрины в текущей сцене музея (для обучения).</summary>
+    public static DisplayCaseUI Current { get; private set; }
+
+    public override void _ExitTree()
+    {
+        if (Current == this) Current = null;
+    }
+
+    public void ForceClose() => Visible = false;
+
     public override void _Ready()
     {
+        Current = this;
         Layer = 101; // выше нижней панели (100), как у инвентаря
         Visible = false;
 
@@ -165,6 +176,7 @@ public partial class DisplayCaseUI : CanvasLayer
                         MobileUI.PrimaryColor, MobileUI.RowButtonHeight, 150f);
                     string resId = invItem.ResourceId;
                     addBtn.Pressed += () => AddItem(resId);
+                    TutorialTargets.Register($"case.add.{resId}", addBtn);
                 }
                 addBtn.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
                 hbox.AddChild(addBtn);

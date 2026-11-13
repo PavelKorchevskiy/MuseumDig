@@ -143,6 +143,10 @@ public partial class DiggingUI : Control
         _excavatorButton.Pressed += () => SelectTool(WorkerType.Excavator);
         hbox.AddChild(_excavatorButton);
 
+        TutorialTargets.Register("dig.tool.digger", _diggerButton);
+        TutorialTargets.Register("dig.tool.extractor", _extractorButton);
+        TutorialTargets.Register("dig.tool.excavator", _excavatorButton);
+
         UpdateButtons();
     }
 

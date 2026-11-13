@@ -133,6 +133,10 @@ private OfflineIncomeUI _offlineIncomeUI;
             UpdateDisplay();
             RefreshRoomView();
 
+            // Обучение: при новой игре запускается здесь (сохранение к этому
+            // моменту уже загружено или создано)
+            TutorialSystem.Instance.OnSceneEntered(this, TutorialSystem.SceneMuseum);
+
             int offlineIncome = SaveSystem.Instance?.ConsumePendingOfflineIncome() ?? 0;
             if (offlineIncome > 0)
             {

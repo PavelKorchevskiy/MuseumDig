@@ -28,4 +28,8 @@ public partial class LocationDefinition : Resource
 	[Export] public FossilDefinition UniqueFossil;
 
 	[Export] public Rarity Rarity = Rarity.Common;
+
+	// Набор тайлов раскопок: "" — луг (res://assets/tiles/), "desert" —
+	// res://assets/tiles/desert/ и т.д. См. DigTileSet.
+	[Export] public string TileSet = "";
 }

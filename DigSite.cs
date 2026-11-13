@@ -1,4 +1,5 @@
 using Godot;
+using System;
 using System.Collections.Generic;
 
 public partial class DigSite : Node2D
@@ -64,6 +65,14 @@ public partial class DigSite : Node2D
         _current = this;
 
         QuestSystem.Instance.OnLocationVisited(location.Id);
+        TutorialSystem.Instance.OnSceneEntered(this, TutorialSystem.SceneDig);
+
+        // Плитки-цели для обучения (область плитки на экране)
+        TutorialTargets.RegisterProvider("dig.tile.intact", () => GetTileScreenRect(
+            t => t.Stage == TileStage.Intact && t.Action == TileAction.None, preferCenter: true));
+        TutorialTargets.RegisterProvider("dig.tile.finding", () => GetTileScreenRect(t => t.HasCollectableFinding));
+        TutorialTargets.RegisterProvider("dig.tile.bone", () => GetTileScreenRect(
+            t => t.HasExtractableFinding && t.Action != TileAction.Extracting));
 
         _background = new DigSiteBackground();
         AddChild(_background);
@@ -228,7 +237,9 @@ public partial class DigSite : Node2D
     private void BeginPointer(Vector2 position)
     {
         _pointerDown = true;
-        _panActive = true;
+        // Во время обучения камера раскопок не двигается: игрок нажимает
+        // только подсвеченное, а подсветка привязана к положению плиток.
+        _panActive = !TutorialSystem.Instance.BlocksWorld;
         _pressPos = position;
         _travelPx = 0f;
         _gestureWasTap = true;
@@ -422,7 +433,7 @@ public partial class DigSite : Node2D
             else
             {
                 // === СВЕЖАЯ ГЕНЕРАЦИЯ: лут роллим ===
-                tile.Initialize(x, y, location.BaseTileHp, location.TileHpGrowthPerRow, location.Id, rollLoot: true);
+                tile.Initialize(x, y, location.BaseTileHp, location.TileHpGrowthPerRow, location.Id, rollLoot: !TutorialSystem.Instance.ControlsLoot);
             }
         }
     }
@@ -488,6 +499,51 @@ public partial class DigSite : Node2D
         }
 
         return data;
+    }
+
+    // ===== Для обучения =====
+
+    /// <summary>Есть ли на текущих раскопках плитка, подходящая под условие.</summary>
+    public static bool AnyTile(Func<Tile, bool> predicate)
+    {
+        if (_current == null || !GodotObject.IsInstanceValid(_current)) return false;
+
+        foreach (var child in _current.GetChildren())
+        {
+            if (child is Tile tile && predicate(tile)) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Область на экране, которую занимает верхняя грань первой подходящей
+    /// плитки. preferCenter — по возможности взять плитку из середины поля
+    /// (она точно не под верхней плашкой и не под панелью инструментов).
+    /// </summary>
+    private Rect2? GetTileScreenRect(Func<Tile, bool> predicate, bool preferCenter = false)
+    {
+        if (!IsInsideTree()) return null;
+
+        Tile found = null;
+        foreach (var child in GetChildren())
+        {
+            if (child is not Tile tile || !predicate(tile)) continue;
+
+            if (found == null) found = tile;
+            if (!preferCenter) break;
+
+            if (tile.GridPosition == new Vector2I(1, 1))
+            {
+                found = tile;
+                break;
+            }
+        }
+        if (found == null) return null;
+
+        Transform2D onScreen = found.GetGlobalTransformWithCanvas();
+        Vector2 topLeft = onScreen * new Vector2(10f, 26f);
+        Vector2 bottomRight = onScreen * new Vector2(118f, 102f);
+        return new Rect2(topLeft, bottomRight - topLeft);
     }
 
     public void RefreshLootSummary()

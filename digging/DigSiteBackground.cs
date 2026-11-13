@@ -6,7 +6,6 @@ public partial class DigSiteBackground : Node
 {
     private const float TileWidth = 128f;
     private const float TileHeight = 74f;
-    private const int BackgroundVariantCount = 6;
     private const int PaddingTiles = 6;
     
     // === НОВОЕ: Эмпирическая корректировка для стыковки с игровым полем ===
@@ -14,10 +13,12 @@ public partial class DigSiteBackground : Node
     private static readonly Vector2 AlignmentOffset = new Vector2(64f, 64f);
     
     private Node2D _parent;
+    private string _tileSet = "";   // набор тайлов локации, см. DigTileSet
 
      public void Setup(Node2D parent, LocationDefinition location)
     {
         _parent = parent;
+        _tileSet = location.TileSet ?? "";
         
         int gridWidth = location.GridWidth;
         int gridHeight = location.GridHeight;
@@ -53,8 +54,8 @@ public partial class DigSiteBackground : Node
         var sprite = new Sprite2D();
         sprite.ZIndex = gx + gy;
 
-        int variant = (HashCoordinates(gx, gy, 100) % BackgroundVariantCount) + 1;
-        string path = $"res://assets/tiles/back_{variant}.png";
+        // Вариант выбирается среди всех back_N, которые есть в наборе
+        string path = DigTileSet.Variant(_tileSet, "back", HashCoordinates(gx, gy, 100));
         
         if (ResourceLoader.Exists(path))
         {
@@ -135,7 +136,7 @@ void fragment() {
 
     private void AddBorderFence(int gridWidth, int gridHeight)
     {
-        string borderPath = "res://assets/tiles/border.png";
+        string borderPath = DigTileSet.Single(_tileSet, "border.png");
         if (!ResourceLoader.Exists(borderPath))
         {
             GD.PrintErr("[Background] border.png не найден!");
@@ -209,8 +210,8 @@ private void AddBorderTile(int gx, int gy, bool flipH, Texture2D texture)
 
     private void AddCornerFences(int gridWidth, int gridHeight)
     {
-        string topCornerPath = "res://assets/tiles/border_edge.png";
-        string sideCornerPath = "res://assets/tiles/border_edge_side.png";
+        string topCornerPath = DigTileSet.Single(_tileSet, "border_edge.png");
+        string sideCornerPath = DigTileSet.Single(_tileSet, "border_edge_side.png");
         
         if (!ResourceLoader.Exists(topCornerPath) || !ResourceLoader.Exists(sideCornerPath))
         {
@@ -268,7 +269,7 @@ private void AddBorderTile(int gx, int gy, bool flipH, Texture2D texture)
 
         private void AddPerimeterIntactTiles(int gridWidth, int gridHeight)
     {
-        string intactPath = "res://assets/tiles/intact_1.png";
+        string intactPath = DigTileSet.Single(_tileSet, "intact_1.png");
         if (!ResourceLoader.Exists(intactPath))
         {
             GD.PrintErr("[Background] intact_1.png не найден!");

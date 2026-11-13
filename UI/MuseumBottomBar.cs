@@ -63,6 +63,14 @@ var (smallSize, largeSize, spacing) = CalculateButtonSizes();
         _container.AddChild(_shopBtn);
         _container.AddChild(_inventoryBtn);
 
+        // Цели для подсветки в обучении
+        TutorialTargets.Register("bottom.bar", _container);
+        TutorialTargets.Register("bottom.quests", _questBtn);
+        TutorialTargets.Register("bottom.progress", _progressBtn);
+        TutorialTargets.Register("bottom.dig", _digBtn);
+        TutorialTargets.Register("bottom.shop", _shopBtn);
+        TutorialTargets.Register("bottom.inventory", _inventoryBtn);
+
         // === Подключаем действия ===
         _questBtn.Pressed += () => {
             var questsUI = QuestsUI.Instance;

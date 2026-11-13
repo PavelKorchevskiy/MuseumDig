@@ -7,6 +7,7 @@ public partial class SaveSystem : Node
     public static SaveSystem Instance { get; private set; }
     
     private const string SavePath = "user://save.json";
+    private const int StartingCoins = 300;
     
     private bool _dirty = false;
     private double _saveTimer = 0;
@@ -107,6 +108,7 @@ public partial class SaveSystem : Node
         }
 
         data.QuestData = QuestSystem.Instance.GetSaveData();
+        data.TutorialData = TutorialSystem.Instance.GetSaveData();
 
         if (isAutoSave)
         {
@@ -151,6 +153,12 @@ public partial class SaveSystem : Node
 
             // === Стартовый подарок новому игроку: 3 билета в Канаду ===
             InventorySystem.Instance?.AddItem("ticket_canada", 3);
+
+            // Стартовое золото: хватает на первую витрину (200) и немного сверху
+            Wallet.Instance?.SetCoins(StartingCoins);
+
+            // Новая игра — при входе в музей запустится основное обучение
+            TutorialSystem.Instance.MarkNewGame();
 
             // Первый набор ежедневных заданий
             QuestSystem.Instance.EnsureToday();
@@ -226,6 +234,7 @@ public partial class SaveSystem : Node
             // === Задания и достижения ===
             // Грузим в самом конце: награда дня считается от дохода музея, а он
             // зависит от уже загруженных комнат, мебели и навыков.
+            TutorialSystem.Instance.LoadFromSaveData(data.TutorialData);
             QuestSystem.Instance.LoadFromSaveData(data.QuestData);
             QuestSystem.Instance.EnsureToday();
 

@@ -289,7 +289,9 @@ public static class GameData
         _locations["canada"] = new LocationDefinition
         {
             Id = "canada", DisplayName = "Canada (Alberta)", Description = "Dinosaur Provincial Park. Land of horned giants.",
-            UnlockCost = 0, RequiredPlayerLevel = 1, GridWidth = 3, GridHeight = 4, BaseTileHp = 3, TileHpGrowthPerRow = 1.15f,
+            UnlockCost = 0, RequiredPlayerLevel = 1, GridWidth = 3, GridHeight = 4,
+            // BaseTileHp = 1 -> стадия плитки копается ~6 секунд (скорость копателя 10/60 HP в секунду)
+            BaseTileHp = 1, TileHpGrowthPerRow = 1.15f,
             LootTable = new List<LootEntry>()
             {
                 CreateLoot("triceratops_skull", 0.3f), CreateLoot("triceratops_body", 0.3f), CreateLoot("triceratops_tail", 0.3f),
@@ -307,6 +309,7 @@ public static class GameData
         _locations["gobi"] = new LocationDefinition
         {
             Id = "gobi", DisplayName = "Gobi Desert", Description = "Mongolia/China. The graveyard of dinosaurs.",
+            TileSet = "desert",
             UnlockCost = 1500, RequiredPlayerLevel = 3, GridWidth = 4, GridHeight = 4, BaseTileHp = 5, TileHpGrowthPerRow = 1.20f,
             LootTable = new List<LootEntry>()
             {
@@ -344,6 +347,7 @@ public static class GameData
         _locations["texas"] = new LocationDefinition
 {
     Id = "texas", 
+    TileSet = "desert",
     DisplayName = "Texas Red Beds", 
     Description = "Seymour, Texas. Permian period fossils in the ancient red clay deposits.",
     UnlockCost = 2500, 

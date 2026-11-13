@@ -17,15 +17,10 @@ public partial class Tile : Panel
     
     public TileLoot _loot;
 
-    private int _variantIntact = 1;
-    private int _variantDug1 = 1;
-    private int _variantDug2 = 1;
-    private int _variantEmpty = 1;
-    private const int IntactVariantCount = 8;
-    private const int Dug1VariantCount = 2;
-    private const int Dug2VariantCount = 2;
-
-    private const int EmptyVariantCount = 2;
+    // Набор тайлов локации ("" — луг) и хеши для выбора вариантов из него.
+    // Сколько вариантов у каждой стадии, определяется по файлам набора (DigTileSet).
+    private string _tileSet = "";
+    private int _hashIntact, _hashDug1, _hashDug2, _hashEmpty;
 
     // Визуальные элементы
     private Sprite2D _dirtSprite;
@@ -141,6 +136,7 @@ public partial class Tile : Panel
 
         DiggingManager.Instance.RegisterTile(this);
 
+        _tileSet = DigTileSet.ForLocation(locationId);
         GenerateVariants();
         if (rollLoot)
         {
@@ -605,17 +601,16 @@ public partial class Tile : Panel
     {
         string path = Stage switch
         {
-            TileStage.Intact => $"res://assets/tiles/intact_{_variantIntact}.png",
-            TileStage.Dug1 => $"res://assets/tiles/dug1_{_variantDug1}.png",
-            TileStage.Dug2 => $"res://assets/tiles/dug2_{_variantDug2}.png",
-            TileStage.FullyDug => "res://assets/tiles/empty.png",
-            _ => $"res://assets/tiles/intact_{_variantIntact}.png"
+            TileStage.Dug1 => DigTileSet.Variant(_tileSet, "dug1", _hashDug1),
+            TileStage.Dug2 => DigTileSet.Variant(_tileSet, "dug2", _hashDug2),
+            TileStage.FullyDug => DigTileSet.Variant(_tileSet, "empty", _hashEmpty),
+            _ => DigTileSet.Variant(_tileSet, "intact", _hashIntact)
         };
         
         // === ДИАГНОСТИКА ===
         if (!ResourceLoader.Exists(path))
         {
-            GD.PrintErr($"[Tile] ❌ Текстура не найдена: {path} (Stage={Stage}, variant={_variantIntact})");
+            GD.PrintErr($"[Tile] ❌ Текстура не найдена: {path} (Stage={Stage}, набор='{_tileSet}')");
         }
         
         return path;
@@ -817,10 +812,20 @@ public partial class Tile : Panel
                     return;
                 }
                 
+                // Обучение: что лежит под плиткой, решается в момент первого копка
+                TutorialSystem.Instance.OnTileDigStarted(this);
+
                 Action = TileAction.Digging;
                 QuestSystem.Instance.OnDiggerAssigned();
                 UpdateVisuals();
-                DiggingUI.Instance.ClearSelection();
+
+                // Пока есть свободные копатели, инструмент остаётся выбранным:
+                // следующего можно отправить тапом по новой плитке, не нажимая
+                // кнопку ещё раз. Выбор снимается, когда заняты все.
+                if (DiggingManager.Instance.GetActiveDiggersCount() >= DiggingManager.Instance.GetMaxDiggers())
+                {
+                    DiggingUI.Instance.ClearSelection();
+                }
             }
         }
         else if (selectedTool == WorkerType.Extractor)
@@ -835,7 +840,12 @@ public partial class Tile : Panel
             {
                 Action = TileAction.Extracting;
                 UpdateVisuals();
-                DiggingUI.Instance.ClearSelection();
+
+                // То же для извлекателей: выбор держится, пока есть свободные
+                if (DiggingManager.Instance.GetActiveExtractorsCount() >= DiggingManager.Instance.GetMaxExtractors())
+                {
+                    DiggingUI.Instance.ClearSelection();
+                }
             }
             else
             {
@@ -896,11 +906,11 @@ public partial class Tile : Panel
         // === ДИАГНОСТИКА ===
         GD.Print($"[Tile] GenerateVariants: GridPosition = ({GridPosition.X}, {GridPosition.Y})");
         
-        _variantIntact = (HashCoordinates(GridPosition.X, GridPosition.Y, 0) % IntactVariantCount) + 1;
-        _variantDug1 = (HashCoordinates(GridPosition.X, GridPosition.Y, 1) % Dug1VariantCount) + 1;
-        _variantDug2 = (HashCoordinates(GridPosition.X, GridPosition.Y, 2) % Dug2VariantCount) + 1;
-        
-        GD.Print($"[Tile] Варианты: intact={_variantIntact}, dug1={_variantDug1}, dug2={_variantDug2}");
+        // Хеш от координат: у одной и той же плитки вариант всегда один и тот же
+        _hashIntact = HashCoordinates(GridPosition.X, GridPosition.Y, 0);
+        _hashDug1 = HashCoordinates(GridPosition.X, GridPosition.Y, 1);
+        _hashDug2 = HashCoordinates(GridPosition.X, GridPosition.Y, 2);
+        _hashEmpty = HashCoordinates(GridPosition.X, GridPosition.Y, 3);
     }
 
     public void RegenerateVariants()

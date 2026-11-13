@@ -160,6 +160,12 @@ public partial class ProgressUI : CanvasLayer
         }
     }
 
+    /// <summary>Переключает на дерево навыков (обучение ведёт игрока к навыку).</summary>
+    public void ShowSkillTree()
+    {
+        if (_currentTab != Tab.SkillTree) SwitchTab(Tab.SkillTree);
+    }
+
     public void Open()
     {
         Visible = true;

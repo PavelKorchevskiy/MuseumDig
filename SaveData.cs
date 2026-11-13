@@ -34,5 +34,8 @@ public class SaveData
 	// Ежедневные задания и достижения
 	public QuestSaveData QuestData { get; set; } = new();
 
+	// Обучение
+	public TutorialSaveData TutorialData { get; set; } = new();
+
 	public long LastSaveTimestamp { get; set; } = 0;
 }

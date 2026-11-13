@@ -1,0 +1,49 @@
+{
+ "anchor": "pixellab-dry-cracked-red-clay-ground-on-1794562325512-frame.png",
+ "source_side": 20,
+ "darken_per_stage": 0.15,
+ "palette_colors": 64,
+ "fence_shadow_rgb": [
+  77,
+  23,
+  22
+ ],
+ "intact": [
+  "pixellab-dry-cracked-red-clay-ground-on-1794562325512-frame.png",
+  "pixellab-flat-bare-cracked-red-clay-1794566139424-frame (1).png",
+  "pixellab-flat-bare-cracked-red-clay-1794566139424-frame (2).png",
+  "pixellab-flat-bare-cracked-red-clay-1794566139424-frame (3).png",
+  "pixellab-red-clay-ground-with-one-dry-t-1794562604116-frame.png",
+  "pixellab-red-clay-ground-with-one-dry-t-1794562737563-frame.png",
+  "pixellab_red_clay_ground_with_one_dry_t_1794566481939_frame_1.png",
+  "pixellab_red_clay_ground_with_one_dry_t_1794566481939_frame_2.png",
+  "pixellab-red-clay-ground-with-one-dry-t-1794566481939-frame.png",
+  "pixellab_red_clay_ground_with_one_dry_t_1794562604116_frame_3.png",
+  "pixellab_red_clay_ground_with_one_dry_t_1794566481939_frame_3.png",
+  "pixellab_red_clay_ground_with_one_dry_t_1794566481939_frame_4.png"
+ ],
+ "back": [
+  "pixellab-large-weathered-orange-sandsto-1794567187581-frame.png",
+  "pixellab_large_weathered_orange_sandsto_1794567307549_frame_1.png",
+  "pixellab_large_weathered_orange_sandsto_1794567307549_frame_2.png",
+  "pixellab_large_weathered_orange_sandsto_1794567307549_frame_5.png",
+  "pixellab-tall-eroded-sandstone-outcrop--1794567761848-frame.png",
+  "pixellab_dry_thorny_desert_shrubs_and_s_1794567533541_frame_1.png",
+  "pixellab_dry_thorny_desert_shrubs_and_s_1794567431432_frame_1.png",
+  "pixellab_tall_eroded_sandstone_outcrop_1794567761848_frame_1.png",
+  "pixellab-dry-thorny-desert-shrubs-and-s-1794567533541-frame.png",
+  "pixellab_large_weathered_orange_sandsto_1794567187581_frame_3.png"
+ ],
+ "dug1": [
+  "pixellab_freshly_dug_dark_red_brown_cla_1794566729581_frame_3.png",
+  "pixellab_freshly_dug_dark_red_brown_cla_1794566729581_frame_4.png"
+ ],
+ "dug2": [
+  "pixellab_freshly_dug_dark_red_brown_cla_1794566729581_frame_5.png",
+  "pixellab-freshly-dug-dark-red-brown-cla-1794566729581-frame.png"
+ ],
+ "empty": [
+  "pixellab_freshly_dug_dark_red_brown_cla_1794566729581_frame_1.png",
+  "pixellab_freshly_dug_dark_red_brown_cla_1794566729581_frame_2.png"
+ ]
+}

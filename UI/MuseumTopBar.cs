@@ -103,7 +103,8 @@ public partial class MuseumTopBar : Control
         
         _settingsBtn.AddChild(settingsIcon);
         
-        _settingsBtn.Pressed += () => GD.Print("[TopBar] Настройки (заглушка)");
+        _settingsBtn.Pressed += ToggleSettingsMenu;
+        TutorialTargets.Register("top.settings", _settingsBtn);
         AttachPressAnimation(_settingsBtn, SettingsBtnSize);
         
         hbox.AddChild(_settingsBtn);
@@ -122,6 +123,49 @@ public partial class MuseumTopBar : Control
         var coinsBox = CreateStatBox("res://assets/ui/icons/coin.png");
         _coinsLabel = coinsBox.Label;
         hbox.AddChild(coinsBox.Container);
+        TutorialTargets.Register("top.coins", coinsBox.Container);
+
+        CreateSettingsMenu();
+    }
+
+    // ===== МЕНЮ ШЕСТЕРЁНКИ =====
+    // Выпадает под шестерёнкой. Пока в нём один пункт — справка-обучение;
+    // сюда же позже лягут язык и звук.
+
+    private PanelContainer _settingsMenu;
+
+    private void CreateSettingsMenu()
+    {
+        _settingsMenu = new PanelContainer();
+        _settingsMenu.Visible = false;
+        _settingsMenu.Position = new Vector2(PanelPadding, PanelHeight + 8f);
+
+        var style = MobileUI.MakeStyle(MobileUI.PanelColor, 16, 2, MobileUI.RowBorderColor);
+        style.ContentMarginLeft = 10;
+        style.ContentMarginRight = 10;
+        style.ContentMarginTop = 10;
+        style.ContentMarginBottom = 10;
+        _settingsMenu.AddThemeStyleboxOverride("panel", style);
+        AddChild(_settingsMenu);
+
+        var vbox = new VBoxContainer();
+        vbox.AddThemeConstantOverride("separation", 8);
+        _settingsMenu.AddChild(vbox);
+
+        var tutorialBtn = MobileUI.CreateButton(
+            "?   " + LocalizationManager.Tr("ui.settings.tutorial"),
+            MobileUI.PrimaryColor, MobileUI.RowButtonHeight, 220f);
+        tutorialBtn.Pressed += () =>
+        {
+            _settingsMenu.Visible = false;
+            TutorialSystem.Instance.StartGuide(this);
+        };
+        vbox.AddChild(tutorialBtn);
+    }
+
+    private void ToggleSettingsMenu()
+    {
+        if (_settingsMenu != null) _settingsMenu.Visible = !_settingsMenu.Visible;
     }
 
     private (HBoxContainer Container, Label Label) CreateStatBox(string iconPath)

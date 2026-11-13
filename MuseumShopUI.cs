@@ -99,6 +99,7 @@ public partial class MuseumShopUI : CanvasLayer
         _tabTicketsBtn = MobileUI.CreateTab(LocalizationManager.Tr("ui.shop.tab_tickets"));
         _tabTicketsBtn.Pressed += () => SwitchTab(ShopTab.Tickets);
         tabsRow.AddChild(_tabTicketsBtn);
+        TutorialTargets.Register("shop.tab.tickets", _tabTicketsBtn);
 
         // === Вкладка "Мебель" ===
         _furnitureScroll = new ScrollContainer();
@@ -170,6 +171,20 @@ public partial class MuseumShopUI : CanvasLayer
     }
 
     // ===== ВКЛАДКИ =====
+
+    /// <summary>Текущий магазин в сцене музея (для обучения).</summary>
+    public static MuseumShopUI Current { get; private set; }
+
+    public override void _EnterTree() => Current = this;
+
+    public override void _ExitTree()
+    {
+        if (Current == this) Current = null;
+    }
+
+    public void ShowFurnitureTab() => SwitchTab(ShopTab.Furniture);
+    public void ShowTicketsTab() => SwitchTab(ShopTab.Tickets);
+    public bool IsTicketsTabOpen => Visible && _currentTab == ShopTab.Tickets;
 
     private void SwitchTab(ShopTab tab)
     {
@@ -269,6 +284,7 @@ public partial class MuseumShopUI : CanvasLayer
 
         string typeId = template.TypeId;
         buyBtn.Pressed += () => OnBuyFurniturePressed(typeId);
+        TutorialTargets.Register($"shop.buy.{typeId}", buyBtn);
 
         row.AddChild(buyBtn);
 

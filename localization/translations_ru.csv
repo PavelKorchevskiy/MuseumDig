@@ -183,3 +183,62 @@ room.east_wing.name,East Gallery,Восточная галерея
 ui.room.unlock,Unlock,Открыть
 ui.room.unlock_confirm,Unlock “{0}” for {1} coins? The money is not refundable.,Открыть «{0}» за {1} монет? Деньги за комнату не возвращаются.
 ui.room.unlock_not_enough,“{0}” costs {1} coins. You have {2}.,«{0}» стоит {1} монет. У вас сейчас {2}.
+tutorial.professor_name,Richard Owen,Ричард Оуэн
+ui.settings.tutorial,Tutorial,Обучение
+ui.tutorial.skip,Skip,Пропустить
+ui.tutorial.skip_confirm,Skip the tutorial? You won't get the {0} coin reward.,Пропустить обучение? Награда {0} монет не будет выдана.
+tutorial.main.01,Welcome! I'm Professor Richard Owen. This museum is yours now — though it's empty so far.,"Добро пожаловать! Я профессор Ричард Оуэн. Этот музей теперь ваш — правда, пока в нём пусто."
+tutorial.main.02,Your coins are at the top. Visitors bring them.,Сверху ваши монеты. Их приносят посетители.
+tutorial.main.03,Museum controls are at the bottom. Let's start with the main thing: digging.,Внизу управление музеем. Начнём с главного: раскопок.
+tutorial.main.04,You need a ticket to get to a dig site. You already have three tickets to Canada. Open the inventory.,"Чтобы попасть на раскопки, нужен билет. Три билета в Канаду у вас уже есть. Откройте инвентарь."
+tutorial.main.05,This is the tickets tab. Use a ticket to Canada.,Это вкладка билетов. Используйте билет в Канаду.
+tutorial.main.06,This is the dig site. Something may be hidden under every tile.,Перед вами площадка для раскопок. Под каждой плиткой может что-то лежать.
+tutorial.main.07,Select the digger.,Выберите копателя.
+tutorial.main.08,Now tap a tile.,Теперь нажмите на плитку.
+tutorial.main.09,The digger works on his own. Let's wait until he's done. The bars under the button show how many workers are free.,"Копатель работает сам. Подождём, пока он закончит. Полоски под кнопкой показывают, сколько рабочих свободно."
+tutorial.main.10,A find! The golden glow means you can pick it up. Tap it.,"Есть находка! Золотое свечение значит, что её можно забрать. Нажмите на неё."
+tutorial.main.11,It's a concretion — a rock with something hidden inside. Let's go back to the museum and crack it open.,"Это конкреция — камень, внутри которого что-то спрятано. Вернёмся в музей и расколем её."
+tutorial.main.12,Open the inventory.,Откройте инвентарь.
+tutorial.main.13,Concretions are on this tab.,Конкреции лежат на этой вкладке.
+tutorial.main.14,Open it.,Раскройте её.
+tutorial.main.15,Hit it with the hammer until it cracks.,"Бейте молотком, пока она не расколется."
+tutorial.main.16,An ammonite! This mollusk is millions of years old. You can put it in a display case.,Аммонит! Этому моллюску миллионы лет. Его можно выставить на витрине.
+tutorial.main.17,Display cases are sold in the shop.,Витрины продаются в магазине.
+tutorial.main.18,Buy a small display case. I left you some money for it.,Купите малую витрину. Деньги на неё я вам оставил.
+tutorial.main.19,Choose a spot in the hall.,Выберите место в зале.
+tutorial.main.20,Place the display case.,Поставьте витрину.
+tutorial.main.21,Now tap the display case.,Теперь нажмите на витрину.
+tutorial.main.22,Put the ammonite in it.,Разместите в ней аммонит.
+tutorial.main.23,Done. Visitors are already coming to see your find.,"Готово. Посетители уже идут, чтобы посмотреть на вашу находку."
+tutorial.main.24,You earn skill points for every unique find. Open the progress tab.,За каждую уникальную находку вы получаете очки навыков. Откройте вкладку прогресса.
+tutorial.main.25,"Museum skills are on the left, digging skills on the right. Pick the second digger.","Слева навыки музея, справа — раскопок. Выберите второго копателя."
+tutorial.main.26,Upgrade the skill.,Улучшите навык.
+tutorial.main.27,Now two diggers can work on the site. Let's go back to the dig.,Теперь на участке могут копать двое. Вернёмся на раскопки.
+tutorial.main.28,Two diggers — you can dig two tiles at once. Put both to work.,Копателей двое — можно копать две плитки сразу. Поставьте обоих.
+tutorial.main.29,A bone! A shovel won't get it out — you need an extractor.,Кость! Лопатой её не достать — нужен извлекатель.
+tutorial.main.30,Tap the tile with the bone.,Нажмите на плитку с костью.
+tutorial.main.31,"When he's done, the bone stays on the tile. Pick it up.","Когда он закончит, кость останется лежать. Заберите её."
+tutorial.main.32,Nothing here. It happens — keep digging.,А здесь пусто. Так бывает — копаем дальше.
+tutorial.main.33,Two more parts to find. You know what to do.,"Осталось найти ещё две части. Вы уже знаете, что делать."
+tutorial.main.34,You have all three parts of the Triceratops! Let's head back.,Все три части трицератопса у вас! Возвращаемся.
+tutorial.main.35,Open the inventory and go to the assembly tab.,Откройте инвентарь и перейдите на вкладку сборки.
+tutorial.main.36,Assemble the Triceratops.,Соберите трицератопса.
+tutorial.main.37,The skeleton is ready. It's on the skeletons tab — place it.,Скелет готов. Он на вкладке скелетов — разместите его.
+tutorial.main.38,Choose a spot and place it.,Выберите место и поставьте.
+tutorial.main.39,Magnificent! A complete skeleton attracts far more visitors.,Великолепно! Целый скелет привлекает гораздо больше посетителей.
+tutorial.main.40,"When you run out of tickets, you can buy new ones here.","Когда билеты закончатся, новые можно купить здесь."
+tutorial.main.41,"That's all. Here are 1000 coins to get you started. If you forget anything, I'm in the gear menu.",На этом всё. Вот 1000 монет на первое время. Если что-то забудете — я в шестерёнке.
+tutorial.guide.01,Let me remind you how things work here. Use the arrows.,"Я напомню, как здесь всё устроено. Листайте стрелками."
+tutorial.guide.02,"Visitors pay for admission. The more exhibits, the more visitors. Locked halls can be opened for coins — tap a hall with a lock.","Посетители платят за вход. Чем больше экспонатов, тем их больше. Закрытые залы можно открыть за монеты — нажмите на зал с замком."
+tutorial.guide.03,"Inventory, tickets. A ticket takes you to a dig site. Every ticket is a new site.","Инвентарь, билеты. Билет отправляет вас на раскопки. Каждый билет — новый участок."
+tutorial.guide.04,"Inventory, finds and bones. Finds can be sold or put in a display case. Bones are parts of skeletons.","Инвентарь, находки и кости. Находки можно продать или выставить в витрине. Кости — части скелетов."
+tutorial.guide.05,"Inventory, assembly and skeletons. Once you have all the parts, assemble the skeleton on the assembly tab. A finished skeleton goes into a hall.","Инвентарь, сборка и скелеты. Когда собраны все части, скелет собирается на вкладке сборки. Готовый скелет ставится в зал."
+tutorial.guide.06,"Inventory, concretions. Crack a concretion with the hammer — there's a find inside.","Инвентарь, конкреции. Конкрецию нужно расколоть молотком — внутри находка."
+tutorial.guide.07,Shop. Display cases for your finds and tickets to dig sites.,Магазин. Здесь витрины для находок и билеты на раскопки.
+tutorial.guide.08,"Progress. Skill points are awarded for unique finds. The museum branch raises income, the digging branch adds workers and speed.","Прогресс. Очки навыков дают за уникальные находки. Ветка музея увеличивает доход, ветка раскопок — число и скорость рабочих."
+tutorial.guide.09,Quests. Daily quests reset at midnight. Achievements give tickets and concretions.,Задания. Ежедневные задания обновляются в полночь. Достижения дают билеты и конкреции.
+tutorial.guide.10,"Dig site, workers. The digger removes a layer of soil. The extractor gets bones out. The excavator removes the top layer at once for coins.","Раскопки, рабочие. Копатель снимает слой земли. Извлекатель достаёт кости. Экскаватор за монеты сразу снимает верхний слой."
+tutorial.guide.11,"Dig site, finds. Anything glowing gold can be picked up with a tap. Workers keep working while you're in the museum.","Раскопки, находки. Всё, что светится золотом, можно забрать нажатием. Пока вы в музее, рабочие продолжают работать."
+tutorial.guide.12,Happy digging!,Удачных раскопок!
+tutorial.main.back_to_dig,Let's go back to the dig site.,Вернёмся на раскопки.
+tutorial.main.wait,Let's wait for the diggers to finish.,"Подождём, пока копатели закончат."
